@@ -58,7 +58,9 @@ def _is_api_key_error(error: Exception) -> bool:
   """Determine if an exception is an API key/authentication error."""
   if isinstance(error, genai_errors.ClientError):
     error_str = str(error)
-    return "API key" in error_str or "api_key" in error_str.lower() or "401" in error_str
+    return (
+      "API key" in error_str or "api_key" in error_str.lower() or "401" in error_str
+    )
   return False
 
 
@@ -269,7 +271,7 @@ class ChatService(BaseGoogleAIService):
     for msg in chat_history[-5:]:
       role_label = "U" if msg.role == "user" else "A"
       msg_content = msg.content[:500]
-      if len(msg.content) > 500:
+      if len(cast(list[str], msg.content)) > 500:
         msg_content += "..."
       parts.append(f"\n{role_label}: {msg_content}")
 
@@ -417,12 +419,14 @@ class ChatService(BaseGoogleAIService):
 
     # Get content parts from content provider (file or URL if available)
     paper_content_parts = await content_provider.get_content_parts(paper)
-    use_file_context = len(paper_content_parts) > 0 and not isinstance(
-      paper_content_parts[0], types.Part
-    ) or (
+    use_file_context = (
       len(paper_content_parts) > 0
-      and hasattr(paper_content_parts[0], "file_data")
-      or hasattr(paper_content_parts[0], "file_uri")
+      and not isinstance(paper_content_parts[0], types.Part)
+      or (
+        len(paper_content_parts) > 0
+        and hasattr(paper_content_parts[0], "file_data")
+        or hasattr(paper_content_parts[0], "file_uri")
+      )
     )
 
     # Check if we got file-based content (not text fallback)
@@ -680,9 +684,7 @@ class ChatService(BaseGoogleAIService):
     result = await db_session.execute(query)
     return list(result.scalars().all())
 
-  async def get_thread_count(
-    self, db_session: AsyncSession, message_id: int
-  ) -> int:
+  async def get_thread_count(self, db_session: AsyncSession, message_id: int) -> int:
     """Get the count of thread replies for a message."""
     from sqlalchemy import func
 
@@ -929,4 +931,3 @@ class ChatService(BaseGoogleAIService):
 
 
 chat_service = ChatService()
-

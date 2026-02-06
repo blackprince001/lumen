@@ -35,8 +35,12 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(["cited_paper_id"], ["papers.id"], ondelete="CASCADE"),
     sa.PrimaryKeyConstraint("id"),
   )
-  op.create_index(op.f("ix_paper_citations_id"), "paper_citations", ["id"], unique=False)
-  op.create_index(op.f("ix_paper_citations_paper_id"), "paper_citations", ["paper_id"], unique=False)
+  op.create_index(
+    op.f("ix_paper_citations_id"), "paper_citations", ["id"], unique=False
+  )
+  op.create_index(
+    op.f("ix_paper_citations_paper_id"), "paper_citations", ["paper_id"], unique=False
+  )
 
 
 def downgrade() -> None:
@@ -44,4 +48,3 @@ def downgrade() -> None:
   op.drop_index(op.f("ix_paper_citations_paper_id"), table_name="paper_citations")
   op.drop_index(op.f("ix_paper_citations_id"), table_name="paper_citations")
   op.drop_table("paper_citations")
-

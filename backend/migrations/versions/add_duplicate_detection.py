@@ -22,7 +22,9 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
   """Upgrade schema."""
   # Add duplicate tracking fields to papers table
-  op.add_column("papers", sa.Column("merged_from_paper_id", sa.Integer(), nullable=True))
+  op.add_column(
+    "papers", sa.Column("merged_from_paper_id", sa.Integer(), nullable=True)
+  )
   op.add_column("papers", sa.Column("is_duplicate_of", sa.Integer(), nullable=True))
   op.create_foreign_key(
     "fk_papers_merged_from", "papers", "papers", ["merged_from_paper_id"], ["id"]
@@ -46,15 +48,21 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(["duplicate_paper_id"], ["papers.id"], ondelete="CASCADE"),
     sa.PrimaryKeyConstraint("id"),
   )
-  op.create_index(op.f("ix_duplicate_detection_log_id"), "duplicate_detection_log", ["id"], unique=False)
+  op.create_index(
+    op.f("ix_duplicate_detection_log_id"),
+    "duplicate_detection_log",
+    ["id"],
+    unique=False,
+  )
 
 
 def downgrade() -> None:
   """Downgrade schema."""
-  op.drop_index(op.f("ix_duplicate_detection_log_id"), table_name="duplicate_detection_log")
+  op.drop_index(
+    op.f("ix_duplicate_detection_log_id"), table_name="duplicate_detection_log"
+  )
   op.drop_table("duplicate_detection_log")
   op.drop_constraint("fk_papers_is_duplicate", "papers", type_="foreignkey")
   op.drop_constraint("fk_papers_merged_from", "papers", type_="foreignkey")
   op.drop_column("papers", "is_duplicate_of")
   op.drop_column("papers", "merged_from_paper_id")
-

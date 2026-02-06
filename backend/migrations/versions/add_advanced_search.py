@@ -41,13 +41,13 @@ def upgrade() -> None:
     CREATE INDEX IF NOT EXISTS papers_content_text_fts_idx 
     ON papers USING GIN (to_tsvector('english', COALESCE(content_text, '')));
   """)
-  
+
   # For papers.title
   op.execute("""
     CREATE INDEX IF NOT EXISTS papers_title_fts_idx 
     ON papers USING GIN (to_tsvector('english', COALESCE(title, '')));
   """)
-  
+
   # For annotations.content
   op.execute("""
     CREATE INDEX IF NOT EXISTS annotations_content_fts_idx 
@@ -62,4 +62,3 @@ def downgrade() -> None:
   op.drop_index("papers_content_text_fts_idx", table_name="papers")
   op.drop_index(op.f("ix_saved_searches_id"), table_name="saved_searches")
   op.drop_table("saved_searches")
-

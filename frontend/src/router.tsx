@@ -12,6 +12,7 @@ import ExportPapers from './pages/ExportPapers';
 import Discovery from './pages/Discovery';
 import Recommendations from './pages/Recommendations';
 import DiscoveryArchive from './pages/DiscoveryArchive';
+import HuggingFacePapers from './pages/HuggingFacePapers';
 import Layout from './components/Layout';
 
 import ErrorPage from './pages/ErrorPage';
@@ -73,6 +74,10 @@ export const router = createBrowserRouter([
       {
         path: 'discovery-archive',
         element: <DiscoveryArchive />,
+      },
+      {
+        path: 'huggingface-papers',
+        element: <HuggingFacePapers />,
       },
     ],
   },

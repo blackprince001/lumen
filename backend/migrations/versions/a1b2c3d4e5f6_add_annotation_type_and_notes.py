@@ -43,12 +43,3 @@ def downgrade() -> None:
   op.drop_column("annotations", "selection_data")
   op.drop_column("annotations", "highlighted_text")
   op.drop_column("annotations", "type")
-
-
-
-
-
-
-
-
-
