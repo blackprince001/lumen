@@ -39,11 +39,15 @@ def get_task_status(task_id: str) -> TaskStatus:
 
   status = TaskStatus(
     task_id=task_id,
-    state=TaskState(result.state) if result.state in TaskState.__members__ else TaskState.PENDING,
+    state=TaskState(result.state)
+    if result.state in TaskState.__members__
+    else TaskState.PENDING,
   )
 
   if result.state == "SUCCESS":
-    status.result = result.result if isinstance(result.result, dict) else {"value": result.result}
+    status.result = (
+      result.result if isinstance(result.result, dict) else {"value": result.result}
+    )
     status.progress = 1.0
   elif result.state == "FAILURE":
     status.error = str(result.result) if result.result else "Unknown error"

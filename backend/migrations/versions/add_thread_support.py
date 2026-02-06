@@ -20,34 +20,34 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    """Add parent_message_id column for thread support."""
-    # Add nullable parent_message_id column for thread replies
-    op.add_column(
-        "chat_messages",
-        sa.Column("parent_message_id", sa.Integer(), nullable=True),
-    )
+  """Add parent_message_id column for thread support."""
+  # Add nullable parent_message_id column for thread replies
+  op.add_column(
+    "chat_messages",
+    sa.Column("parent_message_id", sa.Integer(), nullable=True),
+  )
 
-    # Create foreign key constraint with cascade delete
-    op.create_foreign_key(
-        "fk_chat_messages_parent",
-        "chat_messages",
-        "chat_messages",
-        ["parent_message_id"],
-        ["id"],
-        ondelete="CASCADE",
-    )
+  # Create foreign key constraint with cascade delete
+  op.create_foreign_key(
+    "fk_chat_messages_parent",
+    "chat_messages",
+    "chat_messages",
+    ["parent_message_id"],
+    ["id"],
+    ondelete="CASCADE",
+  )
 
-    # Create index for efficient thread queries
-    op.create_index(
-        "ix_chat_messages_parent_message_id",
-        "chat_messages",
-        ["parent_message_id"],
-        unique=False,
-    )
+  # Create index for efficient thread queries
+  op.create_index(
+    "ix_chat_messages_parent_message_id",
+    "chat_messages",
+    ["parent_message_id"],
+    unique=False,
+  )
 
 
 def downgrade() -> None:
-    """Remove thread support."""
-    op.drop_index("ix_chat_messages_parent_message_id", table_name="chat_messages")
-    op.drop_constraint("fk_chat_messages_parent", "chat_messages", type_="foreignkey")
-    op.drop_column("chat_messages", "parent_message_id")
+  """Remove thread support."""
+  op.drop_index("ix_chat_messages_parent_message_id", table_name="chat_messages")
+  op.drop_constraint("fk_chat_messages_parent", "chat_messages", type_="foreignkey")
+  op.drop_column("chat_messages", "parent_message_id")

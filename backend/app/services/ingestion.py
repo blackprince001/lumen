@@ -23,6 +23,7 @@ class DuplicatePaperError(Exception):
     super().__init__(message)
     self.existing_paper = existing_paper
 
+
 logger = get_logger(__name__)
 
 DOI_PATTERN = r"10\.\d+/[^\s/]+"

@@ -1,5 +1,6 @@
 from typing import Any
 
+
 def sanitize_text(text: str) -> str:
   if not text:
     return text
