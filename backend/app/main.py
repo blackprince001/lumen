@@ -12,10 +12,7 @@ from app.api.discovery import router as discovery_router
 from app.api.duplicates import router as duplicates_router
 from app.api.export import router as export_router
 from app.api.groups import router as groups_router
-<<<<<<< HEAD
-=======
 from app.api.huggingface import router as huggingface_router
->>>>>>> d912c5124d3b304956b4fa80163fed322ac87556
 from app.api.ingest import router as ingest_router
 from app.api.papers import router as papers_router
 from app.api.relationships import router as relationships_router
