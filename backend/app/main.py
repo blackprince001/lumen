@@ -1,0 +1,106 @@
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
+from app.api.ai_features import router as ai_features_router
+from app.api.annotations import router as annotations_router
+from app.api.chat import router as chat_router
+from app.api.discovery import router as discovery_router
+from app.api.duplicates import router as duplicates_router
+from app.api.export import router as export_router
+from app.api.groups import router as groups_router
+from app.api.ingest import router as ingest_router
+from app.api.papers import router as papers_router
+from app.api.relationships import router as relationships_router
+from app.api.search import router as search_router
+from app.api.statistics import router as statistics_router
+from app.api.tags import router as tags_router
+from app.api.tasks import router as tasks_router
+from app.core.config import settings
+from app.core.database import init_db
+from app.core.logger import configure_logging, get_logger
+
+configure_logging(is_debug=settings.DEBUG)
+logger = get_logger(__name__)
+
+storage_path = Path(settings.STORAGE_PATH)
+storage_path.mkdir(parents=True, exist_ok=True)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+  await init_db()
+  yield
+
+
+app = FastAPI(title="Nexus Research Engine", version="1.0.0", lifespan=lifespan)
+
+app.add_middleware(
+  CORSMiddleware,  # type: ignore[arg-type]
+  allow_origins=["*"],
+  allow_credentials=True,
+  allow_methods=["*"],
+  allow_headers=["*"],
+)
+app.include_router(ingest_router, prefix="/api/v1", tags=["ingest"])
+app.include_router(relationships_router, prefix="/api/v1", tags=["relationships"])
+app.include_router(papers_router, prefix="/api/v1", tags=["papers"])
+app.include_router(annotations_router, prefix="/api/v1", tags=["annotations"])
+app.include_router(groups_router, prefix="/api/v1", tags=["groups"])
+app.include_router(search_router, prefix="/api/v1", tags=["search"])
+app.include_router(chat_router, prefix="/api/v1", tags=["chat"])
+app.include_router(tags_router, prefix="/api/v1", tags=["tags"])
+app.include_router(statistics_router, prefix="/api/v1", tags=["statistics"])
+app.include_router(export_router, prefix="/api/v1", tags=["export"])
+app.include_router(duplicates_router, prefix="/api/v1", tags=["duplicates"])
+app.include_router(ai_features_router, prefix="/api/v1", tags=["ai-features"])
+app.include_router(discovery_router, prefix="/api/v1/discovery", tags=["discovery"])
+app.include_router(tasks_router, prefix="/api/v1/tasks", tags=["tasks"])
+
+app.mount("/storage", StaticFiles(directory=str(storage_path)), name="storage")
+
+
+@app.get("/")
+def read_root():
+  return {"message": "Welcome to Nexus API", "version": "1.0.0"}
+
+
+@app.get("/health")
+async def health_check():
+  """Health check including Redis and Celery status."""
+  import redis
+
+  health = {"status": "healthy", "components": {"celery": "", "redis": ""}}
+
+  # Check Redis
+  try:
+    r = redis.Redis(
+      host=settings.REDIS_HOST,
+      port=settings.REDIS_PORT,
+      db=settings.REDIS_DB,
+    )
+    r.ping()
+    health["components"]["redis"] = "healthy"
+  except Exception as e:
+    health["components"]["redis"] = f"unhealthy: {str(e)}"
+    health["status"] = "degraded"
+
+  # Check Celery workers
+  try:
+    from app.celery_app import celery_app
+
+    inspector = celery_app.control.inspect()
+    stats = inspector.stats()
+    if stats:
+      health["components"]["celery"] = f"healthy ({len(stats)} workers)"
+    else:
+      health["components"]["celery"] = "no workers available"
+      health["status"] = "degraded"
+  except Exception as e:
+    health["components"]["celery"] = f"unhealthy: {str(e)}"
+    health["status"] = "degraded"
+
+  return health

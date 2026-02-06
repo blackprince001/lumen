@@ -1,0 +1,175 @@
+services:
+  traefik:
+    image: traefik:v2.11
+    command:
+      - --api.insecure=false
+      - --api.dashboard=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.file.directory=/etc/traefik/
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.forwardedHeaders.insecure=true
+    volumes:
+      - ./letsencrypt:/letsencrypt
+      - ./middlewares.yml:/etc/traefik/middlewares.yml
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - app-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.maurc.org`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.traefik-dashboard.service=api@internal"
+      - "traefik.http.routers.traefik-dashboard.entrypoints=web"
+    restart: unless-stopped
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: nexus-cloudflared
+    restart: always
+    user: "0:0"
+    command: tunnel run douglas-tunnel
+    volumes:
+      - ../tunnel/tunnelling/config.yml:/etc/cloudflared/config.yml:ro
+      - ../tunnel/tunnelling/.cloudflared/c4998085-3e30-4fb6-9ee9-b3305c3543ae.json:/etc/cloudflared/creds.json:ro
+    networks:
+      - app-network
+      - nexus-shared
+    depends_on:
+      - traefik
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nexus-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nexus
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    labels:
+      - traefik.enable=false
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    labels:
+      - traefik.enable=false
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nexus-backend
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=nexus
+      - DB_PORT=5432
+      - PORT=8000
+      - STORAGE_PATH=/app/storage/papers
+      - DEBUG=false
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - SERPAPI_KEY=${SERPAPI_KEY:-}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      - ./backend/storage:/app/storage
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nexus-backend.rule=Host(`api.maurc.org`)
+      - traefik.http.routers.nexus-backend.entrypoints=web
+      - traefik.http.routers.nexus-backend.service=nexus-backend-service
+    #   - traefik.http.routers.nexus-backend.middlewares=security-headers@file
+      - traefik.http.services.nexus-backend-service.loadbalancer.server.port=8000
+    restart: unless-stopped
+
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: uv run celery -A app.celery_app worker -l info -Q ai,processing,dead_letter -c 2
+    deploy:
+        replicas: 3
+    environment:
+      - DB_HOST=postgres
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - DB_NAME=nexus
+      - DB_PORT=5432
+      - STORAGE_PATH=/app/storage/papers
+      - DEBUG=false
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - SERPAPI_KEY=${SERPAPI_KEY:-}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+    volumes:
+      - ./backend/storage:/app/storage
+    labels:
+      - traefik.enable=false
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=https://api.maurc.org/api/v1
+    container_name: nexus-frontend
+    depends_on:
+      - backend
+    networks:
+      - app-network
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.nexus-frontend.rule=Host(`papers.maurc.org`)
+      - traefik.http.routers.nexus-frontend.entrypoints=web
+      - traefik.http.services.nexus-frontend-service.loadbalancer.server.port=4173
+    restart: unless-stopped
+
+networks:
+  app-network:
+    name: papers_network
+    driver: bridge
+  nexus-shared:
+    external: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  letsencrypt:
