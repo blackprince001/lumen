@@ -68,7 +68,8 @@ export function useAISearchStream() {
 
   const search = useCallback(async (request: AISearchRequest) => {
     // Cancel any existing search
-    if (abortControllerRef.current) {
+    if (abortControllerRef.current)
+    {
       abortControllerRef.current.abort();
     }
 
@@ -81,7 +82,8 @@ export function useAISearchStream() {
     const abortController = new AbortController();
     abortControllerRef.current = abortController;
 
-    try {
+    try
+    {
       const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
       const response = await fetch(`${API_BASE_URL}/discovery/ai-search/stream`, {
         method: 'POST',
@@ -90,7 +92,7 @@ export function useAISearchStream() {
         },
         body: JSON.stringify({
           query: request.query,
-          sources: request.sources || ['arxiv', 'semantic_scholar'],
+          sources: request.sources || ['arxiv', 'semantic_scholar', 'google_scholar'],
           filters: request.filters,
           limit: request.limit || 20,
           include_overview: request.include_overview ?? true,
@@ -100,12 +102,14 @@ export function useAISearchStream() {
         signal: abortController.signal,
       });
 
-      if (!response.ok) {
+      if (!response.ok)
+      {
         const error = await response.json().catch(() => ({ detail: 'Search failed' }));
         throw new Error(error.detail || `HTTP ${response.status}`);
       }
 
-      if (!response.body) {
+      if (!response.body)
+      {
         throw new Error('No response body');
       }
 
@@ -113,10 +117,12 @@ export function useAISearchStream() {
       const decoder = new TextDecoder();
       let buffer = '';
 
-      while (true) {
+      while (true)
+      {
         const { done, value } = await reader.read();
 
-        if (done) {
+        if (done)
+        {
           break;
         }
 
@@ -129,17 +135,23 @@ export function useAISearchStream() {
         let eventType = '';
         let eventData = '';
 
-        for (const line of lines) {
-          if (line.startsWith('event: ')) {
+        for (const line of lines)
+        {
+          if (line.startsWith('event: '))
+          {
             eventType = line.slice(7).trim();
-          } else if (line.startsWith('data: ')) {
+          } else if (line.startsWith('data: '))
+          {
             eventData = line.slice(6);
-          } else if (line === '' && eventType && eventData) {
+          } else if (line === '' && eventType && eventData)
+          {
             // End of event, process it
-            try {
+            try
+            {
               const data = JSON.parse(eventData);
               handleEvent(eventType, data, setState);
-            } catch (e) {
+            } catch (e)
+            {
               console.error('Failed to parse SSE event:', e);
             }
             eventType = '';
@@ -147,8 +159,10 @@ export function useAISearchStream() {
           }
         }
       }
-    } catch (error) {
-      if ((error as Error).name === 'AbortError') {
+    } catch (error)
+    {
+      if ((error as Error).name === 'AbortError')
+      {
         // Search was cancelled, ignore
         return;
       }
@@ -162,7 +176,8 @@ export function useAISearchStream() {
   }, []);
 
   const cancel = useCallback(() => {
-    if (abortControllerRef.current) {
+    if (abortControllerRef.current)
+    {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
@@ -190,7 +205,8 @@ function handleEvent(
   data: Record<string, unknown>,
   setState: React.Dispatch<React.SetStateAction<AISearchStreamState>>
 ) {
-  switch (eventType) {
+  switch (eventType)
+  {
     case 'status':
       setState((prev) => ({
         ...prev,
