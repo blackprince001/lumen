@@ -12,7 +12,7 @@ import { SavedDiscoveriesPanel, type LoadedSession } from '@/components/discover
 
 export default function Discovery() {
   const [query, setQuery] = useState('');
-  const [selectedSources, setSelectedSources] = useState<string[]>(['arxiv', 'semantic_scholar']);
+  const [selectedSources, setSelectedSources] = useState<string[]>(['arxiv', 'semantic_scholar', 'google_scholar']);
   const [showFilters, setShowFilters] = useState(false);
   const [yearFrom, setYearFrom] = useState<number | undefined>();
   const [yearTo, setYearTo] = useState<number | undefined>();
@@ -471,6 +471,7 @@ export default function Discovery() {
                 <div className="flex flex-wrap justify-center gap-2 text-sm">
                   <span className="px-3 py-1 bg-red-50 text-red-700 rounded">arXiv</span>
                   <span className="px-3 py-1 bg-blue-50 text-white rounded">Semantic Scholar</span>
+                  <span className="px-3 py-1 bg-amber-50 text-amber-700 rounded">Google Scholar</span>
                   <span className="text-green-28 self-center">and more...</span>
                 </div>
               </div>

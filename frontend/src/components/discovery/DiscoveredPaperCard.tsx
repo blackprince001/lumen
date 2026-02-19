@@ -12,6 +12,7 @@ interface DiscoveredPaperCardProps {
 const SOURCE_BADGES: Record<string, { label: string; color: string }> = {
   arxiv: { label: 'arXiv', color: 'bg-red-100 text-red-800 border-red-200' },
   semantic_scholar: { label: 'S2', color: 'bg-blue-100 text-blue-800 border-blue-200' },
+  google_scholar: { label: 'GScholar', color: 'bg-amber-100 text-amber-800 border-amber-200' },
   pubmed: { label: 'PubMed', color: 'bg-green-100 text-green-800 border-green-200' },
   crossref: { label: 'Crossref', color: 'bg-purple-100 text-purple-800 border-purple-200' },
   openalex: { label: 'OpenAlex', color: 'bg-orange-100 text-orange-800 border-orange-200' },
@@ -71,10 +72,9 @@ export function DiscoveredPaperCard({
               disabled={isAdded}
               className={`
                 flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-sm transition-all duration-200
-                ${
-                  isAdded
-                    ? 'bg-green-100 text-green-800 border border-green-200 cursor-default'
-                    : 'bg-green-4 text-green-38 border border-green-6 hover:bg-green-6'
+                ${isAdded
+                  ? 'bg-green-100 text-green-800 border border-green-200 cursor-default'
+                  : 'bg-green-4 text-green-38 border border-green-6 hover:bg-green-6'
                 }
               `}
               title={isAdded ? 'Added to library' : 'Add to library'}
