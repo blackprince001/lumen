@@ -141,9 +141,9 @@ async def list_papers_endpoint(
   }.get(sort_by, Paper.created_at)
 
   if sort_order == "asc":
-    query = query.order_by(sort_column.asc())
+    query = query.order_by(sort_column.asc(), Paper.id.desc())
   else:
-    query = query.order_by(sort_column.desc().nulls_last())
+    query = query.order_by(sort_column.desc().nulls_last(), Paper.id.desc())
 
   # Paginate
   offset = (page - 1) * page_size

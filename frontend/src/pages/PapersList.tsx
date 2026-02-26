@@ -66,6 +66,7 @@ export default function PapersList() {
     queryFn: () => papersApi.list(page, pageSize, searchQuery || undefined, filters),
     retry: 2,
     retryDelay: 1000,
+    placeholderData: (previousData) => previousData,
   });
 
   const { data: recentPapersData } = useQuery({

@@ -113,11 +113,11 @@ export function PaperTable({ papers, onSort, onDelete, inSelectionMode, selected
                     </div>
                   )}
                   {inSelectionMode ? (
-                    <span className="truncate">{paper.title}</span>
+                    <span className="truncate block w-full">{paper.title}</span>
                   ) : (
                     <Link
                       to={`/papers/${paper.id}`}
-                      className="text-green-38 hover:text-blue-43 hover:underline truncate"
+                      className="text-green-38 hover:text-blue-43 hover:underline truncate block w-full"
                       onClick={(e) => e.stopPropagation()}
                     >
                       {paper.title}
