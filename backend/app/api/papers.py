@@ -64,7 +64,7 @@ async def list_papers_endpoint(
   page_size: int = Query(20, ge=1, le=100),
   search: Optional[str] = None,
   sort_by: Optional[str] = Query(
-    "date_added", pattern="^(date_added|viewed|title|authors)$"
+    "date_added", pattern="^(date_added|viewed|title|authors|last_read_at)$"
   ),
   sort_order: Optional[str] = Query("desc", pattern="^(asc|desc)$"),
   group_id: Optional[int] = None,
@@ -137,12 +137,13 @@ async def list_papers_endpoint(
     "viewed": Paper.viewed_count,
     "title": Paper.title,
     "authors": Paper.title,  # Fallback for metadata-based sort
+    "last_read_at": Paper.last_read_at,
   }.get(sort_by, Paper.created_at)
 
   if sort_order == "asc":
     query = query.order_by(sort_column.asc())
   else:
-    query = query.order_by(sort_column.desc())
+    query = query.order_by(sort_column.desc().nulls_last())
 
   # Paginate
   offset = (page - 1) * page_size

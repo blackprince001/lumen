@@ -116,6 +116,8 @@ export function useAISearchStream() {
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let eventType = '';
+      let eventData = '';
 
       while (true)
       {
@@ -132,9 +134,6 @@ export function useAISearchStream() {
         const lines = buffer.split('\n');
         buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
-        let eventType = '';
-        let eventData = '';
-
         for (const line of lines)
         {
           if (line.startsWith('event: '))
@@ -142,8 +141,8 @@ export function useAISearchStream() {
             eventType = line.slice(7).trim();
           } else if (line.startsWith('data: '))
           {
-            eventData = line.slice(6);
-          } else if (line === '' && eventType && eventData)
+            eventData += (eventData ? '\n' : '') + line.slice(6);
+          } else if (line.trim() === '' && eventType && eventData)
           {
             // End of event, process it
             try

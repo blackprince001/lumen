@@ -68,6 +68,16 @@ export default function PapersList() {
     retryDelay: 1000,
   });
 
+  const { data: recentPapersData } = useQuery({
+    queryKey: ['papers', 'recent'],
+    queryFn: () => papersApi.list(1, 5, undefined, { sort_by: 'last_read_at', sort_order: 'desc' }),
+    retry: 1,
+  });
+
+  const recentPapers = useMemo(() => {
+    return (recentPapersData?.papers || []).filter(p => p.last_read_at);
+  }, [recentPapersData?.papers]);
+
   const regenerateMetadataMutation = useMutation({
     mutationFn: (paperIds: number[]) => papersApi.regenerateMetadataBulk(paperIds),
     onSuccess: () => {
@@ -163,34 +173,7 @@ export default function PapersList() {
     paginationItemsToDisplay: 5,
   });
 
-  // Sort papers: in_progress first, then by last_read_at (most recent first)
-  const sortedPapers = useMemo(() => {
-    if (!data?.papers) return [];
-
-    const statusPriority: Record<string, number> = {
-      'in_progress': 0,
-      'not_started': 1,
-      'read': 2,
-      'archived': 3,
-    };
-
-    return [...data.papers].sort((a, b) => {
-      // First, sort by reading status (in_progress first)
-      const statusA = a.reading_status || 'not_started';
-      const statusB = b.reading_status || 'not_started';
-      const priorityDiff = (statusPriority[statusA] ?? 99) - (statusPriority[statusB] ?? 99);
-
-      if (priorityDiff !== 0) return priorityDiff;
-
-      // Then by last_read_at (most recent first)
-      const dateA = a.last_read_at ? new Date(a.last_read_at).getTime() : 0;
-      const dateB = b.last_read_at ? new Date(b.last_read_at).getTime() : 0;
-      if (dateA !== dateB) return dateB - dateA;
-
-      // Finally by date_added (newest first)
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-  }, [data?.papers]);
+  const sortedPapers = data?.papers || [];
 
   if (isLoading)
   {
@@ -250,6 +233,40 @@ export default function PapersList() {
             </Button>
           </div>
         </div>
+
+        {page === 1 && !searchQuery && recentPapers.length > 0 && (
+          <div className="mb-8 sm:mb-10">
+            <h2 className="text-xl font-medium mb-4 text-anara-light-text flex items-center gap-2">
+              Continue Reading
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+              {recentPapers.map((paper, index) => (
+                <div
+                  key={`recent-${paper.id}`}
+                  onClick={() => {
+                    if (isSelectionMode)
+                    {
+                      if (selectedPaperIds.includes(paper.id))
+                      {
+                        setSelectedPaperIds(selectedPaperIds.filter(id => id !== paper.id));
+                      } else
+                      {
+                        setSelectedPaperIds([...selectedPaperIds, paper.id]);
+                      }
+                    } else
+                    {
+                      navigate(`/papers/${paper.id}`);
+                    }
+                  }}
+                  className={`cursor-pointer ${selectedPaperIds.includes(paper.id) ? 'ring-2 ring-blue-500 rounded-lg' : ''}`}
+                >
+                  <PaperCard paper={paper} onDelete={handleDeletePaper} index={index} />
+                </div>
+              ))}
+            </div>
+            <div className="h-px bg-green-6 w-full mt-8"></div>
+          </div>
+        )}
 
         <div className="mb-4">
           <SortFilterBar

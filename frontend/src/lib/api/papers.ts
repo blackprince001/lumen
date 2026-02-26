@@ -112,7 +112,7 @@ export interface Citation {
 }
 
 export interface PaperListFilters {
-  sort_by?: 'date_added' | 'viewed' | 'title' | 'authors';
+  sort_by?: 'date_added' | 'viewed' | 'title' | 'authors' | 'last_read_at';
   sort_order?: 'asc' | 'desc';
   group_id?: number;
   tag_id?: number;
