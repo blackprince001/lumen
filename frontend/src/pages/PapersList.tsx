@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { SearchInput } from '@/components/SearchInput';
 import { ChevronLeftIcon, ChevronRightIcon, RefreshCw } from 'lucide-react';
@@ -56,17 +56,17 @@ export default function PapersList() {
   });
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
 
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
     setPage(1); // Reset to first page when search changes
-  };
+  }, []);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['papers', page, pageSize, searchQuery, filters],
     queryFn: () => papersApi.list(page, pageSize, searchQuery || undefined, filters),
     retry: 2,
     retryDelay: 1000,
-    placeholderData: (previousData) => previousData,
+    placeholderData: keepPreviousData,
   });
 
   const { data: recentPapersData } = useQuery({
