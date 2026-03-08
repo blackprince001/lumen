@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Folder } from 'lucide-react';
+import { Folder, MessageSquare } from 'lucide-react';
 import { groupsApi } from '@/lib/api/groups';
 import { format } from 'date-fns';
 import { PaperTable } from '@/components/PaperTable';
@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/Button';
 import { PaperMultiSelect } from '@/components/PaperMultiSelect';
+import { GroupChatSidebar } from '@/components/GroupChatSidebar';
 
 export default function GroupDetail() {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,8 @@ export default function GroupDetail() {
   const [renameGroupName, setRenameGroupName] = useState('');
   const [selectedPaperIds, setSelectedPaperIds] = useState<number[]>([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatPaperIds, setChatPaperIds] = useState<number[] | undefined>(undefined);
   const queryClient = useQueryClient();
 
   // Fetch the specific group
@@ -143,13 +146,29 @@ export default function GroupDetail() {
                 {displayGroup.name}
               </h1>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRenameClick}
-            >
-              Rename
-            </Button>
+            <div className="flex items-center gap-2">
+              {displayGroup.papers && displayGroup.papers.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setChatPaperIds(undefined);
+                    setIsChatOpen(true);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <MessageSquare size={14} />
+                  Chat with Group
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRenameClick}
+              >
+                Rename
+              </Button>
+            </div>
           </div>
           <p className="text-sm text-anara-light-text-muted">
             Created {format(new Date(displayGroup.created_at), 'MMMM d, yyyy')}
@@ -203,20 +222,34 @@ export default function GroupDetail() {
                   }}
                 />
                 {selectedPaperIds.length > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex items-center gap-2"
-                    onClick={() => navigate('/export', {
-                      state: {
-                        paperIds: selectedPaperIds,
-                        returnPath: `/groups/${groupId}`,
-                        context: 'Groups'
-                      }
-                    })}
-                  >
-                    Export {selectedPaperIds.length}
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={() => {
+                        setChatPaperIds(selectedPaperIds);
+                        setIsChatOpen(true);
+                      }}
+                    >
+                      <MessageSquare size={14} />
+                      Chat with {selectedPaperIds.length}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex items-center gap-2"
+                      onClick={() => navigate('/export', {
+                        state: {
+                          paperIds: selectedPaperIds,
+                          returnPath: `/groups/${groupId}`,
+                          context: 'Groups'
+                        }
+                      })}
+                    >
+                      Export {selectedPaperIds.length}
+                    </Button>
+                  </>
                 )}
                 {selectedPaperIds.length === 0 && (
                   <Button
@@ -317,7 +350,16 @@ export default function GroupDetail() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Group Chat Sidebar */}
+      {isChatOpen && (
+        <GroupChatSidebar
+          groupId={chatPaperIds ? undefined : groupId}
+          paperIds={chatPaperIds || displayGroup.papers?.map(p => p.id)}
+          groupName={chatPaperIds ? `${chatPaperIds.length} Selected Papers` : displayGroup.name}
+          onClose={() => setIsChatOpen(false)}
+        />
+      )}
     </div>
   );
 }
-

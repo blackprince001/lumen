@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { chatApi, type ChatMessage, type ChatSession, type ChatReferences } from '@/lib/api/chat';
+import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { MentionAutocomplete, type MentionItem } from './MentionAutocomplete';
 import { MarkdownMessage } from './MarkdownMessage';
 import { Button } from './Button';
@@ -20,7 +21,22 @@ interface ChatPanelProps {
 }
 
 export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
-  const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+  // Session management — single source of truth
+  const {
+    sessions,
+    currentSessionId,
+    currentSession,
+    messages,
+    isLoading: sessionsLoadingAll,
+    sessionsLoading,
+    setCurrentSessionId,
+    switchSession,
+    createSession: createSessionAsync,
+    deleteSession: deleteSessionAsync,
+    renameSession: renameSessionAsync,
+    clearSessionMessages: clearSessionMessagesAsync,
+  } = useChatSessions({ paperId });
+
   const [message, setMessage] = useState('');
   const [references, setReferences] = useState<ChatReferences>({ notes: [], annotations: [], papers: [] });
   const [streamingContent, setStreamingContent] = useState('');
@@ -33,6 +49,10 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
   const [pendingUserMessage, setPendingUserMessage] = useState<{ content: string; references: ChatReferences } | null>(null);
   const [expandedThreadId, setExpandedThreadId] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+  const [isDeletingSession, setIsDeletingSession] = useState(false);
+  const [isRenamingSession, setIsRenamingSession] = useState(false);
+  const [isClearingMessages, setIsClearingMessages] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { confirm, dialog: confirmDialog } = useConfirmDialog();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -44,37 +64,6 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
   const streamingSessionIdRef = useRef<number | null>(null);
   // Interval ref for smooth streaming display
   const displayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  // Fetch all sessions for this paper
-  const { data: sessions = [], isLoading: sessionsLoading } = useQuery({
-    queryKey: ['chat', 'sessions', paperId],
-    queryFn: () => chatApi.getSessions(paperId),
-    retry: false,
-  });
-
-  // Fetch latest session (only if exists, doesn't create)
-  const { data: latestSession, isLoading: initialLoading } = useQuery({
-    queryKey: ['chat', 'latest', paperId],
-    queryFn: () => chatApi.getHistory(paperId),
-    retry: false,
-    enabled: currentSessionId === null,
-  });
-
-  // Effect to set initial session ID from latest session or first available session
-  useEffect(() => {
-    if (currentSessionId !== null) return; // Don't override if already set
-
-    if (latestSession)
-    {
-      // If we have a latest session, use it
-      setCurrentSessionId(latestSession.id);
-    } else if (!initialLoading && sessions.length > 0)
-    {
-      // If no latest session but we have sessions, use the first one (most recent)
-      setCurrentSessionId(sessions[0].id);
-    }
-    // If no sessions exist, currentSessionId stays null and we show default prompts
-  }, [latestSession, currentSessionId, initialLoading, sessions]);
 
   // Effect to reset transient state when session changes
   // BUT only if we're not actively streaming (to handle new session creation during first message)
@@ -96,63 +85,7 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
     setIsStreaming(false);
   }, [currentSessionId]);
 
-  // Fetch specific session history
-  const { data: currentSession, isLoading: sessionLoading } = useQuery({
-    queryKey: ['chat', 'session', currentSessionId],
-    queryFn: () => chatApi.getSession(currentSessionId!),
-    enabled: currentSessionId !== null,
-    retry: false,
-  });
-
-  // Create session mutation
-  const createSessionMutation = useMutation({
-    mutationFn: (name?: string) => chatApi.createSession(paperId, name || 'New Session'),
-    onSuccess: (newSession) => {
-      queryClient.invalidateQueries({ queryKey: ['chat', 'sessions', paperId] });
-      queryClient.invalidateQueries({ queryKey: ['chat', 'latest', paperId] });
-      setCurrentSessionId(newSession.id);
-    },
-  });
-
-  // Delete session mutation
-  const deleteSessionMutation = useMutation({
-    mutationFn: (sessionId: number) => chatApi.deleteSession(sessionId),
-    onSuccess: (_, deletedSessionId) => {
-      queryClient.invalidateQueries({ queryKey: ['chat', 'sessions', paperId] });
-      queryClient.invalidateQueries({ queryKey: ['chat', 'session', deletedSessionId] });
-      queryClient.invalidateQueries({ queryKey: ['chat', 'latest', paperId] });
-
-      // If we deleted the current session, switch to another one or clear
-      if (currentSessionId === deletedSessionId)
-      {
-        // Get updated sessions list
-        queryClient.invalidateQueries({ queryKey: ['chat', 'sessions', paperId] });
-        // Reset to get latest session
-        setCurrentSessionId(null);
-      }
-    },
-  });
-
-  // Rename session mutation
-  const renameSessionMutation = useMutation({
-    mutationFn: ({ id, name }: { id: number, name: string }) => chatApi.updateSession(id, name),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chat', 'sessions', paperId] });
-      queryClient.invalidateQueries({ queryKey: ['chat', 'session', currentSessionId] });
-    },
-  });
-
-  // Clear session messages mutation
-  const clearMessagesMutation = useMutation({
-    mutationFn: (sessionId: number) => chatApi.clearSessionMessages(sessionId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chat', 'session', currentSessionId] });
-      queryClient.invalidateQueries({ queryKey: ['chat', 'latest', paperId] });
-    },
-  });
-
   // Auto-scroll to bottom when new messages arrive or streaming content updates
-  const messages = currentSession?.messages || latestSession?.messages || [];
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, displayContent, pendingUserMessage]);
@@ -529,7 +462,8 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
     const newName = window.prompt('Rename session:', currentName);
     if (newName !== null && newName !== currentName && newName.trim() !== "")
     {
-      renameSessionMutation.mutate({ id, name: newName });
+      setIsRenamingSession(true);
+      renameSessionAsync(id, newName).finally(() => setIsRenamingSession(false));
     }
   };
 
@@ -540,12 +474,13 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
         'Clear Messages',
         'Clear all messages from this session? This action cannot be undone.',
         () => {
-          clearMessagesMutation.mutate(currentSessionId);
+          setIsClearingMessages(true);
+          clearSessionMessagesAsync(currentSessionId).finally(() => setIsClearingMessages(false));
         },
         { variant: 'default', confirmLabel: 'Clear' }
       );
     }
-  }, [currentSessionId, confirm, clearMessagesMutation]);
+  }, [currentSessionId, confirm, clearSessionMessagesAsync]);
 
   return (
     <div
@@ -580,11 +515,8 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
                     setStreamingContent('');
                     setDisplayContent('');
                     setIsStreaming(false);
-                    // Invalidate queries first to ensure fresh data
-                    queryClient.invalidateQueries({ queryKey: ['chat', 'session', id] });
-                    queryClient.invalidateQueries({ queryKey: ['chat', 'sessions', paperId] });
-                    // Then update session ID
-                    setCurrentSessionId(id);
+                    // Use switchSession which clears stale cache and ensures fresh data
+                    switchSession(id);
                   }
                 }
               }}
@@ -616,12 +548,13 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
                               'Delete Session',
                               `Delete "${s.name}"? This action cannot be undone.`,
                               () => {
-                                deleteSessionMutation.mutate(s.id);
+                                setIsDeletingSession(true);
+                                deleteSessionAsync(s.id).finally(() => setIsDeletingSession(false));
                               },
                               { variant: 'destructive', confirmLabel: 'Delete' }
                             );
                           }}
-                          disabled={deleteSessionMutation.isPending || isStreaming}
+                          disabled={isDeletingSession || isStreaming}
                           title="Delete session"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -639,13 +572,14 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
                 size="sm"
                 onClick={() => {
                   const sessionName = `Session ${sessions.length + 1}`;
-                  createSessionMutation.mutate(sessionName);
+                  setIsCreatingSession(true);
+                  createSessionAsync(sessionName).finally(() => setIsCreatingSession(false));
                 }}
-                disabled={createSessionMutation.isPending || sessionsLoading}
+                disabled={isCreatingSession || sessionsLoading}
                 className="h-7 w-7 p-0 rounded-md"
                 title="New Session"
               >
-                {createSessionMutation.isPending ? (
+                {isCreatingSession ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <Plus className="w-3.5 h-3.5" />
@@ -657,11 +591,11 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
                   variant="ghost"
                   size="sm"
                   onClick={handleClearMessages}
-                  disabled={clearMessagesMutation.isPending || isStreaming}
+                  disabled={isClearingMessages || isStreaming}
                   className="h-7 w-7 p-0 rounded-md"
                   title="Clear Messages"
                 >
-                  {clearMessagesMutation.isPending ? (
+                  {isClearingMessages ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
                     <X className="w-3.5 h-3.5" />
@@ -688,20 +622,20 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
                           handleRename(currentSessionId, session?.name || 'Session');
                         }
                       }}
-                      disabled={renameSessionMutation.isPending}
+                      disabled={isRenamingSession}
                     >
                       <Edit2 className="w-3 h-3 mr-2" />
-                      {renameSessionMutation.isPending ? 'Renaming...' : 'Rename'}
+                      {isRenamingSession ? 'Renaming...' : 'Rename'}
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="w-full justify-start text-xs h-8 px-2"
                       onClick={handleClearMessages}
-                      disabled={clearMessagesMutation.isPending || !currentSession || (currentSession?.messages?.length || 0) === 0}
+                      disabled={isClearingMessages || !currentSession || (currentSession?.messages?.length || 0) === 0}
                     >
                       <X className="w-3 h-3 mr-2" />
-                      {clearMessagesMutation.isPending ? 'Clearing...' : 'Clear Messages'}
+                      {isClearingMessages ? 'Clearing...' : 'Clear Messages'}
                     </Button>
                     <Button
                       variant="ghost"
@@ -714,16 +648,17 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
                             'Delete Session',
                             'Delete this session? This action cannot be undone.',
                             () => {
-                              deleteSessionMutation.mutate(currentSessionId);
+                              setIsDeletingSession(true);
+                              deleteSessionAsync(currentSessionId).finally(() => setIsDeletingSession(false));
                             },
                             { variant: 'destructive', confirmLabel: 'Delete' }
                           );
                         }
                       }}
-                      disabled={deleteSessionMutation.isPending}
+                      disabled={isDeletingSession}
                     >
                       <Trash2 className="w-3 h-3 mr-2" />
-                      {deleteSessionMutation.isPending ? 'Deleting...' : 'Delete'}
+                      {isDeletingSession ? 'Deleting...' : 'Delete'}
                     </Button>
                   </PopoverContent>
                 </Popover>
@@ -763,7 +698,7 @@ export function ChatPanel({ paperId, onClose }: ChatPanelProps) {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto">
           <div className="w-full p-4 space-y-4">
-            {(initialLoading || sessionLoading || sessionsLoading) ? (
+            {sessionsLoadingAll ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-5 h-5 animate-spin text-green-24" />
               </div>

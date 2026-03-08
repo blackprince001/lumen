@@ -14,6 +14,7 @@ from app.api.export import router as export_router
 from app.api.groups import router as groups_router
 from app.api.huggingface import router as huggingface_router
 from app.api.ingest import router as ingest_router
+from app.api.multi_chat import router as multi_chat_router
 from app.api.papers import router as papers_router
 from app.api.relationships import router as relationships_router
 from app.api.search import router as search_router
@@ -53,6 +54,7 @@ app.include_router(annotations_router, prefix="/api/v1", tags=["annotations"])
 app.include_router(groups_router, prefix="/api/v1", tags=["groups"])
 app.include_router(search_router, prefix="/api/v1", tags=["search"])
 app.include_router(chat_router, prefix="/api/v1", tags=["chat"])
+app.include_router(multi_chat_router, prefix="/api/v1", tags=["multi-chat"])
 app.include_router(tags_router, prefix="/api/v1", tags=["tags"])
 app.include_router(statistics_router, prefix="/api/v1", tags=["statistics"])
 app.include_router(export_router, prefix="/api/v1", tags=["export"])

@@ -4,7 +4,45 @@ This package provides reusable CRUD functions for all entities.
 """
 
 # Utilities
-from app.api.crud.utils import ensure_loaded, sanitize_metadata
+# Annotation
+from app.api.crud.annotation import (
+  create_annotation,
+  delete_annotation,
+  get_annotation_or_404,
+  list_annotations_for_paper,
+  update_annotation,
+)
+
+# Bookmark
+from app.api.crud.bookmark import (
+  create_bookmark,
+  delete_bookmark,
+  get_bookmark_or_404,
+  list_bookmarks_for_paper,
+)
+
+# ChatSession
+from app.api.crud.chat_session import (
+  delete_chat_session,
+  get_chat_session_or_404,
+  list_chat_sessions_for_paper,
+)
+
+# Group
+from app.api.crud.group import (
+  create_group,
+  delete_group,
+  get_group_or_404,
+  list_groups,
+  update_group,
+)
+
+# MultiChatSession
+from app.api.crud.multi_chat_session import (
+  delete_multi_chat_session,
+  get_multi_chat_session_or_404,
+  list_multi_chat_sessions_for_group,
+)
 
 # Paper
 from app.api.crud.paper import (
@@ -18,40 +56,6 @@ from app.api.crud.paper import (
   update_reading_status,
 )
 
-# Tag
-from app.api.crud.tag import (
-  create_tag,
-  delete_tag,
-  get_tag_or_404,
-  list_tags,
-  update_tag,
-)
-
-# Annotation
-from app.api.crud.annotation import (
-  create_annotation,
-  delete_annotation,
-  get_annotation_or_404,
-  list_annotations_for_paper,
-  update_annotation,
-)
-
-# Group
-from app.api.crud.group import (
-  create_group,
-  delete_group,
-  get_group_or_404,
-  list_groups,
-  update_group,
-)
-
-# ChatSession
-from app.api.crud.chat_session import (
-  delete_chat_session,
-  get_chat_session_or_404,
-  list_chat_sessions_for_paper,
-)
-
 # SavedSearch
 from app.api.crud.saved_search import (
   create_saved_search,
@@ -60,13 +64,15 @@ from app.api.crud.saved_search import (
   list_saved_searches,
 )
 
-# Bookmark
-from app.api.crud.bookmark import (
-  create_bookmark,
-  delete_bookmark,
-  get_bookmark_or_404,
-  list_bookmarks_for_paper,
+# Tag
+from app.api.crud.tag import (
+  create_tag,
+  delete_tag,
+  get_tag_or_404,
+  list_tags,
+  update_tag,
 )
+from app.api.crud.utils import ensure_loaded, sanitize_metadata
 
 __all__ = [
   # Utilities
@@ -103,6 +109,10 @@ __all__ = [
   "get_chat_session_or_404",
   "list_chat_sessions_for_paper",
   "delete_chat_session",
+  # MultiChatSession
+  "get_multi_chat_session_or_404",
+  "list_multi_chat_sessions_for_group",
+  "delete_multi_chat_session",
   # SavedSearch
   "get_saved_search_or_404",
   "list_saved_searches",
