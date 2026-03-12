@@ -169,29 +169,59 @@ async def ai_search_papers(
       min_citations=request.filters.min_citations,
     )
 
-  # Perform the regular search first with timeout
+  # Perform query understanding first if needed to get the boolean query
+  query_understanding_data = None
+  search_query = request.query
   try:
-    search_result = await asyncio.wait_for(
-      discovery_service.search(
-        session=session,
-        query=request.query,
-        sources=request.sources,
-        filters=filters,
-        limit=request.limit,
-        cache_results=True,
-      ),
-      timeout=45.0,  # 45 second timeout for search
-    )
-  except asyncio.TimeoutError as e:
-    raise HTTPException(
-      status_code=504,
-      detail="Search timed out. Please try again with fewer sources or a simpler query.",
-    ) from e
+    query_understanding_data = await ai_search_service.understand_query(request.query)
+    if query_understanding_data and query_understanding_data.get("boolean_query"):
+      search_query = query_understanding_data["boolean_query"]
+  except Exception as e:
+    logger.warning(f"Query understanding failed before search: {e}")
 
-  # Convert to response schema
+  # Search each source with appropriate query routing
   source_results = []
   all_papers = []
-  for src_result in search_result["results"]:
+  
+  # Search all providers in parallel with their respective queries
+  async def search_single_source(source_name: str):
+    provider_query = search_query
+    if source_name in ["arxiv", "semantic_scholar"]:
+      provider_query = request.query
+      
+    try:
+      return await asyncio.wait_for(
+        discovery_service.search_source(
+          session=session,
+          source=source_name,
+          query=provider_query,
+          filters=filters,
+          limit=request.limit,
+          cache_results=True,
+        ),
+        timeout=45.0,
+      )
+    except asyncio.TimeoutError:
+      return {
+        "source": source_name,
+        "papers": [],
+        "total_available": None,
+        "error": "Search timed out",
+      }
+    except Exception as e:
+      return {
+        "source": source_name,
+        "papers": [],
+        "total_available": None,
+        "error": str(e),
+      }
+
+  # Run searches in parallel
+  search_tasks = [search_single_source(src) for src in request.sources]
+  results = await asyncio.gather(*search_tasks)
+
+  # Convert to response schema
+  for src_result in results:
     papers = [
       DiscoveredPaperPreview(
         source=p["source"],
@@ -206,7 +236,7 @@ async def ai_search_papers(
         citation_count=p.get("citation_count"),
         relevance_score=p.get("relevance_score"),
       )
-      for p in src_result["papers"]
+      for p in src_result.get("papers", [])
     ]
     source_results.append(
       SourceSearchResult(
@@ -216,7 +246,7 @@ async def ai_search_papers(
         error=src_result.get("error"),
       )
     )
-    all_papers.extend(src_result["papers"])
+    all_papers.extend(src_result.get("papers", []))
 
   # Build ExternalPaperResult list for AI service
   from app.services.discovery.base_provider import ExternalPaperResult
@@ -418,12 +448,18 @@ async def ai_search_stream(
         )
 
         try:
+          # Use optimized boolean query for keyword engines (Google Scholar), 
+          # but fallback to natural language query for semantic/vector engines (searchthearxiv, semantic scholar)
+          provider_query = search_query
+          if source_name in ["arxiv", "semantic_scholar"]:
+            provider_query = request.query
+            
           # Search single source with timeout
           source_result = await asyncio.wait_for(
             discovery_service.search_source(
               session=session,
               source=source_name,
-              query=search_query,  # Use optimized query
+              query=provider_query,
               filters=filters,
               limit=request.limit,
             ),

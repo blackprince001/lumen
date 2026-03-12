@@ -72,9 +72,9 @@ class GoogleScholarProvider(BaseDiscoveryProvider):
       if filters.year_to:
         params["as_yhi"] = filters.year_to
       if filters.authors:
-        # Add authors to query
+        # Add authors to query without overwriting original query
         author_query = " ".join([f'author:"{a}"' for a in filters.authors])
-        params["q"] = f" {author_query}"
+        params["q"] = f"{query} {author_query}"
 
     try:
       search = GoogleSearch(params)
