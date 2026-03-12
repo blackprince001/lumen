@@ -73,13 +73,34 @@ class ArxivProvider(BaseDiscoveryProvider):
       response.raise_for_status()
 
       data = response.json()
-      results = self._parse_searchthearxiv_response(data)
+      semantic_results = self._parse_searchthearxiv_response(data)
 
       # Apply client-side filters if provided
       if filters:
-        results = self._apply_filters(results, filters)
+        semantic_results = self._apply_filters(semantic_results, filters)
 
-      return results[:limit]
+      # If limit is > 10, we might need to augment with official arXiv keyword search
+      # (since searchthearxiv only returns 10)
+      if limit > len(semantic_results):
+        additional_count = limit - len(semantic_results)
+        official_results = await self._search_official_arxiv(
+          query=query, filters=filters, limit=additional_count * 2
+        )
+
+        # Deduplicate: remove any official results that already exist in semantic results
+        seen_ids = {p.external_id for p in semantic_results}
+        augmented_results = semantic_results.copy()
+        
+        for p in official_results:
+          if p.external_id not in seen_ids:
+            augmented_results.append(p)
+            seen_ids.add(p.external_id)
+            if len(augmented_results) >= limit:
+              break
+        
+        return augmented_results
+
+      return semantic_results[:limit]
 
     except httpx.HTTPStatusError as e:
       logger.error(
@@ -87,13 +108,60 @@ class ArxivProvider(BaseDiscoveryProvider):
         status_code=e.response.status_code,
         query=truncated_query,
       )
-      return []
+      # Fallback to official search if semantic fails
+      return await self._search_official_arxiv(query=query, filters=filters, limit=limit)
     except Exception as e:
       logger.error(
         "Error searching SearchTheArxiv",
         error=str(e),
         query=truncated_query,
       )
+      # Fallback to official search if semantic fails
+      return await self._search_official_arxiv(query=query, filters=filters, limit=limit)
+
+  async def _search_official_arxiv(
+    self,
+    query: str,
+    filters: Optional[SearchFilters] = None,
+    limit: int = 20,
+  ) -> List[ExternalPaperResult]:
+    """Search official arXiv API using keyword matching.
+
+    Args:
+        query: Search query
+        filters: Optional filters
+        limit: Maximum results
+
+    Returns:
+        List of paper results
+    """
+    # Simple keyword search in all fields
+    search_query = f"all:{query}"
+    
+    params = {
+      "search_query": search_query,
+      "max_results": limit,
+    }
+
+    try:
+      client = await self._get_client()
+      response = await client.get(
+        f"{ARXIV_API_BASE}/query",
+        params=params,
+      )
+      response.raise_for_status()
+
+      results = self._parse_arxiv_xml(response.text)
+      
+      # Apply client-side filters (year, authors) if provided
+      # even though some might be in the query, we apply to ensure consistency
+      if filters:
+        results = self._apply_filters(results, filters)
+        
+      return results[:limit]
+
+    except Exception as e:
+      logger.error("Error searching official arXiv", error=str(e), query=query)
       return []
 
   def _parse_searchthearxiv_response(
