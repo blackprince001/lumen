@@ -2,6 +2,7 @@ from typing import Any
 
 import httpx
 
+from app.core.config import settings
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -147,4 +148,4 @@ class SemanticScholarService:
       return []
 
 
-semantic_scholar_service = SemanticScholarService()
+semantic_scholar_service = SemanticScholarService(api_key=settings.SEMANTIC_SCHOLAR_API_KEY)

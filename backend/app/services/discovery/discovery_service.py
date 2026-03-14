@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Tuple, cast
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.discovery import DiscoveredPaper
 from app.services.discovery.base_provider import (
@@ -485,13 +486,15 @@ class DiscoveryService:
 def init_discovery_service() -> DiscoveryService:
   """Initialize discovery service with providers."""
   from app.services.discovery.arxiv_provider import ArxivProvider
-  from app.services.discovery.semantic_scholar_provider import SemanticScholarProvider
   from app.services.discovery.google_scholar_provider import GoogleScholarProvider
+  from app.services.discovery.semantic_scholar_provider import SemanticScholarProvider
 
   # Register providers
   provider_registry.register(ArxivProvider)
-  provider_registry.register(SemanticScholarProvider)
-  provider_registry.register(GoogleScholarProvider)
+  provider_registry.register(
+    SemanticScholarProvider, api_key=settings.SEMANTIC_SCHOLAR_API_KEY
+  )
+  provider_registry.register(GoogleScholarProvider, api_key=settings.SERPAPI_KEY)
 
   return DiscoveryService()
 

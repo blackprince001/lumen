@@ -23,7 +23,14 @@ class SemanticScholarProvider(BaseDiscoveryProvider):
   supports_recommendations = True
 
   # Semantic Scholar rate limits
-  requests_per_second = 10.0  # 100 requests per 5 minutes without API key
+  # Without key: 100 requests per 5 minutes (~0.33 req/s)
+  # With key: much higher (typically 10-100 req/s)
+  requests_per_second = 0.33
+
+  def __init__(self, api_key: Optional[str] = None) -> None:
+    super().__init__(api_key=api_key)
+    if self.api_key:
+      self.requests_per_second = 10.0
 
   # Fields to request from the API
   PAPER_FIELDS = (

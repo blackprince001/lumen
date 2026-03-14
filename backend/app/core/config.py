@@ -20,6 +20,7 @@ class Settings(BaseSettings):
   EMBEDDING_DIMENSION: int = 768
   GOOGLE_API_KEY: str = ""
   SERPAPI_KEY: str = ""
+  SEMANTIC_SCHOLAR_API_KEY: str = ""
   GENAI_MODEL: str = "gemini-3-flash-preview"
   DEBUG: bool = False
   PORT: int = 8000
