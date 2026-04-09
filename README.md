@@ -1,175 +1,304 @@
 # Papers
 
-A personal research paper management and reading platform with AI-powered features for organizing, annotating, and understanding academic literature.
+A modern research paper management platform with AI-powered reading assistance, full-text search, and semantic discovery. Organize academic literature with intelligent tagging, threaded discussions, and automatic paper relationship discovery through citations.
 
 ## Features
 
-### Paper Management
-- **Multi-source Ingestion**: Upload PDFs directly or import from URLs (arXiv, ACM, IEEE, OpenReview, PMLR, NeurIPS, and more)
-- **Batch Import**: Paste multiple URLs at once for bulk ingestion
-- **Groups & Tags**: Organize papers into hierarchical collections with custom tags
-- **Duplicate Detection**: Automatically detect and manage duplicate papers
-- **Reading Status**: Track papers as unread, in-progress, or completed
+### Paper Organization
 
-### AI-Powered Features
-- **Chat with Papers**: Ask questions about any paper with context-aware responses using Google Gemini
-- **Threaded Conversations**: Create follow-up threads on AI responses for deeper exploration
-- **Auto-generated Summaries**: Get concise AI summaries of papers upon ingestion
-- **Key Findings Extraction**: Automatically extract main contributions and results
-- **Reading Guides**: AI-generated guides to help navigate complex papers
-- **Smart Highlights**: AI suggests important passages to highlight
+- **Multi-source Ingestion**: Import papers directly from URLs (arXiv, ACM, IEEE, OpenReview, PMLR, NeurIPS, etc.) or upload PDFs
+- **Hierarchical Groups**: Create nested collection structures to organize papers by topic, project, or custom taxonomy
+- **Smart Tagging**: Apply custom tags to papers for flexible filtering and cross-cutting organization
+- **Duplicate Detection**: Automatic detection and management of duplicate papers in your library
+- **Reading Progress**: Track papers through states (unread, in-progress, read, archived) with reading time estimates
+
+### AI-Powered Reading
+
+- **Chat with Papers**: Ask context-aware questions about any paper and get detailed responses powered by Google Gemini
+- **Threaded Conversations**: Create follow-up threads on responses for deeper exploration of specific topics
+- **Auto-generated Summaries**: Receive AI-generated summaries upon paper ingestion for quick understanding
+- **Key Findings Extraction**: Automatically extract main contributions, methodology, and conclusions
+- **Reading Guides**: Get AI-generated guides with questions to guide your reading journey
+- **Smart Highlights**: AI suggests important passages to highlight for quick review
 
 ### Reading & Annotation
-- **PDF Reader**: Built-in PDF viewer with smooth navigation
-- **Annotations**: Highlight text and add notes directly on papers
-- **Citation Graph**: Visualize relationships between papers via extracted citations
+
+- **Built-in PDF Reader**: Smooth, responsive PDF viewer integrated directly into the application
+- **Rich Annotations**: Highlight text and attach notes directly on papers with multiple annotation types
+- **Citation Graph**: Visualize connections between papers through extracted citation relationships
+- **Bookmarks**: Mark important sections for quick navigation and reference
 
 ### Search & Discovery
-- **Full-text Search**: Search across all paper content
-- **Semantic Search**: Find papers by meaning using vector embeddings
-- **Paper Relationships**: Discover related papers through citations
+
+- **Full-text Search**: Search across all paper content, metadata, and annotations
+- **Semantic Search**: Find papers by meaning using vector embeddings (768-dimensional vectors)
+- **Paper Relationships**: Discover related papers through citation extraction and analysis
+- **Advanced Filters**: Filter by tags, groups, reading status, publication date, and more
 
 ### Export & Integration
-- **Multiple Formats**: Export papers and annotations
-- **Browser Extension**: Save papers directly from the web with one click
 
-## Tech Stack
+- **Multiple Export Formats**: Export papers with metadata in various formats
+- **Annotations Export**: Export your annotations and notes separately or with papers
 
-- **Backend**: Python 3.13+, FastAPI, SQLAlchemy, PostgreSQL (pgvector)
-- **Frontend**: React 19, TypeScript, Vite, TailwindCSS
-- **AI**: Google Gemini API
-- **Infrastructure**: Docker, Traefik
+## Architecture
 
-## Prerequisites
+Papers is a full-stack polyglot application designed for single-user self-hosting.
 
-- Python 3.13+
-- Node.js 18+ or Bun
-- PostgreSQL 16 with pgvector extension
-- Google API Key (for AI features)
+### Backend
 
-## Local Development Setup
+- **Framework**: FastAPI (Python 3.13+) - modern, performant async web framework
+- **Database**: PostgreSQL 16 with pgvector extension for vector embeddings
+- **ORM**: SQLAlchemy 2.0 with async support for database operations
+- **Task Queue**: Celery with Redis broker for background AI tasks and paper processing
+- **Vector Search**: pgvector for semantic similarity search using embeddings
+- **Caching**: Redis for session management and task status tracking
 
-### 1. Clone the repository
+### Frontend
+
+- **Framework**: React 19 with TypeScript for type-safe UI development
+- **Build Tool**: Vite for fast development and optimized production builds
+- **Styling**: TailwindCSS for responsive design
+- **Data Management**: TanStack Query (React Query) for efficient server state management
+- **PDF Viewer**: Integrated PDF.js for in-browser PDF reading
+- **Rich Editor**: TipTap for text editing with markdown support and math rendering
+
+### Infrastructure
+
+- **Containerization**: Docker and Docker Compose for reproducible deployments
+- **Reverse Proxy**: Traefik v2 for routing, SSL termination, and load balancing
+- **SSL/TLS**: Automatic Let's Encrypt certificate provisioning and renewal
+- **Development**: Includes local Traefik setup for localhost domain routing
+
+## External Dependencies
+
+Papers relies on several third-party services and libraries that need to be configured.
+
+### AI Model Provider
+
+**Google Gemini API** (required for AI features)
+
+- Used for: Paper summaries, key findings extraction, reading guides, smart highlights, threaded conversations
+- Configuration: Set `GOOGLE_API_KEY` environment variable
+- Get your key: <https://ai.google.dev/>
+- Cost: Free tier available with usage limits; pay-as-you-go for higher volumes
+- Models used: `gemini-3-flash-preview` for generation, `gemini-embedding-001` for embeddings
+
+### Search & Discovery Integration (Optional)
+
+- **Semantic Scholar API**: Academic paper search and citation data
+  - Provides: Paper metadata, citation context, author information
+  - Configuration: Set `SEMANTIC_SCHOLAR_API_KEY` (optional - falls back to SearchTheArXiv)
+  - Cost: Free tier available
+
+- **SerpAPI**: General-purpose web search for paper discovery
+  - Provides: Fallback paper search when Semantic Scholar is unavailable
+  - Configuration: Set `SERPAPI_KEY` (optional)
+  - Cost: Free tier with limited queries; paid plans available
+
+### Database (PostgreSQL)
+
+- **pgvector Extension**: Enables vector similarity search on embeddings
+- **PostgreSQL 16+**: Required for advanced features and performance
+- Self-hosted or managed PostgreSQL service (AWS RDS, Google Cloud SQL, etc.)
+
+### Infrastructure Services
+
+- **Redis**: In-memory data structure store for task queue and session management
+- **Docker**: Container runtime for local and production deployments
+
+## System Requirements
+
+### Local Development
+
+- **Python**: 3.13 or later
+- **Node.js**: 18+ or Bun (JavaScript package manager/runtime)
+- **PostgreSQL**: 16 with pgvector extension
+- **Redis**: 7.0+ for task queue
+- **RAM**: Minimum 4GB (2GB backend, 1GB frontend, 1GB services)
+- **Storage**: At least 10GB for paper PDFs and database
+
+### Production Server
+
+- **OS**: Linux (Ubuntu 22.04+ recommended) or compatible
+- **CPU**: 2+ cores
+- **RAM**: 4GB minimum (8GB+ recommended for 3+ Celery workers)
+- **Storage**: 20GB+ SSD for database, papers, and cache
+- **Docker**: Docker and Docker Compose installed
+- **Domain**: A registered domain with DNS pointing to your server
+
+## Getting Started
+
+### Prerequisites
+
+1. **Get API Keys**
+   - Google API Key: <https://ai.google.dev/> (required)
+   - Optional: Semantic Scholar API, SerpAPI
+
+2. **Install Dependencies**
+   - Python 3.13+: <https://www.python.org/downloads/>
+   - Node.js 18+ or Bun: <https://nodejs.org/> or <https://bun.sh/>
+   - Docker & Docker Compose: <https://www.docker.com/products/docker-desktop>
+
+### Local Development Setup
 
 ```bash
-git clone <repository-url>
+# Clone the repository
+git clone <your-repo-url>
 cd papers
-```
 
-### 2. Backend Setup
+# Create .env file in root directory
+cat > .env << EOF
+GOOGLE_API_KEY=your_google_api_key_here
+SEMANTIC_SCHOLAR_API_KEY=optional_semantic_scholar_key
+SERPAPI_KEY=optional_serpapi_key
+DB_PASSWORD=your_secure_password
+EOF
 
-```bash
-cd backend
-
-# Create virtual environment and install dependencies
-uv sync
-
-# Copy environment file and configure
-cp .env.example .env
-# Edit .env with your GOOGLE_API_KEY and database credentials
+# Start all services with Docker
+docker compose up -d
 
 # Run database migrations
-uv run alembic upgrade head
-
-# Start development server
-uv run fastapi dev app/main.py
-```
-
-Backend runs at `http://localhost:8000`
-
-### 3. Frontend Setup
-
-```bash
-cd frontend
-
-# Install dependencies
-bun install
-# or: npm install
-
-# Copy environment file
-cp .env.example .env
-# Set VITE_API_URL=http://localhost:8000/api/v1
-
-# Start development server
-bun run dev
-# or: npm run dev
-```
-
-Frontend runs at `http://localhost:5173`
-
-### 4. Database Setup (if not using Docker)
-
-```bash
-# Create database
-createdb nexus
-
-# Enable pgvector extension
-psql nexus -c "CREATE EXTENSION IF NOT EXISTS vector;"
-```
-
-## Docker Setup (Local)
-
-```bash
-# Copy environment file
-cp .env.example .env
-# Add your GOOGLE_API_KEY
-
-# Start all services
-docker compose up -d
+docker compose exec backend alembic upgrade head
 
 # Access the application
 # Frontend: http://papers.localhost
 # Backend API: http://api.localhost
+# API Docs: http://api.localhost/docs
 # Traefik Dashboard: http://traefik.localhost/dashboard
+```
+
+### Local Development (Without Docker)
+
+**Backend:**
+
+```bash
+cd backend
+uv sync                           # Install dependencies
+export GOOGLE_API_KEY=your_key
+export DB_HOST=localhost
+export DB_NAME=papers
+export DEBUG=true
+uv run alembic upgrade head      # Run migrations
+uv run fastapi dev app/main.py   # Start dev server (localhost:8000)
+```
+
+**Frontend:**
+
+```bash
+cd frontend
+npm install                       # or: bun install
+export VITE_API_URL=http://localhost:8000/api/v1
+npm run dev                       # or: bun run dev (localhost:5173)
+```
+
+**Celery Worker (optional for background tasks):**
+
+```bash
+cd backend
+uv run celery -A app.celery_app worker -l info -Q ai,processing,dead_letter
+```
+
+**PostgreSQL & Redis:**
+
+```bash
+# Using Docker for just services
+docker compose up -d postgres redis
+
+# Or install locally and run
+# PostgreSQL: createdb papers; psql papers -c "CREATE EXTENSION IF NOT EXISTS vector;"
+# Redis: redis-server
 ```
 
 ## Production Deployment
 
-### 1. Configure Domain
-
-Edit `docker-compose.prod.yml` and replace `yourdomain.com` with your actual domain:
-
-- `api.yourdomain.com` - Backend API
-- `papers.yourdomain.com` - Frontend
-- `traefik.yourdomain.com` - Traefik dashboard
-
-### 2. Configure DNS
-
-Point these subdomains to your server's IP address.
-
-### 3. Set Environment Variables
+### 1. Prepare Your Server
 
 ```bash
-export GOOGLE_API_KEY=your_api_key
+# SSH into your server
+ssh user@your-server-ip
+
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# Install Docker Compose
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# Clone repository
+git clone <your-repo-url> /opt/papers
+cd /opt/papers
+```
+
+### 2. Configure Environment
+
+Create `.env` file in the Papers directory:
+
+```bash
+# API Keys
+GOOGLE_API_KEY=your_google_api_key_here
+SEMANTIC_SCHOLAR_API_KEY=your_optional_api_key
+SERPAPI_KEY=your_optional_api_key
+
+# Database (choose strong password)
+DB_USER=papers_user
+DB_PASSWORD=your_very_secure_password_here
+DB_NAME=papers
+
+# Let's Encrypt Email (for SSL certificate notifications)
+LETSENCRYPT_EMAIL=your-email@yourdomain.com
+
+# Your Domain Configuration
+TRAEFIK_DOMAIN=traefik.yourdomain.com
+BACKEND_DOMAIN=api.yourdomain.com
+FRONTEND_DOMAIN=papers.yourdomain.com
+```
+
+### 3. Configure DNS
+
+Point your domain's DNS records to your server's IP:
+
+```
+traefik.yourdomain.com    A  your.server.ip.address
+api.yourdomain.com        A  your.server.ip.address
+papers.yourdomain.com     A  your.server.ip.address
+```
+
+DNS changes propagate in a few minutes. Verify:
+
+```bash
+nslookup papers.yourdomain.com
 ```
 
 ### 4. Deploy
 
 ```bash
-# Create data directories
+cd /opt/papers
+
+# Create directories for persistent data
 mkdir -p data/storage letsencrypt
 
-# Start production services
+# Start all services
 docker compose -f docker-compose.prod.yml up -d --build
 
-# View logs
+# Monitor startup (should complete in 30-60 seconds)
 docker compose -f docker-compose.prod.yml logs -f
-```
 
-SSL certificates are automatically provisioned via Let's Encrypt.
-
-### 5. Database Migrations (Production)
-
-```bash
+# Run database migrations
 docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
+
+# Verify it's running
+curl https://api.yourdomain.com/health
+curl https://papers.yourdomain.com
 ```
 
-## Browser Extension
+## Contributing
 
-See [extension/README.md](extension/README.md) for installation and usage instructions.
+This is a personal project. Feel free to fork and customize for your needs.
 
-## API Documentation
+## License
 
-When running, API docs are available at:
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+MIT
