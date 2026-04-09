@@ -33,7 +33,6 @@ class Paper(Base):
   doi = Column(String, unique=True, index=True, nullable=True)
   url = Column(String, nullable=True)
   file_path = Column(String, nullable=True)
-  vector_id = Column(String, nullable=True)
   embedding = Column(Vector(settings.EMBEDDING_DIMENSION), nullable=True)
   metadata_json = Column(JSON, default=dict)
   content_text = Column(Text, nullable=True)
@@ -91,12 +90,6 @@ class Paper(Base):
   )
   bookmarks = relationship(
     "Bookmark", back_populates="paper", cascade="all, delete-orphan"
-  )
-  merged_from_paper_id = Column(
-    Integer, ForeignKey("papers.id", ondelete="SET NULL"), nullable=True
-  )
-  is_duplicate_of = Column(
-    Integer, ForeignKey("papers.id", ondelete="SET NULL"), nullable=True
   )
   ai_summary = Column(Text, nullable=True)
   summary_generated_at = Column(DateTime(timezone=True), nullable=True)

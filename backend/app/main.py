@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
   yield
 
 
-app = FastAPI(title="Nexus Research Engine", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="Papers Research Engine", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
   CORSMiddleware,  # type: ignore[arg-type]
@@ -71,7 +71,7 @@ app.mount("/storage", StaticFiles(directory=str(storage_path)), name="storage")
 
 @app.get("/")
 def read_root():
-  return {"message": "Welcome to Nexus API", "version": "1.0.0"}
+  return {"message": "Welcome to Papers API", "version": "1.0.0"}
 
 
 @app.get("/health")

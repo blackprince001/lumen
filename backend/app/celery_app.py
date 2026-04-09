@@ -64,14 +64,11 @@ celery_app.conf.update(
   ),
   task_routes={
     "app.tasks.ai_tasks.*": {"queue": "ai"},
-    "app.tasks.search_tasks.*": {"queue": "ai"},
     "app.tasks.paper_processing.*": {"queue": "processing"},
-    "app.tasks.ingestion_tasks.*": {"queue": "processing"},
   },
   # Rate limiting for AI queue
   task_annotations={
     "app.tasks.ai_tasks.*": {"rate_limit": "10/m"},
-    "app.tasks.search_tasks.*": {"rate_limit": "10/m"},
   },
   # Retry policy defaults
   task_default_retry_delay=60,  # 1 minute default retry delay

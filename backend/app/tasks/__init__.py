@@ -12,12 +12,6 @@ from app.tasks.paper_processing import (
   extract_citations_task,
   process_paper_full,
 )
-from app.tasks.search_tasks import (
-  cluster_papers_task,
-  explain_relevance_task,
-  generate_overview_task,
-  understand_query_task,
-)
 
 __all__ = [
   "generate_summary_task",
@@ -25,11 +19,6 @@ __all__ = [
   "generate_reading_guide_task",
   "generate_highlights_task",
   "generate_embedding_task",
-  "process_paper_task",
   "extract_citations_task",
   "process_paper_full",
-  "understand_query_task",
-  "generate_overview_task",
-  "cluster_papers_task",
-  "explain_relevance_task",
 ]

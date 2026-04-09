@@ -2,7 +2,7 @@
 
 ## Project Type
 Polyglot monorepo — Python 3.13 FastAPI backend + React/TypeScript frontend + TypeScript browser extension.
-App name: **Nexus Research Engine**.
+App name: **Papers Research Engine**.
 
 ## Directory Map
 ```
