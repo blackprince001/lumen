@@ -31,9 +31,6 @@ logger = get_logger(__name__)
 router = APIRouter()
 
 
-# ---- Helper to serialize a session ----
-
-
 def _serialize_session(session: MultiChatSession) -> dict:
   """Convert a MultiChatSession ORM object to a response dict."""
   return {
@@ -67,11 +64,6 @@ def _serialize_session(session: MultiChatSession) -> dict:
     "created_at": session.created_at.isoformat() if session.created_at else None,
     "updated_at": session.updated_at.isoformat() if session.updated_at else None,
   }
-
-
-# ============================================================
-# Group-scoped endpoints
-# ============================================================
 
 
 @router.post("/groups/{group_id}/chat/stream")
@@ -162,11 +154,6 @@ async def create_group_session(
     raise HTTPException(status_code=400, detail=str(e))
 
 
-# ============================================================
-# Ad-hoc multi-paper chat (arbitrary paper selection)
-# ============================================================
-
-
 @router.post("/multi-chat/stream")
 async def stream_multi_chat_message(
   chat_request: MultiChatRequest,
@@ -199,11 +186,6 @@ async def stream_multi_chat_message(
       "X-Accel-Buffering": "no",
     },
   )
-
-
-# ============================================================
-# Session-level endpoints (shared between group and ad-hoc)
-# ============================================================
 
 
 @router.get("/multi-chat/sessions/{session_id}", response_model=MultiChatSessionSchema)
