@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { groupsApi, type Group } from '@/lib/api/groups';
-import { Add as Plus, DocumentText as FileText, FolderOpen, Edit as Edit2, Trash as Trash2 } from 'iconsax-reactjs';
+import { Add as Plus, DocumentText as FileText, FolderOpen, Edit as Edit2, Trash as Trash2, DocumentDownload } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -16,9 +16,10 @@ interface FolderCardProps {
   theme: PaperTheme;
   onEdit: (group: Group) => void;
   onDelete: (id: number) => void;
+  onExport: (group: Group) => void;
 }
 
-function FolderCard({ group, theme, onEdit, onDelete }: FolderCardProps) {
+function FolderCard({ group, theme, onEdit, onDelete, onExport }: FolderCardProps) {
   const [hovered, setHovered] = useState(false);
 
   const bg = hovered ? theme.bg : 'var(--card)';
@@ -84,6 +85,18 @@ function FolderCard({ group, theme, onEdit, onDelete }: FolderCardProps) {
 
       {/* Action buttons */}
       <div className="absolute top-10 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+        {(group.paper_count ?? group.papers?.length ?? 0) > 0 && (
+          <Button
+            variant="ghost"
+            className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm"
+            onClick={(e) => {
+              e.preventDefault();
+              onExport(group);
+            }}
+          >
+            <DocumentDownload size={14} />
+          </Button>
+        )}
         <Button
           variant="ghost"
           className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm"
@@ -114,6 +127,7 @@ export default function Groups() {
   const [editingGroup, setEditingGroup] = useState<Group | null>(null);
   const [formData, setFormData] = useState({ name: '' });
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { confirm, dialogProps } = useConfirmDialog();
 
   const { data: groups = [], isLoading } = useQuery({
@@ -185,6 +199,11 @@ export default function Groups() {
     if (ok) deleteMutation.mutate(id);
   };
 
+  const handleExport = (group: Group) => {
+    const paperIds = group.papers?.map(p => p.id) ?? [];
+    navigate('/export', { state: { paperIds, returnPath: '/groups' } });
+  };
+
   const closeDialog = () => {
     setIsCreateOpen(false);
     setEditingGroup(null);
@@ -229,13 +248,14 @@ export default function Groups() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groups.map((group, index) => (
+            {groups.filter(g => g.parent_id == null).map((group, index) => (
               <FolderCard
                 key={group.id}
                 group={group}
                 theme={getPaperTheme(index)}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                onExport={handleExport}
               />
             ))}
           </div>

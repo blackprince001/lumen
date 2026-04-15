@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'motion/react';
-import { Home, Chart as BarChart3, Gps as Compass, Notepad2 as Newspaper, MagicStar as Sparkles, Book1 as Library, DocumentText as FileText, Hierarchy as GitBranch, Archive, Folder, ArrowDown2 as ChevronDown, Layer as Layers, SidebarLeft as PanelLeftClose, SidebarLeft as PanelLeftOpen, Shield } from 'iconsax-reactjs';
+import { Home, Chart as BarChart3, Gps as Compass, Notepad2 as Newspaper, MagicStar as Sparkles, Book1 as Library, DocumentText as FileText, Hierarchy as GitBranch, Archive, Folder, ArrowDown2 as ChevronDown, SidebarLeft as PanelLeftClose, SidebarLeft as PanelLeftOpen, Shield } from 'iconsax-reactjs';
 import { groupsApi, type Group } from '@/lib/api/groups';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
@@ -110,7 +110,6 @@ const DISCOVER_NAV = [
 const TOOLS_NAV = [
   { href: '/annotations', icon: FileText, label: 'Annotations' },
   { href: '/citations', icon: GitBranch, label: 'Citations' },
-  { href: '/export', icon: Layers, label: 'Export' },
 ];
 
 function NavItem({
