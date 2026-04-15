@@ -7,8 +7,8 @@ A modern research paper management platform with AI-powered reading assistance, 
 ### Paper Organization
 
 - **Multi-source Ingestion**: Import papers directly from URLs (arXiv, ACM, IEEE, OpenReview, PMLR, NeurIPS, etc.) or upload PDFs
-- **Hierarchical Groups**: Create nested collection structures to organize papers by topic, project, or custom taxonomy
-- **Smart Tagging**: Apply custom tags to papers for flexible filtering and cross-cutting organization
+- **Hierarchical Groups**: Create nested collection structures to organize papers by topic, project, or custom taxonomy — scoped per user
+- **Smart Tagging**: Apply custom tags to papers for flexible filtering and cross-cutting organization — scoped per user
 - **Duplicate Detection**: Automatic detection and management of duplicate papers in your library
 - **Reading Progress**: Track papers through states (unread, in-progress, read, archived) with reading time estimates
 
@@ -30,7 +30,7 @@ A modern research paper management platform with AI-powered reading assistance, 
 
 ### Search & Discovery
 
-- **Full-text Search**: Search across all paper content, metadata, and annotations
+- **Full-text Search**: Search across all paper content, metadata, and annotations — scoped to your library
 - **Semantic Search**: Find papers by meaning using vector embeddings (768-dimensional vectors)
 - **Paper Relationships**: Discover related papers through citation extraction and analysis
 - **Advanced Filters**: Filter by tags, groups, reading status, publication date, and more
@@ -40,27 +40,37 @@ A modern research paper management platform with AI-powered reading assistance, 
 - **Multiple Export Formats**: Export papers with metadata in various formats
 - **Annotations Export**: Export your annotations and notes separately or with papers
 
+### Multi-user & Auth
+
+- **Google OAuth**: Sign in with your Google account
+- **Admin Login**: Local username/password login for administrators (configured via environment variables)
+- **Per-user Data Isolation**: All papers, groups, tags, annotations, chat sessions, bookmarks, saved searches, and discovery sessions are fully scoped to the authenticated user
+- **Admin Access**: Administrators can view all users' data for support and manage user accounts
+- **Persistent Sessions**: Access token stored in localStorage for seamless page refreshes without re-authentication
+
 ## Architecture
 
-Papers is a full-stack polyglot application designed for single-user self-hosting.
+Papers is a full-stack polyglot application designed for self-hosting.
 
 ### Backend
 
-- **Framework**: FastAPI (Python 3.13+) - modern, performant async web framework
+- **Framework**: FastAPI (Python 3.13+) — modern, performant async web framework
 - **Database**: PostgreSQL 16 with pgvector extension for vector embeddings
 - **ORM**: SQLAlchemy 2.0 with async support for database operations
 - **Task Queue**: Celery with Redis broker for background AI tasks and paper processing
 - **Vector Search**: pgvector for semantic similarity search using embeddings
+- **Auth**: JWT access tokens + httpOnly refresh token cookies; Google OAuth + local admin login
 - **Caching**: Redis for session management and task status tracking
 
 ### Frontend
 
 - **Framework**: React 19 with TypeScript for type-safe UI development
 - **Build Tool**: Vite for fast development and optimized production builds
-- **Styling**: TailwindCSS for responsive design
+- **Styling**: TailwindCSS with a near-monochrome design system (forest-green undertones, mint accent)
 - **Data Management**: TanStack Query (React Query) for efficient server state management
 - **PDF Viewer**: Integrated PDF.js for in-browser PDF reading
 - **Rich Editor**: TipTap for text editing with markdown support and math rendering
+- **Theming**: Light and dark mode with adaptive logo and paper card color themes
 
 ### Infrastructure
 
@@ -83,15 +93,25 @@ Papers relies on several third-party services and libraries that need to be conf
 - Cost: Free tier available with usage limits; pay-as-you-go for higher volumes
 - Models used: `gemini-3-flash-preview` for generation, `gemini-embedding-001` for embeddings
 
+### Auth
+
+**Google OAuth** (required for Google sign-in)
+
+- Configuration: Set `GOOGLE_CLIENT_ID` environment variable
+- Get your client ID: <https://console.cloud.google.com/>
+
+**Admin Login** (optional local admin account)
+
+- Configuration: Set `ADMIN_USERNAME` and `ADMIN_PASSWORD` as base64-encoded strings
+- Example: `echo -n "admin" | base64` → set as `ADMIN_USERNAME`
+
 ### Search & Discovery Integration (Optional)
 
 - **Semantic Scholar API**: Academic paper search and citation data
-  - Provides: Paper metadata, citation context, author information
-  - Configuration: Set `SEMANTIC_SCHOLAR_API_KEY` (optional - falls back to SearchTheArXiv)
+  - Configuration: Set `SEMANTIC_SCHOLAR_API_KEY` (optional — falls back to arXiv)
   - Cost: Free tier available
 
 - **SerpAPI**: General-purpose web search for paper discovery
-  - Provides: Fallback paper search when Semantic Scholar is unavailable
   - Configuration: Set `SERPAPI_KEY` (optional)
   - Cost: Free tier with limited queries; paid plans available
 
@@ -131,7 +151,8 @@ Papers relies on several third-party services and libraries that need to be conf
 ### Prerequisites
 
 1. **Get API Keys**
-   - Google API Key: <https://ai.google.dev/> (required)
+   - Google API Key: <https://ai.google.dev/> (required for AI features)
+   - Google Client ID: <https://console.cloud.google.com/> (required for Google sign-in)
    - Optional: Semantic Scholar API, SerpAPI
 
 2. **Install Dependencies**
@@ -149,9 +170,13 @@ cd papers
 # Create .env file in root directory
 cat > .env << EOF
 GOOGLE_API_KEY=your_google_api_key_here
+GOOGLE_CLIENT_ID=your_google_client_id_here
 SEMANTIC_SCHOLAR_API_KEY=optional_semantic_scholar_key
 SERPAPI_KEY=optional_serpapi_key
 DB_PASSWORD=your_secure_password
+JWT_SECRET_KEY=your_random_secret_key
+ADMIN_USERNAME=$(echo -n "admin" | base64)
+ADMIN_PASSWORD=$(echo -n "yourpassword" | base64)
 EOF
 
 # Start all services with Docker
@@ -175,6 +200,10 @@ docker compose exec backend alembic upgrade head
 cd backend
 uv sync                           # Install dependencies
 export GOOGLE_API_KEY=your_key
+export GOOGLE_CLIENT_ID=your_client_id
+export JWT_SECRET_KEY=your_secret
+export ADMIN_USERNAME=$(echo -n "admin" | base64)
+export ADMIN_PASSWORD=$(echo -n "yourpassword" | base64)
 export DB_HOST=localhost
 export DB_NAME=papers
 export DEBUG=true
@@ -185,10 +214,12 @@ uv run fastapi dev app/main.py   # Start dev server (localhost:8000)
 **Frontend:**
 
 ```bash
-cd frontend
-npm install                       # or: bun install
-export VITE_API_URL=http://localhost:8000/api/v1
-npm run dev                       # or: bun run dev (localhost:5173)
+cd frontend-v2
+bun install                       # or: npm install
+# Create .env file
+echo "VITE_API_URL=http://localhost:8000/api/v1" > .env
+echo "VITE_GOOGLE_CLIENT_ID=your_google_client_id" >> .env
+bun run dev                       # or: npm run dev (localhost:5173)
 ```
 
 **Celery Worker (optional for background tasks):**
@@ -224,10 +255,6 @@ sudo apt update && sudo apt upgrade -y
 curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
-# Install Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
-
 # Clone repository
 git clone <your-repo-url> /opt/papers
 cd /opt/papers
@@ -240,8 +267,14 @@ Create `.env` file in the Papers directory:
 ```bash
 # API Keys
 GOOGLE_API_KEY=your_google_api_key_here
+GOOGLE_CLIENT_ID=your_google_client_id_here
 SEMANTIC_SCHOLAR_API_KEY=your_optional_api_key
 SERPAPI_KEY=your_optional_api_key
+
+# Auth
+JWT_SECRET_KEY=your_very_long_random_secret_key
+ADMIN_USERNAME=YWRtaW4=        # base64("admin")
+ADMIN_PASSWORD=your_base64_password
 
 # Database (choose strong password)
 DB_USER=papers_user
@@ -255,6 +288,7 @@ LETSENCRYPT_EMAIL=your-email@yourdomain.com
 TRAEFIK_DOMAIN=traefik.yourdomain.com
 BACKEND_DOMAIN=api.yourdomain.com
 FRONTEND_DOMAIN=papers.yourdomain.com
+FRONTEND_URL=https://papers.yourdomain.com
 ```
 
 ### 3. Configure DNS
@@ -265,12 +299,6 @@ Point your domain's DNS records to your server's IP:
 traefik.yourdomain.com    A  your.server.ip.address
 api.yourdomain.com        A  your.server.ip.address
 papers.yourdomain.com     A  your.server.ip.address
-```
-
-DNS changes propagate in a few minutes. Verify:
-
-```bash
-nslookup papers.yourdomain.com
 ```
 
 ### 4. Deploy
@@ -284,9 +312,6 @@ mkdir -p data/storage letsencrypt
 # Start all services
 docker compose -f docker-compose.prod.yml up -d --build
 
-# Monitor startup (should complete in 30-60 seconds)
-docker compose -f docker-compose.prod.yml logs -f
-
 # Run database migrations
 docker compose -f docker-compose.prod.yml exec backend alembic upgrade head
 
@@ -298,7 +323,3 @@ curl https://papers.yourdomain.com
 ## Contributing
 
 This is a personal project. Feel free to fork and customize for your needs.
-
-## License
-
-MIT

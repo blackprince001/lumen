@@ -6,7 +6,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Set Python to use UTF-8 and unbuffered logging
 ENV PYTHONUNBUFFERED=1 \
     PYTHONIOENCODING=utf-8 \
-    LANG=C.UTF-8
+    LANG=C.UTF-8 \
+    UV_SYSTEM_PYTHON=1
 
 # Set working directory
 WORKDIR /app

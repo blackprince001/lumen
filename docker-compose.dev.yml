@@ -1,6 +1,6 @@
 services:
   traefik:
-    image: traefik:v2.10
+    image: traefik:v2.11
     command:
       - --api.insecure=true
       - --providers.docker=true
@@ -11,23 +11,20 @@ services:
       - --log.level=INFO
     ports:
       - "80:80"
-      - "8080:8080"
     volumes:
-      - ./middlewares.yml:/etc/traefik/middlewares.yml
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - app-network
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.localhost`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      - "traefik.http.routers.traefik-dashboard.rule=Host(`traefik.testing.maurc.org`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.entrypoints=web"
-      - "traefik.http.routers.traefik-dashboard.middlewares=security-headers@file"
     restart: unless-stopped
 
   postgres:
     image: pgvector/pgvector:pg16
-    container_name: nexus-postgres
+    container_name: papers-postgres
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
@@ -51,7 +48,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: nexus-redis
+    container_name: papers-redis
     command: redis-server --appendonly yes
     ports:
       - "6379:6379"
@@ -72,7 +69,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: nexus-backend
+    container_name: papers-backend
     environment:
       - DB_HOST=${DB_HOST:-postgres}
       - DB_USER=${DB_USER:-postgres}
@@ -84,8 +81,14 @@ services:
       - DEBUG=${DEBUG:-true}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - FRONTEND_URL=${FRONTEND_URL}
     volumes:
       - storage_data:/app/storage
     depends_on:
@@ -98,23 +101,24 @@ services:
     labels:
       - traefik.enable=true
       # Main application router
-      - traefik.http.routers.nexus-backend.rule=Host(`api.localhost`)
-      - traefik.http.routers.nexus-backend.entrypoints=web
-      - traefik.http.routers.nexus-backend.service=nexus-backend-service
-      - traefik.http.routers.nexus-backend.middlewares=security-headers@file
+      - traefik.http.routers.papers-backend.rule=Host(`api.testing.maurc.org`)
+      - traefik.http.routers.papers-backend.entrypoints=web
+      - traefik.http.routers.papers-backend.service=papers-backend-service
       # Main application service
-      - traefik.http.services.nexus-backend-service.loadbalancer.server.port=8000
-      - traefik.http.services.nexus-backend-service.loadbalancer.healthcheck.path=/health
-      - traefik.http.services.nexus-backend-service.loadbalancer.healthcheck.interval=10s
-      - traefik.http.services.nexus-backend-service.loadbalancer.healthcheck.timeout=3s
+      - traefik.http.services.papers-backend-service.loadbalancer.server.port=8000
+      - traefik.http.services.papers-backend-service.loadbalancer.healthcheck.path=/health
+      - traefik.http.services.papers-backend-service.loadbalancer.healthcheck.interval=10s
+      - traefik.http.services.papers-backend-service.loadbalancer.healthcheck.timeout=3s
     restart: unless-stopped
 
   celery-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: nexus-celery-worker
-    command: uv run celery -A app.celery_app worker -l info -Q ai,processing,dead_letter -c 2
+    # container_name: papers-celery-worker
+    command: uv run celery -A app.celery_app worker -l info -Q ai,processing,discovery,dead_letter -c 4
+    deploy:
+      replicas: 2
     environment:
       - DB_HOST=${DB_HOST:-postgres}
       - DB_USER=${DB_USER:-postgres}
@@ -125,8 +129,14 @@ services:
       - DEBUG=${DEBUG:-true}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - FRONTEND_URL=${FRONTEND_URL}
     volumes:
       - storage_data:/app/storage
     depends_on:
@@ -142,11 +152,12 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend-v2
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=http://api.localhost/api/v1
-    container_name: nexus-frontend
+        - VITE_API_URL=${VITE_API_URL}
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
+    container_name: papers-frontend
     depends_on:
       - backend
     networks:
@@ -154,15 +165,14 @@ services:
     labels:
       - traefik.enable=true
       # Main application router
-      - traefik.http.routers.nexus-frontend.rule=Host(`papers.localhost`)
-      - traefik.http.routers.nexus-frontend.entrypoints=web
-      - traefik.http.routers.nexus-frontend.service=nexus-frontend-service
-      - traefik.http.routers.nexus-frontend.middlewares=security-headers@file
+      - traefik.http.routers.papers-frontend.rule=Host(`testing.maurc.org`)
+      - traefik.http.routers.papers-frontend.entrypoints=web
+      - traefik.http.routers.papers-frontend.service=papers-frontend-service
       # Main application service
-      - traefik.http.services.nexus-frontend-service.loadbalancer.server.port=4173
-      - traefik.http.services.nexus-frontend-service.loadbalancer.healthcheck.path=/
-      - traefik.http.services.nexus-frontend-service.loadbalancer.healthcheck.interval=10s
-      - traefik.http.services.nexus-frontend-service.loadbalancer.healthcheck.timeout=3s
+      - traefik.http.services.papers-frontend-service.loadbalancer.server.port=4173
+      - traefik.http.services.papers-frontend-service.loadbalancer.healthcheck.path=/
+      - traefik.http.services.papers-frontend-service.loadbalancer.healthcheck.interval=10s
+      - traefik.http.services.papers-frontend-service.loadbalancer.healthcheck.timeout=3s
     restart: unless-stopped
 
 networks:

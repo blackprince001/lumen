@@ -88,8 +88,14 @@ services:
       - DEBUG=false
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - FRONTEND_URL=https://${FRONTEND_DOMAIN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -118,8 +124,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: nexus-celery-worker-prod
-    command: uv run celery -A app.celery_app worker -l info -Q ai,processing,dead_letter -c 4
+    command: celery -A app.celery_app worker -l info -Q ai,processing,discovery,dead_letter -c 4
+    deploy:
+      replicas: 2
     environment:
       - DB_HOST=${DB_HOST:-postgres}
       - DB_USER=${DB_USER:-postgres}
@@ -130,8 +137,14 @@ services:
       - DEBUG=false
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - SEMANTIC_SCHOLAR_API_KEY=${SEMANTIC_SCHOLAR_API_KEY}
+      - SERPAPI_KEY=${SERPAPI_KEY}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      - FRONTEND_URL=https://${FRONTEND_DOMAIN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -147,10 +160,11 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      context: ./frontend-v2
       dockerfile: Dockerfile
       args:
         - VITE_API_URL=https://${BACKEND_DOMAIN}/api/v1
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID}
     container_name: nexus-frontend-prod
     depends_on:
       - backend
@@ -178,4 +192,3 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-  letsencrypt:
