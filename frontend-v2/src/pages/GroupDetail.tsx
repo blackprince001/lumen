@@ -141,7 +141,7 @@ export default function GroupDetail() {
         {breadcrumbs.length > 0 && (
           <div className="flex items-center gap-2 text-code text-[var(--muted-foreground)] mb-4">
             <Link to="/groups" className="hover:text-[var(--foreground)]">
-              Library
+              Groups
             </Link>
             {breadcrumbs.map((crumb, index) => (
               <div key={crumb.id} className="flex items-center gap-2">

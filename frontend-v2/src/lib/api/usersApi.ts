@@ -25,7 +25,7 @@ export interface UsersListParams {
 
 export const usersApi = {
   list: (params?: UsersListParams) =>
-    api.get<UserAnalytics[]>('/users', { params: params as Record<string, string | number | boolean | undefined> }),
+    api.get<User[]>('/users', { params: params as Record<string, string | number | boolean | undefined> }),
 
   get: (id: number) => api.get<UserAnalytics>(`/users/${id}`),
 

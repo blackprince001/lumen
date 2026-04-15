@@ -19,14 +19,13 @@ import { cn } from '@/lib/utils';
 
 export default function Discovery() {
   const [query, setQuery] = useState('');
-  const [selectedSources, setSelectedSources] = useState<SourceId[]>(['arxiv', 'semantic_scholar']);
+  const [selectedSources, setSelectedSources] = useState<SourceId[]>(['arxiv', 'semantic_scholar', 'google_scholar']);
   const [showFilters, setShowFilters] = useState(false);
   const [yearFrom, setYearFrom] = useState('');
   const [yearTo, setYearTo] = useState('');
   const [minCitations, setMinCitations] = useState('');
   const [limit, setLimit] = useState(20);
-  const [activeTab, setActiveTab] = useState<'list' | 'clustered'>('list');
-  const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState<'list' | 'clustered'>('clustered');
   const [citationPaper, setCitationPaper] = useState<DiscoveredPaperPreview | null>(null);
   const [loadedSession, setLoadedSession] = useState<LoadedSession | null>(null);
 
@@ -116,14 +115,6 @@ export default function Discovery() {
     });
   };
 
-  const togglePaperSelection = (id: string) => {
-    setSelectedPapers(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
   // Merge live search data with loaded session data
   const displayPapers = loadedSession ? loadedSession.papers : allPapers;
   const displayOverview = loadedSession ? loadedSession.overview : overview;
@@ -160,7 +151,6 @@ export default function Discovery() {
       {/* Search Form */}
       <form onSubmit={handleSearch} className="mb-6">
         <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-[var(--muted-foreground)]" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -182,8 +172,9 @@ export default function Discovery() {
 
       {/* Source Selection & Filters */}
       <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-6">
+
         <div className="flex items-center justify-between mb-4">
-          <SourceSelector selectedSources={selectedSources} onChange={setSelectedSources} />
+          <span>Sources:</span> <SourceSelector selectedSources={selectedSources} onChange={setSelectedSources} />
         </div>
         <button
           type="button"
@@ -197,16 +188,28 @@ export default function Discovery() {
 
         {showFilters && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
-            {[
-              { label: 'Year From', value: yearFrom, set: setYearFrom, placeholder: '2020' },
-              { label: 'Year To', value: yearTo, set: setYearTo, placeholder: '2024' },
-              { label: 'Min Citations', value: minCitations, set: setMinCitations, placeholder: '10' },
-            ].map(({ label, value, set, placeholder }) => (
+            {([
+              { label: 'Year From', value: yearFrom, set: setYearFrom },
+              { label: 'Year To', value: yearTo, set: setYearTo },
+            ] as const).map(({ label, value, set }) => (
               <div key={label}>
                 <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">{label}</label>
-                <Input type="number" value={value} onChange={(e) => set(e.target.value)} placeholder={placeholder} className="h-8 text-code" />
+                <select
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                  className="w-full h-8 px-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-code text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+                >
+                  <option value="">Any</option>
+                  {Array.from({ length: new Date().getFullYear() - 1989 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
               </div>
             ))}
+            <div>
+              <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Min Citations</label>
+              <Input type="number" value={minCitations} onChange={(e) => setMinCitations(e.target.value)} placeholder="0" className="h-8 text-code" />
+            </div>
             <div>
               <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">
                 Papers / Source
@@ -214,7 +217,7 @@ export default function Discovery() {
               <Input
                 type="number"
                 min={1}
-                max={100}
+                max={20}
                 value={limit}
                 onChange={(e) => {
                   const n = parseInt(e.target.value);
@@ -302,9 +305,6 @@ export default function Discovery() {
                 <DiscoveredPaperCard
                   key={`${paper.source}-${paper.external_id}-${i}`}
                   paper={paper}
-                  showCheckbox
-                  isSelected={selectedPapers.has(`${paper.source}-${paper.external_id}`)}
-                  onToggleSelect={() => togglePaperSelection(`${paper.source}-${paper.external_id}`)}
                 />
               ))}
             </div>

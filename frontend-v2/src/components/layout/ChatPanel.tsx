@@ -97,7 +97,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
               </TabsTrigger>
               <TabsTrigger value="annotations" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
                 <Highlighter size={13} />
-                <span className="hidden xl:inline text-caption">Ann</span>
+                <span className="hidden xl:inline text-caption">Annotate</span>
                 {annotationItems.length > 0 && (
                   <span className="text-micro bg-[var(--muted)] px-1.5 py-0.5 rounded-full tabular-nums">
                     {annotationItems.length}

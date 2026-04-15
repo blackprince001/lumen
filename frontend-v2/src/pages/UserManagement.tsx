@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { SearchNormal as Search, Shield, ShieldSlash as ShieldOff, Trash as Trash2, ArrowDown2 as ChevronDown, ArrowUp2 as ChevronUp } from 'iconsax-reactjs';
-import { usersApi, type UserAnalytics } from '@/lib/api/usersApi';
+import { usersApi } from '@/lib/api/usersApi';
+import type { User } from '@/lib/api/authApi';
 import { toastSuccess as toastS, toastError as toastE } from '@/lib/utils/toast';
 import { formatDistanceToNow } from 'date-fns';
 
 function RoleBadge({ role }: { role: string }) {
   return (
-    <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${
-      role === 'admin'
+    <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${role === 'admin'
         ? 'text-amber-700 bg-amber-50 border-amber-200'
         : 'text-[var(--muted-foreground)] bg-[var(--muted)] border-[var(--border)]'
-    }`}>
+      }`}>
       {role}
     </span>
   );
@@ -84,7 +84,7 @@ export default function UserManagement() {
   const [roleFilter, setRoleFilter] = useState('');
   const [activeFilter, setActiveFilter] = useState<boolean | undefined>(undefined);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
-  const [sortField, setSortField] = useState<keyof UserAnalytics>('created_at');
+  const [sortField, setSortField] = useState<keyof User>('created_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const { data: users = [], isLoading } = useQuery({
@@ -105,12 +105,12 @@ export default function UserManagement() {
     onError: () => toastE('Failed to delete user'),
   });
 
-  const toggleSort = (field: keyof UserAnalytics) => {
+  const toggleSort = (field: keyof User) => {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else { setSortField(field); setSortDir('asc'); }
   };
 
-  const SortIcon = ({ field }: { field: keyof UserAnalytics }) =>
+  const SortIcon = ({ field }: { field: keyof User }) =>
     sortField === field
       ? sortDir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />
       : null;
@@ -175,15 +175,14 @@ export default function UserManagement() {
                 </th>
               ))}
               <th className="text-left px-4 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">Status</th>
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">Last login</th>
               <th className="px-4 py-2.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
             {isLoading ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">Loading…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">Loading…</td></tr>
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={7} className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">No users found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">No users found</td></tr>
             ) : sorted.map((user) => (
               <tr key={user.id} className="hover:bg-[var(--muted)] transition-colors">
                 <td className="px-4 py-3">
@@ -194,18 +193,15 @@ export default function UserManagement() {
                 <td className="px-4 py-3 text-[var(--muted-foreground)]">{user.email}</td>
                 <td className="px-4 py-3 text-[var(--muted-foreground)]">{user.organization ?? '—'}</td>
                 <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
-                <td className="px-4 py-3"><StatusDot active={(user as UserAnalytics).is_active ?? true} /></td>
-                <td className="px-4 py-3 text-[var(--muted-foreground)] text-xs">
-                  {user.last_login_at ? formatDistanceToNow(new Date(user.last_login_at), { addSuffix: true }) : 'Never'}
-                </td>
+                <td className="px-4 py-3"><StatusDot active={user.is_active} /></td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1 justify-end">
                     <button
-                      onClick={() => updateMutation.mutate({ id: user.id, data: { is_active: !(user as UserAnalytics).is_active } })}
-                      title={(user as UserAnalytics).is_active ? 'Deactivate' : 'Activate'}
+                      onClick={() => updateMutation.mutate({ id: user.id, data: { is_active: !user.is_active } })}
+                      title={user.is_active ? 'Deactivate' : 'Activate'}
                       className="p-1.5 rounded-lg hover:bg-[var(--border)] transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
                     >
-                      {(user as UserAnalytics).is_active ? <ShieldOff size={14} /> : <Shield size={14} />}
+                      {user.is_active ? <ShieldOff size={14} /> : <Shield size={14} />}
                     </button>
                     <button
                       onClick={() => { if (confirm(`Delete ${user.display_name}?`)) deleteMutation.mutate(user.id); }}

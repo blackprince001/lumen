@@ -1,7 +1,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { Add as Plus, Grid1 as LayoutGrid, MenuBoard as List, Trash as Trash2, Refresh as RefreshCw, DocumentText as FileText, TickSquare as CheckSquare, CloseCircle as X, FolderAdd as FolderInput } from 'iconsax-reactjs';
+import { Add as Plus, Grid1 as LayoutGrid, MenuBoard as List, Trash as Trash2, Refresh as RefreshCw, Layer, TickSquare as CheckSquare, CloseCircle as X, FolderAdd as FolderInput } from 'iconsax-reactjs';
 import { Link } from 'react-router-dom';
 
 import { papersApi }    from '@/lib/api/papers';
@@ -374,7 +374,7 @@ export default function PapersList() {
                       onClick={() => navigate('/export', { state: { paperIds: selectedIds } })}
                       className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
                     >
-                      <FileText size={14} />
+                      <Layer size={14} />
                     </button>
                   </Tooltip>
                 )}

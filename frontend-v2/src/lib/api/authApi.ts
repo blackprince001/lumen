@@ -9,6 +9,7 @@ export interface User {
   department: string | null;
   research_field: string | null;
   role: 'user' | 'admin';
+  is_active: boolean;
   created_at: string;
 }
 

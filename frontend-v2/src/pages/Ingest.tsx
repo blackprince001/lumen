@@ -104,7 +104,15 @@ export default function Ingest() {
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
-    setSelectedFiles(prev => [...prev, ...Array.from(files)]);
+    const incoming = Array.from(files);
+    setSelectedFiles(prev => {
+      const combined = [...prev, ...incoming];
+      if (combined.length > 5) {
+        toastError('Maximum 5 files at a time');
+        return combined.slice(0, 5);
+      }
+      return combined;
+    });
   };
 
   const removeFile = (index: number) => {
@@ -187,16 +195,40 @@ export default function Ingest() {
 
             <TabsContent value="batch" className="space-y-4">
               <div>
-                <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-2">
-                  URLs (one per line)
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">
+                    URLs (one per line, max 5)
+                  </label>
+                  {batchUrls.trim() && (
+                    <button
+                      onClick={() => setBatchUrls('')}
+                      className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  )}
+                </div>
                 <textarea
                   placeholder="https://arxiv.org/abs/1706.03762&#10;https://arxiv.org/abs/..."
                   className="w-full bg-[var(--white)] text-[var(--foreground)] text-body px-3 py-2 h-32 rounded-lg border border-[var(--border)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--foreground)] focus:ring-2 focus:ring-[var(--foreground)]/10 resize-none"
                   value={batchUrls}
-                  onChange={(e) => setBatchUrls(e.target.value)}
+                  onChange={(e) => {
+                    const lines = e.target.value.split('\n');
+                    const nonEmpty = lines.filter(l => l.trim().length > 0);
+                    if (nonEmpty.length > 5) {
+                      toastError('Maximum 5 URLs at a time');
+                      return;
+                    }
+                    setBatchUrls(e.target.value);
+                  }}
                   disabled={isProcessing}
                 />
+                {(() => {
+                  const count = batchUrls.split('\n').filter(l => l.trim().length > 0).length;
+                  return count > 0 ? (
+                    <p className="text-caption text-[var(--muted-foreground)] mt-1">{count}/5 URLs</p>
+                  ) : null;
+                })()}
               </div>
             </TabsContent>
 
@@ -211,21 +243,34 @@ export default function Ingest() {
               />
 
               <div 
-                className="border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-colors cursor-pointer border-[var(--border)] hover:border-[var(--foreground)] hover:bg-[var(--muted)]/30"
-                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  "border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-colors border-[var(--border)]",
+                  selectedFiles.length < 5
+                    ? "cursor-pointer hover:border-[var(--foreground)] hover:bg-[var(--muted)]/30"
+                    : "opacity-50 cursor-not-allowed"
+                )}
+                onClick={() => selectedFiles.length < 5 && fileInputRef.current?.click()}
               >
                 <Upload size={28} className="text-[var(--muted-foreground)] mb-2" />
                 <p className="text-code font-medium text-[var(--foreground)] text-center mb-1">
                   Drop PDF files here or click to browse
                 </p>
-                <p className="text-caption text-[var(--muted-foreground)]">Max 50MB per file</p>
+                <p className="text-caption text-[var(--muted-foreground)]">Max 50MB per file · Up to 5 files</p>
               </div>
 
               {selectedFiles.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-caption font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
-                    {selectedFiles.length} file(s) selected
-                  </p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-caption font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+                      {selectedFiles.length}/5 file(s) selected
+                    </p>
+                    <button
+                      onClick={() => setSelectedFiles([])}
+                      className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                    >
+                      Clear all
+                    </button>
+                  </div>
                   {selectedFiles.map((file, i) => (
                     <div key={i} className="flex items-center gap-2 text-code p-2 rounded-lg bg-[var(--muted)] border border-[var(--border)]">
                       <FileUp size={14} className="text-[var(--muted-foreground)]" />

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Refresh as RefreshCw, SearchNormal as FileSearch, Trash as Trash2, Edit as Pencil, TickCircle as Check, CloseCircle as X, ExportSquare as ExternalLink, Calendar, Link as LinkIcon, FingerScan as Fingerprint } from 'iconsax-reactjs';
+import { Trash as Trash2, Edit as Pencil, TickCircle as Check, CloseCircle as X, ExportSquare as ExternalLink, Calendar, Link as LinkIcon, FingerScan as Fingerprint, Refresh } from 'iconsax-reactjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type Paper, papersApi } from '@/lib/api/papers';
 import { Button } from '@/components/ui/Button';
@@ -36,7 +36,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
   });
 
   const updateMutation = useMutation({
-    mutationFn: (updates: { title?: string; tag_ids?: number[] }) => 
+    mutationFn: (updates: { title?: string; tag_ids?: number[] }) =>
       papersApi.update(paperId, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
@@ -51,15 +51,9 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
     },
   });
 
-  const regenerateMetadataMutation = useMutation({
-    mutationFn: () => papersApi.regenerateMetadata(paperId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
-    },
-  });
-
   const handleSaveTitle = () => {
-    if (!editedTitle.trim() || editedTitle.trim() === paper.title) {
+    if (!editedTitle.trim() || editedTitle.trim() === paper.title)
+    {
       setIsEditingTitle(false);
       return;
     }
@@ -71,10 +65,10 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
     setIsEditingTitle(false);
   };
 
-  const authors = (paper.metadata_json?.authors_list as string[]) || 
-                  (paper.metadata_json?.author ? [paper.metadata_json.author as string] : []);
+  const authors = (paper.metadata_json?.authors_list as string[]) ||
+    (paper.metadata_json?.author ? [paper.metadata_json.author as string] : []);
 
-  const publishedDate = paper.metadata_json?.published_date 
+  const publishedDate = paper.metadata_json?.published_date
     ? format(new Date(paper.metadata_json.published_date as string), 'MMMM d, yyyy')
     : null;
 
@@ -87,20 +81,11 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
             <Button
               variant="ghost"
               className="h-8 w-8 p-0"
-              onClick={() => regenerateMetadataMutation.mutate()}
-              disabled={regenerateMetadataMutation.isPending}
-              title="Regenerate Metadata"
-            >
-              <RefreshCw size={14} className={regenerateMetadataMutation.isPending ? 'animate-spin' : ''} />
-            </Button>
-            <Button
-              variant="ghost"
-              className="h-8 w-8 p-0"
               onClick={() => extractCitationsMutation.mutate()}
               disabled={extractCitationsMutation.isPending}
-              title="Extract Citations"
+              title="Regenerate Citations"
             >
-              <FileSearch size={14} className={extractCitationsMutation.isPending ? 'animate-spin' : ''} />
+              <Refresh size={14} className={extractCitationsMutation.isPending ? 'animate-spin' : ''} />
             </Button>
             {onDelete && (
               <Button
@@ -139,8 +124,8 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
           ) : (
             <div className="flex items-start justify-between gap-2">
               <h1 className="text-body-lg font-bold leading-snug text-[var(--foreground)] flex-1">{paper.title}</h1>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
                 onClick={() => setIsEditingTitle(true)}
               >
@@ -153,7 +138,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
         {/* Abstract / Description */}
         {!!paper.metadata_json?.abstract && (
           <div className="mb-4">
-            <div 
+            <div
               className="relative cursor-pointer group"
               onClick={() => setIsAbstractExpanded(!isAbstractExpanded)}
             >
@@ -171,12 +156,12 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
                   {paper.metadata_json.abstract as string}
                 </p>
               </motion.div>
-              
+
               {!isAbstractExpanded && (
                 <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[var(--white)] to-transparent pointer-events-none" />
               )}
-              
-              <motion.div 
+
+              <motion.div
                 animate={{ rotate: isAbstractExpanded ? 180 : 0 }}
                 className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--white)] border border-[var(--border)] rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
               >
@@ -190,15 +175,15 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
 
         {/* Tags */}
         <div className="space-y-2">
-          <TagList 
-            tags={paper.tags || []} 
-            showRemove 
+          <TagList
+            tags={paper.tags || []}
+            showRemove
             onRemove={(tagId) => {
               const newTags = (paper.tags || []).filter(t => t.id !== tagId).map(t => t.id);
               updateMutation.mutate({ tag_ids: newTags });
             }}
           />
-          <TagInput 
+          <TagInput
             selectedTags={paper.tags || []}
             onTagsChange={(tags) => updateMutation.mutate({ tag_ids: tags.map(t => t.id) })}
           />
@@ -241,9 +226,9 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
                 <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
                   <Fingerprint size={12} /> DOI
                 </h4>
-                <a 
-                  href={`https://doi.org/${paper.doi}`} 
-                  target="_blank" 
+                <a
+                  href={`https://doi.org/${paper.doi}`}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-code text-[var(--foreground)] hover:text-[var(--sky-blue)] truncate block"
                 >
@@ -256,9 +241,9 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
                 <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
                   <LinkIcon size={12} /> URL
                 </h4>
-                <a 
-                  href={paper.url} 
-                  target="_blank" 
+                <a
+                  href={paper.url}
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="text-code text-[var(--foreground)] hover:text-[var(--sky-blue)] truncate block"
                 >
@@ -272,7 +257,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
         {/* Citations List */}
         <div className="pt-2 border-t border-[var(--border)]">
           <h4 className="text-btn font-semibold text-[var(--foreground)] mb-4">Citations</h4>
-          <PaperCitationsList 
+          <PaperCitationsList
             citations={citationsData?.citations || []}
             isLoading={citationsLoading}
             error={citationsError}

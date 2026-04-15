@@ -1,23 +1,15 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { format, subDays, addDays, subMonths, addMonths, isToday, isFuture, parseISO, startOfMonth } from 'date-fns';
 import { motion } from 'motion/react';
-import { ExportSquare as ExternalLink, Like1 as ThumbsUp, Message as MessageSquare, Refresh as RefreshCw, ArrowLeft2 as ChevronLeft, ArrowRight2 as ChevronRight, ArrowDown2 as ChevronDown, ArrowUp2 as ChevronUp, MagicStar as Sparkles, Refresh as Loader2, DocumentText as FileText, Notepad2 as Newspaper, Bookmark2 as BookmarkPlus, TickCircle as Check, Flash as Flame, Clock, TrendUp as TrendingUp, Calendar } from 'iconsax-reactjs';
+import { ExportSquare as ExternalLink, Like1 as ThumbsUp, Message as MessageSquare, Refresh as RefreshCw, ArrowLeft2 as ChevronLeft, ArrowRight2 as ChevronRight, ArrowDown2 as ChevronDown, ArrowUp2 as ChevronUp, MagicStar as Sparkles, Refresh as Loader2, DocumentText as FileText, Notepad2 as Newspaper, Bookmark2 as BookmarkPlus, Calendar } from 'iconsax-reactjs';
 import { huggingfaceApi, type HFPaperItem } from '@/lib/api/huggingface';
-import { papersApi } from '@/lib/api/papers';
 import { Button } from '@/components/ui/Button';
 import { getPaperTheme } from '@/lib/paper-themes';
-import { toastSuccess, toastError } from '@/lib/utils/toast';
+import { AddToLibraryDialog } from '@/components/discovery/AddToLibraryDialog';
 import { cn } from '@/lib/utils';
 
 type ViewMode = 'daily' | 'monthly';
-type FeedTab = 'trending' | 'latest' | 'top';
-
-const FEED_TABS: { id: FeedTab; label: string; icon: React.ElementType }[] = [
-  { id: 'trending', label: 'Trending', icon: Flame },
-  { id: 'latest',   label: 'Latest',   icon: Clock },
-  { id: 'top',      label: 'Top',      icon: TrendingUp },
-];
 
 function getTodayString() {
   return format(new Date(), 'yyyy-MM-dd');
@@ -25,8 +17,7 @@ function getTodayString() {
 
 function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isAdded, setIsAdded] = useState(false);
-  const queryClient = useQueryClient();
+  const [showDialog, setShowDialog] = useState(false);
   const theme = useMemo(() => {
     const hash = paper.paper.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
     return getPaperTheme(hash);
@@ -37,17 +28,8 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
   const paperUrl = paper.paperUrl || `https://huggingface.co/papers/${paper.paper.id}`;
   const summary = paper.paper.ai_summary || paper.summary || paper.paper.summary;
 
-  const addMutation = useMutation({
-    mutationFn: () => papersApi.ingestBatch([paperUrl]),
-    onSuccess: () => {
-      setIsAdded(true);
-      toastSuccess('Paper added to library');
-      queryClient.invalidateQueries({ queryKey: ['papers'] });
-    },
-    onError: () => toastError('Failed to add paper'),
-  });
-
   return (
+    <>
     <motion.article
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -73,13 +55,12 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
         </div>
         {/* Add to library */}
         <button
-          onClick={(e) => { e.stopPropagation(); addMutation.mutate(); }}
-          disabled={addMutation.isPending || isAdded}
-          className="absolute top-2.5 right-3 p-1.5 bg-white/80 rounded transition-all hover:bg-white disabled:opacity-60"
-          title={isAdded ? 'Added to library' : 'Add to library'}
+          onClick={(e) => { e.stopPropagation(); setShowDialog(true); }}
+          className="absolute top-2.5 right-3 p-1.5 bg-white/80 rounded transition-all hover:bg-white"
+          title="Add to library"
           style={{ color: theme.text }}
         >
-          {addMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : isAdded ? <Check size={13} className="text-green-600" /> : <BookmarkPlus size={13} />}
+          <BookmarkPlus size={13} />
         </button>
       </div>
 
@@ -143,13 +124,20 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
         </div>
       </div>
     </motion.article>
+
+      {showDialog && (
+        <AddToLibraryDialog
+          paper={{ title: paper.title, url: paperUrl }}
+          onClose={() => setShowDialog(false)}
+        />
+      )}
+    </>
   );
 }
 
 export default function HuggingFacePapers() {
   const [viewMode, setViewMode] = useState<ViewMode>('daily');
   const [selectedDate, setSelectedDate] = useState(getTodayString());
-  const [activeTab, setActiveTab] = useState<FeedTab>('trending');
   const parsedDate = parseISO(selectedDate);
   const isTodaySelected = isToday(parsedDate);
 
@@ -170,16 +158,6 @@ export default function HuggingFacePapers() {
     const next = startOfMonth(addMonths(parsedDate, 1));
     if (!isFuture(next)) setSelectedDate(format(next, 'yyyy-MM-dd'));
   };
-
-  // Sort papers by tab
-  const sortedPapers = useMemo(() => {
-    if (!data?.papers) return [];
-    const papers = [...data.papers];
-    if (activeTab === 'trending') return papers.sort((a, b) => (b.paper.upvotes + b.numComments) - (a.paper.upvotes + a.numComments));
-    if (activeTab === 'top') return papers.sort((a, b) => b.paper.upvotes - a.paper.upvotes);
-    // latest — keep API order (already chronological)
-    return papers;
-  }, [data, activeTab]);
 
   const dateLabel = viewMode === 'daily'
     ? format(parsedDate, 'EEEE, MMMM d, yyyy')
@@ -246,24 +224,6 @@ export default function HuggingFacePapers() {
         </div>
       </div>
 
-      {/* Feed tabs */}
-      <div className="flex items-center gap-1 mb-6 border-b border-[var(--border)]">
-        {FEED_TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={cn(
-              'flex items-center gap-1.5 h-9 px-3 text-code font-semibold border-b-2 -mb-px transition-all',
-              activeTab === id
-                ? 'border-[var(--foreground)] text-[var(--foreground)]'
-                : 'border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
-            )}
-          >
-            <Icon size={13} />{label}
-          </button>
-        ))}
-      </div>
-
       {/* Loading */}
       {isLoading && (
         <div className="flex flex-col items-center justify-center py-16 gap-3">
@@ -295,9 +255,9 @@ export default function HuggingFacePapers() {
             </button>
           </div>
 
-          {sortedPapers.length > 0 ? (
+          {data.papers.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {sortedPapers.map((paper, i) => <HFPaperCard key={paper.paper.id} paper={paper} index={i} />)}
+              {data.papers.map((paper, i) => <HFPaperCard key={paper.paper.id} paper={paper} index={i} />)}
             </div>
           ) : (
             <div className="text-center py-16">

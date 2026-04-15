@@ -1,19 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { SearchNormal as Search, ArrowRight, Add as Plus } from 'iconsax-reactjs';
+import { SearchNormal as Search, Add as Plus } from 'iconsax-reactjs';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PaperCard } from '@/components/PaperCard';
 import { papersApi } from '@/lib/api/papers';
-
-const QUICK_SEARCHES = [
-  'Transformer attention',
-  'Diffusion models',
-  'RLHF',
-  'Graph neural networks',
-  'Sparse autoencoders',
-];
 
 export default function Home() {
   const [query, setQuery] = useState('');
@@ -64,22 +56,10 @@ export default function Home() {
               disabled={!query.trim()}
               className="mr-2 h-9 px-4 bg-[var(--foreground)] text-[var(--white)] text-code font-medium rounded-xl flex items-center gap-1.5 disabled:opacity-30 hover:opacity-85 active:opacity-75 transition-opacity"
             >
-              Search <ArrowRight size={14} />
+              Search
             </button>
           </div>
 
-          {/* Quick chips */}
-          <div className="mt-3 flex flex-wrap gap-2 justify-center">
-            {QUICK_SEARCHES.map((term) => (
-              <button
-                key={term}
-                onClick={() => handleSearch(term)}
-                className="h-7 px-3 text-caption font-medium bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)] hover:text-[var(--foreground)] rounded-full transition-colors"
-              >
-                {term}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -89,7 +69,7 @@ export default function Home() {
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <h4 className="text-btn font-semibold text-[var(--foreground)]">
-              Library{total > 0 && ` · ${total} papers`}
+              Recent Papers: {total > 0 && ` · ${total} papers`}
             </h4>
             <Link to="/ingest">
               <Button variant="primary" icon={<Plus size={13} />} className="!h-7 !px-3 !text-caption">
@@ -121,7 +101,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="py-20 text-center">
-              <p className="text-[var(--muted-foreground)] mb-4">Your library is empty</p>
+              <p className="text-[var(--muted-foreground)] mb-4">Your groups are empty</p>
               <Link to="/ingest">
                 <Button variant="outlined">Add your first paper</Button>
               </Link>

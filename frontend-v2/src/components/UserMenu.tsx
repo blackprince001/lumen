@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Logout as LogOut, Setting2 as Settings, Shield, ArrowDown2 as ChevronDown } from 'iconsax-reactjs';
+import { Logout as LogOut, Setting2 as Settings, Shield, ArrowDown2 as ChevronUp } from 'iconsax-reactjs';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
@@ -58,7 +58,7 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
                 admin
               </span>
             )}
-            <ChevronDown size={12} className="shrink-0 opacity-50" />
+            <ChevronUp size={12} className="shrink-0 opacity-50" />
           </>
         )}
       </button>
