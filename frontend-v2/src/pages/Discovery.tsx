@@ -1,0 +1,336 @@
+import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
+import { SearchNormal as Search, MagicStar as Sparkles, Refresh as Loader2, ArrowDown2 as ChevronDown, Save2 as Save, Filter, MenuBoard as List } from 'iconsax-reactjs';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { SourceSelector, type SourceId } from '@/components/discovery/SourceSelector';
+import { ResearchOverview } from '@/components/discovery/ResearchOverview';
+import { DiscoveredPaperCard } from '@/components/discovery/DiscoveredPaperCard';
+import { ClusteredResults } from '@/components/discovery/ClusteredResults';
+import { SavedDiscoveriesPanel, type LoadedSession } from '@/components/discovery/SavedDiscoveriesPanel';
+import { CitationExplorer } from '@/components/discovery/CitationExplorer';
+import { useAISearchStream } from '@/hooks/use-ai-search-stream';
+import { AnimatePresence } from 'motion/react';
+import { DiscoveryStatus } from '@/components/discovery/DiscoveryStatus';
+import { discoveryApi, type DiscoverySessionCreate, type DiscoveredPaperPreview, type DiscoverySearchFilters } from '@/lib/api/discovery';
+import { toastSuccess, toastError } from '@/lib/utils/toast';
+import { cn } from '@/lib/utils';
+
+export default function Discovery() {
+  const [query, setQuery] = useState('');
+  const [selectedSources, setSelectedSources] = useState<SourceId[]>(['arxiv', 'semantic_scholar']);
+  const [showFilters, setShowFilters] = useState(false);
+  const [yearFrom, setYearFrom] = useState('');
+  const [yearTo, setYearTo] = useState('');
+  const [minCitations, setMinCitations] = useState('');
+  const [limit, setLimit] = useState(20);
+  const [activeTab, setActiveTab] = useState<'list' | 'clustered'>('list');
+  const [selectedPapers, setSelectedPapers] = useState<Set<string>>(new Set());
+  const [citationPaper, setCitationPaper] = useState<DiscoveredPaperPreview | null>(null);
+  const [loadedSession, setLoadedSession] = useState<LoadedSession | null>(null);
+
+  const location = useLocation();
+  const queryClient = useQueryClient();
+  const { isSearching, isComplete, status, timeline, allPapers, queryUnderstanding, overview, clustering, relevanceExplanations, error, search } = useAISearchStream();
+
+  // Restore session from archive navigation
+  useEffect(() => {
+    const state = location.state as { restoreSessionId?: number } | null;
+    if (!state?.restoreSessionId) return;
+    discoveryApi.getSession(state.restoreSessionId).then((session) => {
+      const filters: DiscoverySearchFilters = {};
+      if (session.filters_json?.year_from) filters.year_from = session.filters_json.year_from as number;
+      if (session.filters_json?.year_to) filters.year_to = session.filters_json.year_to as number;
+      if (session.filters_json?.min_citations) filters.min_citations = session.filters_json.min_citations as number;
+      setQuery(session.query);
+      setSelectedSources(session.sources as SourceId[]);
+      if (filters.year_from) setYearFrom(String(filters.year_from));
+      if (filters.year_to) setYearTo(String(filters.year_to));
+      if (filters.min_citations) setMinCitations(String(filters.min_citations));
+      setLoadedSession({
+        query: session.query,
+        sources: session.sources,
+        filters,
+        papers: session.papers || [],
+        queryUnderstanding: session.query_understanding,
+        overview: session.overview,
+        clustering: session.clustering,
+        relevanceExplanations: session.relevance_explanations,
+      });
+    }).catch(console.error);
+    // Clear state so back-navigation doesn't re-restore
+    window.history.replaceState({}, '');
+  }, [location.state]);
+
+  const saveSessionMutation = useMutation({
+    mutationFn: (data: DiscoverySessionCreate) => discoveryApi.createSession(data),
+    onSuccess: () => {
+      toastSuccess('Search session saved');
+      queryClient.invalidateQueries({ queryKey: ['discovery-sessions'] });
+    },
+    onError: () => toastError('Failed to save session'),
+  });
+
+  const buildFilters = (): DiscoverySearchFilters => ({
+    year_from: yearFrom ? parseInt(yearFrom) : undefined,
+    year_to: yearTo ? parseInt(yearTo) : undefined,
+    min_citations: minCitations ? parseInt(minCitations) : undefined,
+  });
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim() || selectedSources.length === 0) return;
+    setLoadedSession(null);
+    search({ query: query.trim(), sources: selectedSources, filters: buildFilters(), limit, include_overview: true, include_clustering: true, include_relevance: true });
+  };
+
+  const handleSuggestedSearch = (suggestedQuery: string) => {
+    setQuery(suggestedQuery);
+    setLoadedSession(null);
+    search({ query: suggestedQuery, sources: selectedSources, filters: buildFilters(), limit, include_overview: true, include_clustering: true, include_relevance: true });
+  };
+
+  const handleLoadSession = (session: LoadedSession) => {
+    setQuery(session.query);
+    setSelectedSources(session.sources as SourceId[]);
+    if (session.filters.year_from) setYearFrom(String(session.filters.year_from));
+    if (session.filters.year_to) setYearTo(String(session.filters.year_to));
+    if (session.filters.min_citations) setMinCitations(String(session.filters.min_citations));
+    setLoadedSession(session);
+  };
+
+  const handleSaveSession = () => {
+    const papers = loadedSession ? loadedSession.papers : allPapers;
+    if (papers.length === 0) return;
+    saveSessionMutation.mutate({
+      name: `${query} - ${new Date().toLocaleDateString()}`,
+      query,
+      sources: selectedSources,
+      filters_json: buildFilters() as Record<string, unknown>,
+      query_understanding: loadedSession ? loadedSession.queryUnderstanding : queryUnderstanding,
+      overview: loadedSession ? loadedSession.overview : overview,
+      clustering: loadedSession ? loadedSession.clustering : clustering,
+      relevance_explanations: loadedSession ? loadedSession.relevanceExplanations : relevanceExplanations,
+      papers,
+    });
+  };
+
+  const togglePaperSelection = (id: string) => {
+    setSelectedPapers(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  // Merge live search data with loaded session data
+  const displayPapers = loadedSession ? loadedSession.papers : allPapers;
+  const displayOverview = loadedSession ? loadedSession.overview : overview;
+  const displayClustering = loadedSession ? loadedSession.clustering : clustering;
+  const displayRelevance = loadedSession ? (loadedSession.relevanceExplanations ?? []) : relevanceExplanations;
+  const displayQueryUnderstanding = loadedSession ? loadedSession.queryUnderstanding : queryUnderstanding;
+
+  const hasResults = displayPapers.length > 0;
+  const hasSearched = isSearching || hasResults || isComplete || !!error;
+
+  const researchOverview = displayOverview ? {
+    overview: displayOverview.overview || '',
+    key_themes: displayOverview.key_themes || [],
+    notable_trends: displayOverview.notable_trends || [],
+    research_gaps: displayOverview.research_gaps || [],
+    suggested_followups: displayOverview.suggested_followups || (displayOverview as any).suggested_searches || [],
+  } : null;
+
+  const queryUnderstandingData = displayQueryUnderstanding ? {
+    interpreted_query: displayQueryUnderstanding.interpreted_query || (displayQueryUnderstanding as any).intent || '',
+    boolean_query: displayQueryUnderstanding.boolean_query,
+    key_concepts: displayQueryUnderstanding.key_concepts || [],
+  } : undefined;
+
+  return (
+    <div className="max-w-[60rem] mx-auto px-6 py-8">
+      <div className="mb-8 text-center">
+        <h1 className="text-page-title mb-1">Research Discovery</h1>
+        <p className="text-body text-[var(--muted-foreground)] max-w-2xl mx-auto">
+          Search across arXiv, Semantic Scholar, and Google Scholar to discover relevant papers with AI-powered insights and intelligent clustering
+        </p>
+      </div>
+
+      {/* Search Form */}
+      <form onSubmit={handleSearch} className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-[var(--muted-foreground)]" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search for papers by topic, title, or keywords..."
+            className="pl-12 pr-32 h-14 text-btn"
+            disabled={isSearching}
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            className="absolute right-2 top-1/2 -translate-y-1/2 h-10"
+            disabled={!query.trim() || selectedSources.length === 0 || isSearching}
+            icon={isSearching ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+          >
+            Search
+          </Button>
+        </div>
+      </form>
+
+      {/* Source Selection & Filters */}
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <SourceSelector selectedSources={selectedSources} onChange={setSelectedSources} />
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2 text-code text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+        >
+          <Filter size={14} />
+          <span>Advanced Filters</span>
+          <ChevronDown size={14} className={cn('transition-transform', showFilters && 'rotate-180')} />
+        </button>
+
+        {showFilters && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
+            {[
+              { label: 'Year From', value: yearFrom, set: setYearFrom, placeholder: '2020' },
+              { label: 'Year To', value: yearTo, set: setYearTo, placeholder: '2024' },
+              { label: 'Min Citations', value: minCitations, set: setMinCitations, placeholder: '10' },
+            ].map(({ label, value, set, placeholder }) => (
+              <div key={label}>
+                <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">{label}</label>
+                <Input type="number" value={value} onChange={(e) => set(e.target.value)} placeholder={placeholder} className="h-8 text-code" />
+              </div>
+            ))}
+            <div>
+              <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">
+                Papers / Source
+              </label>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={limit}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value);
+                  if (!isNaN(n)) setLimit(Math.min(100, Math.max(1, n)));
+                }}
+                placeholder="20"
+                className="h-8 text-code"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Saved Discoveries */}
+      <SavedDiscoveriesPanel onLoadSession={handleLoadSession} />
+
+      {/* Discovery Status */}
+      <AnimatePresence>
+        {isSearching && <DiscoveryStatus status={status} timeline={timeline} isSearching={isSearching} />}
+      </AnimatePresence>
+
+      {/* Error */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+          <p className="text-code text-red-800">{error}</p>
+        </div>
+      )}
+
+      {/* Research Overview */}
+      {researchOverview && (
+        <ResearchOverview
+          overview={researchOverview}
+          queryUnderstanding={queryUnderstandingData}
+          onSuggestedSearch={handleSuggestedSearch}
+        />
+      )}
+
+      {/* Results */}
+      {hasResults && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h3 className="text-body font-bold">
+                {displayPapers.length} Papers Found
+                {loadedSession && <span className="text-caption font-normal text-[var(--muted-foreground)] ml-2">(loaded from saved)</span>}
+              </h3>
+              {displayClustering && (
+                <div className="flex items-center gap-1 border border-[var(--border)] rounded-lg overflow-hidden">
+                  {(['list', 'clustered'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTab(tab)}
+                      className={cn(
+                        'px-3 py-1 text-caption font-medium transition-colors flex items-center gap-1',
+                        activeTab === tab
+                          ? 'bg-[var(--foreground)] text-[var(--white)]'
+                          : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                      )}
+                    >
+                      {tab === 'list' ? <><List size={11} /> All</> : <><Sparkles size={11} /> By Topic</>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Button
+              variant="primary"
+              icon={<Save size={14} />}
+              onClick={handleSaveSession}
+              disabled={saveSessionMutation.isPending || !!loadedSession}
+            >
+              {saveSessionMutation.isPending ? 'Saving...' : saveSessionMutation.isSuccess ? 'Saved!' : 'Save Session'}
+            </Button>
+          </div>
+
+          {activeTab === 'clustered' && displayClustering ? (
+            <ClusteredResults
+              clustering={displayClustering}
+              papers={displayPapers}
+              relevanceExplanations={displayRelevance}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {displayPapers.map((paper, i) => (
+                <DiscoveredPaperCard
+                  key={`${paper.source}-${paper.external_id}-${i}`}
+                  paper={paper}
+                  showCheckbox
+                  isSelected={selectedPapers.has(`${paper.source}-${paper.external_id}`)}
+                  onToggleSelect={() => togglePaperSelection(`${paper.source}-${paper.external_id}`)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!hasSearched && (
+        <div className="text-center py-16">
+          <Sparkles size={48} className="text-[var(--muted-foreground)] mx-auto mb-4 opacity-50" />
+          <p className="text-body text-[var(--muted-foreground)] max-w-md mx-auto">
+            Enter a search query above to discover research papers with AI-powered insights
+          </p>
+        </div>
+      )}
+
+      {/* Citation Explorer Modal */}
+      {citationPaper && (
+        <CitationExplorer
+          paper={citationPaper}
+          isOpen={!!citationPaper}
+          onClose={() => setCitationPaper(null)}
+          onSelectPaper={(paper) => setCitationPaper(paper)}
+        />
+      )}
+    </div>
+  );
+}

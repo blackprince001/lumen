@@ -1,0 +1,223 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Lamp as Lightbulb, Refresh as RefreshCw, Edit as Edit2, Save2 as Save, Warning2 as AlertCircle } from 'iconsax-reactjs';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
+import { Button } from '@/components/ui/Button';
+import { Textarea } from '@/components/ui/Textarea';
+import { aiFeaturesApi } from '@/lib/api/aiFeatures';
+import { cn } from '@/lib/utils';
+
+interface KeyFindingsProps {
+  paperId: number;
+}
+
+export function KeyFindings({ paperId }: KeyFindingsProps) {
+  const queryClient = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [editedFindings, setEditedFindings] = useState<string>('');
+
+  const { data: findings, isLoading, error } = useQuery({
+    queryKey: ['ai-findings', paperId],
+    queryFn: () => aiFeaturesApi.getFindings(paperId),
+    retry: 1,
+  });
+
+  const generateMutation = useMutation({
+    mutationFn: () => aiFeaturesApi.extractFindings(paperId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-findings', paperId] });
+      queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (findingsData: any) => aiFeaturesApi.updateFindings(paperId, findingsData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ai-findings', paperId] });
+      setEditing(false);
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex flex-col items-center justify-center text-[var(--muted-foreground)] animate-pulse">
+        <Lightbulb size={24} className="mb-2 opacity-50" />
+        <p className="text-code">Extracting insights...</p>
+      </div>
+    );
+  }
+
+  const findingsData = findings?.findings || {};
+
+  if (editing) {
+    return (
+      <div className="space-y-4">
+        <div className="p-3 bg-[var(--muted)]/30 rounded-lg border border-[var(--border)] mb-2">
+          <p className="text-caption text-[var(--muted-foreground)]">
+            Note: Findings are stored as structured JSON. Edit with caution.
+          </p>
+        </div>
+        <Textarea
+          value={editedFindings || JSON.stringify(findingsData, null, 2)}
+          onChange={(e) => setEditedFindings(e.target.value)}
+          rows={15}
+          className="w-full text-caption font-mono bg-[var(--white)]"
+          autoFocus
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            className="h-8 text-caption"
+            onClick={() => {
+              try {
+                const parsed = JSON.parse(editedFindings);
+                updateMutation.mutate(parsed);
+              } catch (e) {
+                alert('Invalid JSON format');
+              }
+            }}
+            disabled={updateMutation.isPending}
+          >
+            <Save size={14} className="mr-1.5" />
+            Save Changes
+          </Button>
+          <Button
+            variant="ghost"
+            className="h-8 text-caption"
+            onClick={() => {
+              setEditing(false);
+              setEditedFindings('');
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const renderSection = (title: string, items?: string[] | string) => {
+    if (!items || (Array.isArray(items) && items.length === 0)) return null;
+
+    return (
+      <div className="space-y-3">
+        <h4 className="text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)] flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-[var(--foreground)]/20" />
+          {title}
+        </h4>
+        {Array.isArray(items) ? (
+          <ul className="space-y-3 pl-1">
+            {items.map((item, idx) => (
+              <li key={idx} className="text-code leading-relaxed text-[var(--foreground)] flex gap-3">
+                <span className="text-[var(--muted-foreground)] opacity-40 mt-1.5 text-micro tabular-nums shrink-0">
+                  {String(idx + 1).padStart(2, '0')}
+                </span>
+                <div className="prose-inline">
+                  <ReactMarkdown 
+                    remarkPlugins={[remarkGfm, remarkMath]} 
+                    rehypePlugins={[rehypeKatex]}
+                    components={{
+                      p: ({ children }) => <span>{children}</span>,
+                      a: ({ href, children }) => <a href={href} className="text-[var(--sky-blue)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                      code: ({ children }) => <code className="bg-[var(--muted)] px-1 py-0.5 rounded text-caption font-mono">{children}</code>
+                    }}
+                  >
+                    {item}
+                  </ReactMarkdown>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="text-code leading-relaxed text-[var(--foreground)] prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0">
+             <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+              {items}
+            </ReactMarkdown>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const hasContent = Object.keys(findingsData).some(key => {
+    const val = (findingsData as any)[key];
+    return val && (Array.isArray(val) ? val.length > 0 : true);
+  });
+
+  return (
+    <div className="space-y-8">
+      {hasContent ? (
+        <>
+          {renderSection("Key Findings", findingsData.key_findings)}
+          {renderSection("Conclusions", findingsData.conclusions)}
+          {renderSection("Methodology", findingsData.methodology)}
+          {renderSection("Limitations", findingsData.limitations)}
+          {renderSection("Future Work", findingsData.future_work)}
+          
+          <div className="flex items-center gap-2 pt-6 border-t border-[var(--border)]">
+            <Button
+              variant="ghost"
+              className="h-8 text-caption px-3"
+              onClick={() => {
+                setEditedFindings(JSON.stringify(findingsData, null, 2));
+                setEditing(true);
+              }}
+            >
+              <Edit2 size={13} className="mr-1.5" />
+              Edit
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-8 text-caption px-3 ml-auto"
+              onClick={() => generateMutation.mutate()}
+              disabled={generateMutation.isPending}
+            >
+              <RefreshCw size={13} className={cn("mr-1.5", generateMutation.isPending && "animate-spin")} />
+              {generateMutation.isPending ? 'Extracting...' : 'Regenerate'}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-[var(--muted)]/20 rounded-2xl border border-dashed border-[var(--border)]">
+          <Lightbulb size={32} className="mb-4 text-[var(--muted-foreground)] opacity-40" />
+          <h3 className="text-btn font-semibold text-[var(--foreground)] mb-2">Findings Not Extracted</h3>
+          <p className="text-code text-[var(--muted-foreground)] mb-6 max-w-[15rem]">
+            Use AI to identify key contributions, methodology details, and limitations from this paper.
+          </p>
+          <Button
+            onClick={() => generateMutation.mutate()}
+            disabled={generateMutation.isPending}
+            className="px-6"
+          >
+            {generateMutation.isPending ? (
+              <>
+                <RefreshCw size={16} className="mr-2 animate-spin" />
+                Analyzing paper...
+              </>
+            ) : (
+              <>
+                <Lightbulb size={16} className="mr-2" />
+                Extract Insights
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+
+      {(generateMutation.isError || error) && (
+        <div className="p-4 bg-[var(--destructive)]/5 border border-[var(--destructive)]/20 rounded-xl flex items-start gap-3">
+          <AlertCircle size={16} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+          <div>
+            <p className="text-caption font-semibold text-[var(--destructive)]">Extraction failed</p>
+            <p className="text-caption text-[var(--destructive)]/80 mt-1 uppercase">
+              {generateMutation.error instanceof Error ? generateMutation.error.message : 'Server error'}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

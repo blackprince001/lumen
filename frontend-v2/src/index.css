@@ -1,0 +1,405 @@
+@import "tw-animate-css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Papers Design System — derived from DESIGN.md (Logically-inspired)
+ *
+ * Near-monochrome palette with forest-green undertones.
+ * Content-first, scholarly, restrained color.
+ */
+
+:root {
+  /* ===== PRIMARY ===== */
+  --forest-black: #232927;
+  --true-black: #080908;
+  --deep-forest: #0F3322;
+
+  /* ===== ACCENT ===== */
+  --mint-green: #4CFFA9;
+  --sky-blue: #3C91E6;
+  --light-blue: #4F9BE8;
+  --coral-red: #E45B3C;
+
+  /* ===== NEUTRAL SCALE ===== */
+  --black: #000000;
+  --near-black: #101111;
+  --charcoal: #080908;
+  --dark-gray: #232927;
+  --mid-gray: #616664;
+  --cool-gray: #A1AAA6;
+
+  /* ===== SURFACES & BORDERS ===== */
+  --white: #FFFFFF;
+  --off-white: #FDFDFD;
+  --light-gray: #F1F2F1;
+  --border-gray: #E2E4E3;
+  --card-surface: #F9F9F9;
+
+  /* ===== SEMANTIC / STATUS ===== */
+  --error-red: #D12E3E;
+  --success-green: #07BC0C;
+
+  /* ===== SHADOWS ===== */
+  --inset-light: rgba(255, 255, 255, 0.25);
+  --inset-dark: rgb(0, 0, 0);
+
+  /* ===== ELEVATION ===== */
+  --shadow-none: none;
+  --shadow-inset: rgba(255, 255, 255, 0.25) 0px 2px 1px 0px inset, rgb(0, 0, 0) 0px -2px 0px 0px inset;
+  --shadow-inset-hover: rgba(255, 255, 255, 0.20) 0px 2px 1px 0px inset, rgb(0, 0, 0) 0px -2px 0px 0px inset;
+  --shadow-subtle: 0px 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-elevated: 0px 4px 16px rgba(0, 0, 0, 0.08), 0px 1px 4px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0px 8px 32px rgba(0, 0, 0, 0.12), 0px 2px 8px rgba(0, 0, 0, 0.06);
+  --shadow-focus: 0 0 0 2px rgba(35, 41, 39, 0.12);
+
+  /* ===== NOTIFICATION BANNER ===== */
+  --banner-bg: #FFF9E6;
+  --banner-border: #F0E0A0;
+
+  /* ===== TYPOGRAPHY ===== */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+
+  /* ===== LAYOUT ===== */
+  --sidebar-width: 220px;
+  --sidebar-collapsed-width: 60px;
+  --max-content-width: 1160px;
+  --main-content-width: 940px;
+
+  /* ===== TAILWIND SEMANTIC MAPPINGS ===== */
+  --background: var(--off-white);
+  --foreground: var(--charcoal);
+  --card: var(--card-surface);
+  --card-foreground: var(--charcoal);
+  --popover: var(--white);
+  --popover-foreground: var(--charcoal);
+  --primary: var(--forest-black);
+  --primary-foreground: var(--white);
+  --secondary: var(--light-gray);
+  --secondary-foreground: var(--charcoal);
+  --muted: var(--light-gray);
+  --muted-foreground: var(--mid-gray);
+  --accent: var(--mint-green);
+  --accent-foreground: var(--charcoal);
+  --destructive: var(--error-red);
+  --destructive-foreground: var(--white);
+  --border: var(--border-gray);
+  --input: var(--border-gray);
+  --ring: var(--forest-black);
+
+  /* ===== PAPER THEMES (Default/Light) ===== */
+  --theme-olive-bg: #f4f1e0;
+  --theme-olive-border: #e2dec0;
+  --theme-olive-text: #5c5a4a;
+  --theme-olive-accent: #e9e5d0;
+  --theme-olive-action: #d5d0b0;
+  --theme-beige-bg: #f5f0e8;
+  --theme-beige-border: #e5dec8;
+  --theme-beige-text: #5c5850;
+  --theme-beige-accent: #ebe4d8;
+  --theme-beige-action: #d8ceb8;
+  --theme-blue-bg: #edf2f7;
+  --theme-blue-border: #cbd5e0;
+  --theme-blue-text: #4a5568;
+  --theme-blue-accent: #e2e8f0;
+  --theme-blue-action: #b8c7d9;
+  --theme-yellow-bg: #fffaf0;
+  --theme-yellow-border: #fef3c7;
+  --theme-yellow-text: #92400e;
+  --theme-yellow-accent: #fefde8;
+  --theme-yellow-action: #fde68a;
+  --theme-pink-bg: #fff5f5;
+  --theme-pink-border: #fed7d7;
+  --theme-pink-text: #9b2c2c;
+  --theme-pink-accent: #fff5f5;
+  --theme-pink-action: #feb2b2;
+  --theme-green-bg: #f0fff4;
+  --theme-green-border: #c6f6d5;
+  --theme-green-text: #22543d;
+  --theme-green-accent: #f0fff4;
+  --theme-green-action: #9ae6b4;
+  --theme-purple-bg: #faf5ff;
+  --theme-purple-border: #e9d8fd;
+  --theme-purple-text: #553c9a;
+  --theme-purple-accent: #faf5ff;
+  --theme-purple-action: #d6bcfa;
+
+  color-scheme: light;
+}
+
+/* ===== DARK THEME ===== */
+/* Clean neutral black — no colour tinting */
+.dark {
+  --forest-black: #E8E8E8;
+  --true-black: #F2F2F2;
+  --deep-forest: #A0A0A0;
+
+  --charcoal: #E2E2E2;
+  --near-black: #CCCCCC;
+  --mid-gray: #888888;
+  --cool-gray: #555555;
+
+  /* Surfaces — pure blacks */
+  --white: #1A1A1A;
+  --off-white: #111111;
+  --light-gray: #222222;
+  --border-gray: #2E2E2E;
+  --card-surface: #1E1E1E;
+
+  --error-red: #F06070;
+  --success-green: #34D058;
+
+  --banner-bg: #1E1E1E;
+  --banner-border: #333333;
+
+  --shadow-inset: rgba(255, 255, 255, 0.06) 0px 2px 1px 0px inset, rgba(0, 0, 0, 0.6) 0px -2px 0px 0px inset;
+  --shadow-inset-hover: rgba(255, 255, 255, 0.04) 0px 2px 1px 0px inset, rgba(0, 0, 0, 0.6) 0px -2px 0px 0px inset;
+  --shadow-subtle: 0px 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0px 4px 16px rgba(0, 0, 0, 0.45), 0px 1px 4px rgba(0, 0, 0, 0.25);
+  --shadow-modal: 0px 8px 32px rgba(0, 0, 0, 0.55), 0px 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-focus: 0 0 0 2px rgba(255, 255, 255, 0.12);
+
+  --background: var(--off-white);
+  --foreground: var(--charcoal);
+  --card: var(--card-surface);
+  --card-foreground: var(--charcoal);
+  --popover: var(--white);
+  --popover-foreground: var(--charcoal);
+  --primary: #E2E2E2;
+  --primary-foreground: #111111;
+  --secondary: var(--light-gray);
+  --secondary-foreground: var(--charcoal);
+  --muted: var(--light-gray);
+  --muted-foreground: var(--mid-gray);
+  --accent: var(--mid-gray);
+  --accent-foreground: #111111;
+  --destructive: var(--error-red);
+  --destructive-foreground: #111111;
+  --border: var(--border-gray);
+  --input: var(--border-gray);
+  --ring: #D0D0D0;
+
+  /* ===== PAPER THEMES (Dark) ===== */
+  --theme-olive-bg: #1c1d12;
+  --theme-olive-border: #2e301e;
+  --theme-olive-text: #d4d0c0;
+  --theme-olive-accent: #232516;
+  --theme-olive-action: #3a3c26;
+  --theme-beige-bg: #1d1b18;
+  --theme-beige-border: #332f2a;
+  --theme-beige-text: #e5dec8;
+  --theme-beige-accent: #262320;
+  --theme-beige-action: #3a3630;
+  --theme-blue-bg: #111827;
+  --theme-blue-border: #1e293b;
+  --theme-blue-text: #94a3b8;
+  --theme-blue-accent: #1e293b;
+  --theme-blue-action: #334155;
+  --theme-yellow-bg: #1c1912;
+  --theme-yellow-border: #332d1e;
+  --theme-yellow-text: #fbbf24;
+  --theme-yellow-accent: #262116;
+  --theme-yellow-action: #453b1d;
+  --theme-pink-bg: #1c1212;
+  --theme-pink-border: #331e1e;
+  --theme-pink-text: #f87171;
+  --theme-pink-accent: #261616;
+  --theme-pink-action: #451d1d;
+  --theme-green-bg: #061c12;
+  --theme-green-border: #0e3322;
+  --theme-green-text: #34d058;
+  --theme-green-accent: #0b2619;
+  --theme-green-action: #164a32;
+  --theme-purple-bg: #14121c;
+  --theme-purple-border: #251e33;
+  --theme-purple-text: #a78bfa;
+  --theme-purple-accent: #1b1626;
+  --theme-purple-action: #2d2645;
+
+  color-scheme: dark;
+}
+
+/* ===== BASE RESET ===== */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 19.6px;
+  color: var(--foreground);
+  background-color: var(--background);
+  font-feature-settings: "ss07", "zero", "calt" 1, "liga" 1;
+  font-variant-ligatures: common-ligatures;
+  font-optical-sizing: auto;
+  font-variant-numeric: tabular-nums;
+  min-height: 100dvh;
+}
+
+/* Headings follow original hierarchy */
+h1 {
+  font-family: var(--font-sans);
+  font-size: 25px;
+  font-weight: 700;
+  line-height: 35px;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+h2 {
+  font-family: var(--font-sans);
+  font-size: 31px;
+  font-weight: 700;
+  line-height: 40.3px;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+h3 {
+  font-family: var(--font-sans);
+  font-size: 39px;
+  font-weight: 700;
+  line-height: 50.7px;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+h4 {
+  font-family: var(--font-sans);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 28px;
+  color: var(--foreground);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-gray);
+  }
+}
+
+/* ===== NATIVE DIALOG ===== */
+
+/* Author utility classes like `flex` on the <dialog> element override the
+ * UA's `dialog:not([open]) { display: none }` rule, leaving closed dialogs
+ * visible. Re-enforce hidden state with !important so utilities can't win. */
+dialog:not([open]) {
+  display: none !important;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+}
+
+/* ===== SONNER TOASTS — Logically design system ===== */
+
+/*
+ * We deliberately avoid `richColors` on <Toaster> and instead
+ * style everything through CSS vars. This gives us pixel-perfect
+ * control while still reacting to the light/dark theme switch.
+ */
+
+[data-sonner-toaster] {
+  font-family: var(--font-sans) !important;
+  width: 420px !important;
+}
+
+[data-sonner-toast] {
+  font-family: var(--font-sans) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  line-height: 21px !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-elevated) !important;
+  border: 1px solid var(--border-gray) !important;
+  background: var(--white) !important;
+  color: var(--charcoal) !important;
+  padding: 16px 20px !important;
+  gap: 12px !important;
+  width: 100% !important;
+  min-height: 60px !important;
+}
+
+/* Title */
+[data-sonner-toast] [data-title] {
+  font-weight: 500 !important;
+  font-size: 15px !important;
+  color: var(--charcoal) !important;
+}
+
+/* Description */
+[data-sonner-toast] [data-description] {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: var(--mid-gray) !important;
+  line-height: 20px !important;
+  margin-top: 4px !important;
+}
+
+/* Intent conveyed through title + icon color only — no border accents */
+[data-sonner-toast][data-type="success"] [data-icon],
+[data-sonner-toast][data-type="success"] [data-title] {
+  color: var(--success-green) !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon],
+[data-sonner-toast][data-type="error"] [data-title] {
+  color: var(--error-red) !important;
+}
+
+[data-sonner-toast][data-type="warning"] [data-icon],
+[data-sonner-toast][data-type="warning"] [data-title] {
+  color: var(--coral-red) !important;
+}
+
+[data-sonner-toast][data-type="info"] [data-icon],
+[data-sonner-toast][data-type="info"] [data-title] {
+  color: var(--sky-blue) !important;
+}
+
+/* Close button */
+[data-sonner-toast] [data-close-button] {
+  background: var(--light-gray) !important;
+  border: 1px solid var(--border-gray) !important;
+  color: var(--mid-gray) !important;
+  border-radius: 6px !important;
+  top: 10px !important;
+  right: 10px !important;
+}
+
+[data-sonner-toast] [data-close-button]:hover {
+  background: var(--border-gray) !important;
+  color: var(--charcoal) !important;
+}

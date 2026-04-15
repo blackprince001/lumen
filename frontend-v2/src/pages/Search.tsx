@@ -1,0 +1,267 @@
+import { useState, useCallback } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { SearchNormal as SearchIcon, SliderHorizontal as SlidersHorizontal, MagicStar as Sparkles } from 'iconsax-reactjs';
+import { searchApi, type SearchMode, type SearchRequest } from '@/lib/api/search';
+import { Button } from '@/components/ui/Button';
+import { Badge } from '@/components/ui/Badge';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover';
+import { Select } from '@/components/ui/Select';
+import { Input } from '@/components/ui/Input';
+import { getPaperTheme } from '@/lib/paper-themes';
+import { cn } from '@/lib/utils';
+
+export default function Search() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
+  
+  const initialQuery = searchParams.get('q') ?? '';
+  const initialMode = (searchParams.get('mode') as SearchMode) ?? 'fulltext';
+  
+  const [query, setQuery] = useState(initialQuery);
+  const [mode, setMode] = useState<SearchMode>(initialMode);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  
+  // Filters
+  const [yearFrom, setYearFrom] = useState('');
+  const [yearTo, setYearTo] = useState('');
+  const [readingStatus, setReadingStatus] = useState('');
+  const [priority, setPriority] = useState('');
+
+  // Search query
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ['search', query, mode, yearFrom, yearTo, readingStatus, priority],
+    queryFn: () => searchApi.search({
+      query,
+      mode,
+      year_from: yearFrom ? parseInt(yearFrom) : undefined,
+      year_to: yearTo ? parseInt(yearTo) : undefined,
+      reading_status: (readingStatus || undefined) as SearchRequest['reading_status'],
+      priority: (priority || undefined) as SearchRequest['priority'],
+    }),
+    enabled: !!query.trim(),
+  });
+
+  const handleSearch = useCallback(() => {
+    if (query.trim()) {
+      const params = new URLSearchParams();
+      params.set('q', query.trim());
+      params.set('mode', mode);
+      setSearchParams(params);
+    }
+  }, [query, mode, setSearchParams]);
+
+  const handleModeChange = (newMode: SearchMode) => {
+    setMode(newMode);
+    if (query.trim()) {
+      const params = new URLSearchParams();
+      params.set('q', query.trim());
+      params.set('mode', newMode);
+      setSearchParams(params);
+    }
+  };
+
+  const clearFilters = () => {
+    setYearFrom('');
+    setYearTo('');
+    setReadingStatus('');
+    setPriority('');
+  };
+
+  const hasFilters = yearFrom || yearTo || readingStatus || priority;
+  const results = data?.results ?? [];
+
+  return (
+    <div className="max-w-content mx-auto px-6 py-8">
+      {/* Search header */}
+      <div className="mb-8">
+        <h1 className="tracking-tight mb-1">Search</h1>
+        <p className="text-body text-[var(--muted-foreground)]">
+          Find papers by content, metadata, or meaning
+        </p>
+      </div>
+
+      {/* Search bar */}
+      <div className="flex items-center gap-3 mb-6">
+        <div className="flex-1 relative">
+          <SearchIcon
+            size={16}
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] pointer-events-none"
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Search across all papers..."
+            className="w-full h-11 pl-10 pr-4 bg-[var(--card)] border border-[var(--border)] rounded-xl text-code text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--ring)] transition-all"
+            autoFocus
+          />
+        </div>
+        
+        {/* Filters Popover */}
+        <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+          <PopoverTrigger>
+            <Button 
+              variant="secondary" 
+              icon={<SlidersHorizontal size={14} />} 
+              className={cn("!h-11", hasFilters && "bg-[var(--muted)]")}
+            >
+              Filters
+              {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-[var(--foreground)] ml-1" />}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent side="bottom" align="end" className="w-72 p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-code font-semibold">Advanced Filters</p>
+              {hasFilters && (
+                <button onClick={clearFilters} className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+                  Clear all
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-caption text-[var(--muted-foreground)] font-medium block mb-1.5">Year Range</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="number" placeholder="From" value={yearFrom} onChange={(e) => setYearFrom(e.target.value)} className="h-8 text-code" />
+                  <Input type="number" placeholder="To" value={yearTo} onChange={(e) => setYearTo(e.target.value)} className="h-8 text-code" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-caption text-[var(--muted-foreground)] font-medium block mb-1.5">Reading Status</label>
+                <Select value={readingStatus} onChange={(e) => setReadingStatus(e.target.value)} className="h-8 text-code">
+                  <option value="">All</option>
+                  <option value="not_started">Not Started</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="read">Read</option>
+                  <option value="archived">Archived</option>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-caption text-[var(--muted-foreground)] font-medium block mb-1.5">Priority</label>
+                <Select value={priority} onChange={(e) => setPriority(e.target.value)} className="h-8 text-code">
+                  <option value="">All</option>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </Select>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+
+      {/* Search mode toggle */}
+      <div className="flex items-center gap-2 mb-8">
+        <button 
+          onClick={() => handleModeChange('fulltext')}
+          className={cn(
+            "h-8 px-3 text-caption font-medium rounded-lg flex items-center gap-1.5 transition-colors",
+            mode === 'fulltext' 
+              ? "bg-[var(--foreground)] text-[var(--white)] shadow-sm" 
+              : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]"
+          )}
+        >
+          <SearchIcon size={13} />
+          <span>Full-text</span>
+        </button>
+        <button 
+          onClick={() => handleModeChange('semantic')}
+          className={cn(
+            "h-8 px-3 text-caption font-medium rounded-lg flex items-center gap-1.5 transition-colors",
+            mode === 'semantic' 
+              ? "bg-[var(--foreground)] text-[var(--white)] shadow-sm" 
+              : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]"
+          )}
+        >
+          <Sparkles size={13} />
+          <span>Semantic</span>
+        </button>
+      </div>
+
+      {/* Results */}
+      {isLoading && (
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="border rounded-2xl p-6">
+              <Skeleton className="h-5 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2 mb-4" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isError && (
+        <div className="text-center py-12 text-[var(--muted-foreground)]">
+          <p className="mb-4">Failed to search</p>
+          <Button variant="outlined" onClick={() => queryClient.invalidateQueries({ queryKey: ['search'] })}>
+            Retry
+          </Button>
+        </div>
+      )}
+
+      {!isLoading && !isError && query.trim() && (
+        <div className="space-y-4">
+          <p className="text-code font-medium text-[var(--muted-foreground)] mb-6">
+            {results.length} result{results.length !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
+          </p>
+
+          {results.length === 0 ? (
+            <div className="text-center py-12 text-[var(--muted-foreground)]">
+              <p>No results found</p>
+            </div>
+          ) : (
+            results.map((result) => {
+              const theme = getPaperTheme(result.paper_id);
+              return (
+                <Link 
+                  key={result.paper_id} 
+                  to={`/papers/${result.paper_id}`}
+                  className="group block border rounded-2xl p-6 transition-all duration-200 hover:border-[var(--foreground)] relative overflow-hidden"
+                  style={{ backgroundColor: theme.bg, borderColor: theme.border }}
+                >
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <h3 className="text-body-lg font-medium leading-snug group-hover:text-[var(--foreground)] transition-colors" style={{ color: theme.text }}>
+                      {result.title}
+                    </h3>
+                    {mode === 'semantic' && result.similarity_score !== undefined && (
+                      <Badge variant="secondary" className="shrink-0">
+                        {Math.round(result.similarity_score * 100)}% match
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {result.authors && (
+                    <p className="text-caption text-[var(--muted-foreground)] mb-3">{result.authors}</p>
+                  )}
+                  
+                  {result.snippet && (
+                    <p 
+                      className="text-code leading-relaxed" 
+                      style={{ color: theme.text }}
+                      dangerouslySetInnerHTML={{ __html: result.snippet }}
+                    />
+                  )}
+                </Link>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {!query.trim() && (
+        <div className="text-center py-12 text-[var(--muted-foreground)]">
+          <SearchIcon size={48} className="mx-auto mb-4 opacity-20" />
+          <p>Enter a search query to find papers</p>
+        </div>
+      )}
+    </div>
+  );
+}

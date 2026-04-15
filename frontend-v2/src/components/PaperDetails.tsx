@@ -1,0 +1,284 @@
+import { useState } from 'react';
+import { motion } from 'motion/react';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { Refresh as RefreshCw, SearchNormal as FileSearch, Trash as Trash2, Edit as Pencil, TickCircle as Check, CloseCircle as X, ExportSquare as ExternalLink, Calendar, Link as LinkIcon, FingerScan as Fingerprint } from 'iconsax-reactjs';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { type Paper, papersApi } from '@/lib/api/papers';
+import { Button } from '@/components/ui/Button';
+import { TagInput } from '@/components/TagInput';
+import { TagList } from '@/components/TagList';
+import { PaperCitationsList } from '@/components/PaperCitationsList';
+
+interface PaperDetailsProps {
+  paper: Paper;
+  onDelete?: () => void;
+}
+
+export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
+  const queryClient = useQueryClient();
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(paper.title);
+  const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
+
+  const paperId = paper.id;
+
+  // Fetch citations for this paper
+  const {
+    data: citationsData,
+    isLoading: citationsLoading,
+    error: citationsError,
+  } = useQuery({
+    queryKey: ['citations-list', paperId],
+    queryFn: () => papersApi.getCitationsList(paperId),
+    enabled: !!paperId,
+    staleTime: 5 * 60_000,
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (updates: { title?: string; tag_ids?: number[] }) => 
+      papersApi.update(paperId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
+      setIsEditingTitle(false);
+    },
+  });
+
+  const extractCitationsMutation = useMutation({
+    mutationFn: () => papersApi.extractCitations(paperId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['citations-list', paperId] });
+    },
+  });
+
+  const regenerateMetadataMutation = useMutation({
+    mutationFn: () => papersApi.regenerateMetadata(paperId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
+    },
+  });
+
+  const handleSaveTitle = () => {
+    if (!editedTitle.trim() || editedTitle.trim() === paper.title) {
+      setIsEditingTitle(false);
+      return;
+    }
+    updateMutation.mutate({ title: editedTitle.trim() });
+  };
+
+  const handleCancelTitle = () => {
+    setEditedTitle(paper.title);
+    setIsEditingTitle(false);
+  };
+
+  const authors = (paper.metadata_json?.authors_list as string[]) || 
+                  (paper.metadata_json?.author ? [paper.metadata_json.author as string] : []);
+
+  const publishedDate = paper.metadata_json?.published_date 
+    ? format(new Date(paper.metadata_json.published_date as string), 'MMMM d, yyyy')
+    : null;
+
+  return (
+    <div className="flex flex-col h-full bg-[var(--white)] overflow-hidden">
+      <div className="px-6 py-4 border-b border-[var(--border)] shrink-0 bg-[var(--white)] z-10">
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h3 className="text-btn font-semibold text-[var(--foreground)]">Information</h3>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={() => regenerateMetadataMutation.mutate()}
+              disabled={regenerateMetadataMutation.isPending}
+              title="Regenerate Metadata"
+            >
+              <RefreshCw size={14} className={regenerateMetadataMutation.isPending ? 'animate-spin' : ''} />
+            </Button>
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={() => extractCitationsMutation.mutate()}
+              disabled={extractCitationsMutation.isPending}
+              title="Extract Citations"
+            >
+              <FileSearch size={14} className={extractCitationsMutation.isPending ? 'animate-spin' : ''} />
+            </Button>
+            {onDelete && (
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0 text-[var(--destructive)] hover:bg-[var(--destructive)]/10"
+                onClick={onDelete}
+                title="Delete Paper"
+              >
+                <Trash2 size={14} />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Title Section */}
+        <div className="group relative mb-4">
+          {isEditingTitle ? (
+            <div className="flex items-start gap-2">
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                className="flex-1 px-3 py-1.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg text-code focus:outline-none focus:ring-1 focus:ring-[var(--foreground)] min-h-[2.25rem]"
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
+                autoFocus
+              />
+              <div className="flex gap-1">
+                <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleSaveTitle}>
+                  <Check size={14} />
+                </Button>
+                <Button variant="ghost" className="h-8 w-8 p-0" onClick={handleCancelTitle}>
+                  <X size={14} />
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start justify-between gap-2">
+              <h1 className="text-body-lg font-bold leading-snug text-[var(--foreground)] flex-1">{paper.title}</h1>
+              <Button 
+                variant="ghost" 
+                className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                onClick={() => setIsEditingTitle(true)}
+              >
+                <Pencil size={13} />
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Abstract / Description */}
+        {!!paper.metadata_json?.abstract && (
+          <div className="mb-4">
+            <div 
+              className="relative cursor-pointer group"
+              onClick={() => setIsAbstractExpanded(!isAbstractExpanded)}
+            >
+              <motion.div
+                initial={false}
+                animate={{ height: isAbstractExpanded ? 'auto' : '5.6em' }}
+                transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
+                className="overflow-hidden"
+              >
+                <p className={cn(
+                  "text-code text-[var(--muted-foreground)] leading-relaxed transition-colors",
+                  !isAbstractExpanded && "line-clamp-4",
+                  isAbstractExpanded ? "text-[var(--foreground)]" : "group-hover:text-[var(--foreground)]"
+                )}>
+                  {paper.metadata_json.abstract as string}
+                </p>
+              </motion.div>
+              
+              {!isAbstractExpanded && (
+                <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[var(--white)] to-transparent pointer-events-none" />
+              )}
+              
+              <motion.div 
+                animate={{ rotate: isAbstractExpanded ? 180 : 0 }}
+                className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--white)] border border-[var(--border)] rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <div className="text-micro text-[var(--muted-foreground)] px-1">
+                  {isAbstractExpanded ? 'Show less' : 'Read more'}
+                </div>
+              </motion.div>
+            </div>
+          </div>
+        )}
+
+        {/* Tags */}
+        <div className="space-y-2">
+          <TagList 
+            tags={paper.tags || []} 
+            showRemove 
+            onRemove={(tagId) => {
+              const newTags = (paper.tags || []).filter(t => t.id !== tagId).map(t => t.id);
+              updateMutation.mutate({ tag_ids: newTags });
+            }}
+          />
+          <TagInput 
+            selectedTags={paper.tags || []}
+            onTagsChange={(tags) => updateMutation.mutate({ tag_ids: tags.map(t => t.id) })}
+          />
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6 scrollbar-none">
+        {/* Metadata Grid */}
+        <div className="grid grid-cols-1 gap-5">
+          {/* Authors */}
+          {authors.length > 0 && (
+            <div className="space-y-1.5">
+              <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                Authors
+              </h4>
+              <div className="flex flex-wrap gap-1.5">
+                {authors.map((author, i) => (
+                  <span key={i} className="text-code px-2 py-0.5 bg-[var(--muted)]/50 rounded text-[var(--foreground)]">
+                    {author}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Published */}
+          {publishedDate && (
+            <div className="space-y-1.5">
+              <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                <Calendar size={12} /> Published
+              </h4>
+              <p className="text-code text-[var(--foreground)]">{publishedDate}</p>
+            </div>
+          )}
+
+          {/* DOI / URL */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {paper.doi && (
+              <div className="space-y-1.5">
+                <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                  <Fingerprint size={12} /> DOI
+                </h4>
+                <a 
+                  href={`https://doi.org/${paper.doi}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-code text-[var(--foreground)] hover:text-[var(--sky-blue)] truncate block"
+                >
+                  {paper.doi}
+                </a>
+              </div>
+            )}
+            {paper.url && (
+              <div className="space-y-1.5">
+                <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                  <LinkIcon size={12} /> URL
+                </h4>
+                <a 
+                  href={paper.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-code text-[var(--foreground)] hover:text-[var(--sky-blue)] truncate block"
+                >
+                  Source <ExternalLink size={10} className="inline ml-1" />
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Citations List */}
+        <div className="pt-2 border-t border-[var(--border)]">
+          <h4 className="text-btn font-semibold text-[var(--foreground)] mb-4">Citations</h4>
+          <PaperCitationsList 
+            citations={citationsData?.citations || []}
+            isLoading={citationsLoading}
+            error={citationsError}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
