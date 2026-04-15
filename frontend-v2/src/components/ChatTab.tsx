@@ -381,7 +381,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
         <div
           ref={messagesContainerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-y-auto p-4 space-y-4 relative"
+          className="flex-1 overflow-y-auto p-4 space-y-0.5 relative"
         >
           <div ref={messagesTopRef} />
           {messages.length === 0 && !isStreaming && !pendingUserMessage && (
@@ -393,15 +393,20 @@ export function ChatTab({ paperId }: ChatTabProps) {
 
           {messages.map((msg) => (
             <div key={msg.id}>
-              <div className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+              <div className="flex justify-start">
                 <div
                   className={cn(
-                    'rounded-2xl px-4 py-2.5 max-w-[85%]',
+                    'group relative w-full px-4 py-2.5 rounded-b-interactive bg-transparent transition-colors border border-transparent',
                     msg.role === 'user'
-                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] rounded-br-sm'
-                      : 'bg-[var(--card)] border border-[var(--border)] rounded-bl-sm relative group'
+                      ? 'hover:bg-[rgba(60,145,230,0.05)] hover:border-[rgba(60,145,230,0.25)]'
+                      : 'hover:bg-[rgba(76,255,169,0.06)] hover:border-[rgba(76,255,169,0.3)]'
                   )}
                 >
+                  {/* Short top accent bar */}
+                  <span className={cn(
+                    'absolute top-0 left-0 h-[2px] w-10',
+                    msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
+                  )} />
                   {msg.role === 'user' ? (
                     <p className="text-code leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   ) : (
@@ -427,12 +432,15 @@ export function ChatTab({ paperId }: ChatTabProps) {
                       </div>
                     </>
                   )}
+                  <span className="absolute bottom-1.5 right-2 text-[10px] text-[var(--muted-foreground)] opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
+                    {format(new Date(msg.created_at), 'MMM d, h:mm a')}
+                  </span>
                 </div>
               </div>
 
               {/* Thread - always show if message has replies or if input is active */}
               {msg.role === 'assistant' && (msg.thread_count > 0 || activeThreadId === msg.id) && (
-                <div className="ml-8 mt-2">
+                <div className="ml-4 mt-2">
                   <MessageThread 
                     parentMessage={msg} 
                     showInput={activeThreadId === msg.id}
@@ -440,18 +448,14 @@ export function ChatTab({ paperId }: ChatTabProps) {
                   />
                 </div>
               )}
-
-              {/* Timestamp */}
-              <p className={cn('text-micro text-[var(--muted-foreground)] mt-1 px-1', msg.role === 'user' ? 'text-right' : 'text-left')}>
-                {format(new Date(msg.created_at), 'MMM d, h:mm a')}
-              </p>
             </div>
           ))}
 
           {/* Pending user message */}
           {pendingUserMessage && (
-            <div className="flex justify-end">
-              <div className="bg-[var(--primary)] text-[var(--primary-foreground)] rounded-2xl rounded-br-sm px-4 py-2.5 max-w-[85%]">
+            <div className="flex justify-start">
+              <div className="relative w-full px-4 py-2.5 rounded-b-interactive bg-transparent border border-transparent">
+                <span className="absolute top-0 left-0 h-[2px] w-10 bg-[rgba(60,145,230,0.5)]" />
                 <p className="text-code leading-relaxed whitespace-pre-wrap">{pendingUserMessage.content}</p>
               </div>
             </div>
@@ -460,7 +464,8 @@ export function ChatTab({ paperId }: ChatTabProps) {
           {/* Streaming response */}
           {isStreaming && (
             <div className="flex justify-start">
-              <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-[85%]">
+              <div className="relative w-full px-4 py-2.5 rounded-b-interactive bg-transparent border border-transparent">
+                <span className="absolute top-0 left-0 h-[2px] w-10 bg-[rgba(76,255,169,0.5)]" />
                 {displayContent ? (
                   <MarkdownMessage content={displayContent} />
                 ) : (

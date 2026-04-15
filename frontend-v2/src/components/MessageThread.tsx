@@ -120,7 +120,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
       )}
 
       {/* Thread messages */}
-      <div className="space-y-2">
+      <div className="space-y-0.5">
             {isLoading ? (
               <div className="flex items-center justify-center py-4">
                 <Skeleton className="w-8 h-8 rounded-full" />
@@ -128,39 +128,44 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
             ) : (
               <>
                 {threadMessages.map(msg => (
-                  <div key={msg.id} className={cn('flex', msg.role === 'user' ? 'justify-end' : 'justify-start')}>
+                  <div key={msg.id} className="flex justify-start">
                     <div
                       className={cn(
-                        'rounded-lg px-3 py-2 text-caption max-w-[85%]',
+                        'group relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent transition-colors border border-transparent',
                         msg.role === 'user'
-                          ? 'bg-[var(--primary)] text-[var(--primary-foreground)]'
-                          : 'bg-[var(--card)] border border-[var(--border)]'
+                          ? 'hover:bg-[rgba(60,145,230,0.05)] hover:border-[rgba(60,145,230,0.25)]'
+                          : 'hover:bg-[rgba(76,255,169,0.06)] hover:border-[rgba(76,255,169,0.3)]'
                       )}
                     >
+                      <span className={cn(
+                        'absolute top-0 left-0 h-[2px] w-8',
+                        msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
+                      )} />
                       {msg.role === 'user' ? (
                         <div className="whitespace-pre-wrap break-words">{msg.content}</div>
                       ) : (
                         <MarkdownMessage content={msg.content} />
                       )}
-                      <div className="text-micro mt-1 opacity-60">
+                      <span className="absolute bottom-1 right-2 text-[10px] text-[var(--muted-foreground)] opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
                         {format(new Date(msg.created_at), 'HH:mm')}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 ))}
 
                 {pendingUserMessage && (
-                  <div className="flex justify-end">
-                    <div className="rounded-lg px-3 py-2 text-caption max-w-[85%] bg-[var(--primary)] text-[var(--primary-foreground)]">
+                  <div className="flex justify-start">
+                    <div className="relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent border border-transparent">
+                      <span className="absolute top-0 left-0 h-[2px] w-8 bg-[rgba(60,145,230,0.5)]" />
                       <div className="whitespace-pre-wrap break-words">{pendingUserMessage}</div>
-                      <div className="text-micro mt-1 opacity-60">{format(new Date(), 'HH:mm')}</div>
                     </div>
                   </div>
                 )}
 
                 {isStreaming && displayContent && (
                   <div className="flex justify-start">
-                    <div className="rounded-lg px-3 py-2 text-caption max-w-[85%] bg-[var(--card)] border border-[var(--border)]">
+                    <div className="relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent border border-transparent">
+                      <span className="absolute top-0 left-0 h-[2px] w-8 bg-[rgba(76,255,169,0.5)]" />
                       <MarkdownMessage content={displayContent} />
                     </div>
                   </div>
