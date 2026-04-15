@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
-import { SearchNormal as Search, MagicStar as Sparkles, Refresh as Loader2, ArrowDown2 as ChevronDown, Save2 as Save, Filter, MenuBoard as List } from 'iconsax-reactjs';
+import { MagicStar as Sparkles, Refresh as Loader2, ArrowDown2 as ChevronDown, Save2 as Save, Filter, MenuBoard as List } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { SourceSelector, type SourceId } from '@/components/discovery/SourceSelector';
