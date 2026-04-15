@@ -16,15 +16,11 @@ async def get_paper_or_404(
   paper_id: int,
   *,
   with_relations: bool = False,
+  user_id: int | None = None,
 ) -> Paper:
-  """Fetch a paper by ID or raise 404.
-
-  Args:
-      session: Database session
-      paper_id: Paper ID
-      with_relations: If True, eager load annotations, groups, tags
-  """
   query = select(Paper).where(Paper.id == paper_id)
+  if user_id is not None:
+    query = query.where(Paper.uploaded_by_id == user_id)
 
   if with_relations:
     query = query.options(
@@ -53,19 +49,17 @@ async def list_papers(
   search: str | None = None,
   group_id: int | None = None,
   tag_id: int | None = None,
+  user_id: int | None = None,
 ) -> tuple[list[Paper], int]:
-  """List papers with pagination and filtering.
-
-  Returns:
-      Tuple of (papers list, total count)
-  """
   query = select(Paper).options(
     selectinload(Paper.annotations),
     selectinload(Paper.groups),
     selectinload(Paper.tags),
   )
 
-  # Apply filters
+  if user_id is not None:
+    query = query.where(Paper.uploaded_by_id == user_id)
+
   if search:
     query = query.where(
       or_(
@@ -84,8 +78,9 @@ async def list_papers(
       paper_tag_association.c.tag_id == tag_id
     )
 
-  # Count
   count_query = select(func.count()).select_from(Paper)
+  if user_id is not None:
+    count_query = count_query.where(Paper.uploaded_by_id == user_id)
   if search:
     count_query = count_query.where(
       or_(
@@ -97,7 +92,6 @@ async def list_papers(
   total_result = await session.execute(count_query)
   total = total_result.scalar() or 0
 
-  # Paginate
   offset = (page - 1) * page_size
   query = query.order_by(Paper.created_at.desc()).offset(offset).limit(page_size)
 
@@ -114,14 +108,14 @@ async def update_paper(
   session: AsyncSession,
   paper_id: int,
   *,
+  user_id: int | None = None,
   title: str | None = None,
   doi: str | None = None,
   metadata_json: dict | None = None,
   group_ids: list[int] | None = None,
   tag_ids: list[int] | None = None,
 ) -> Paper:
-  """Update a paper and return the updated entity."""
-  paper = await get_paper_or_404(session, paper_id, with_relations=True)
+  paper = await get_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
 
   if title is not None:
     paper.title = title
@@ -147,11 +141,10 @@ async def update_paper(
   return paper
 
 
-async def delete_paper(session: AsyncSession, paper_id: int) -> None:
-  """Delete a paper and its associated PDF file."""
+async def delete_paper(session: AsyncSession, paper_id: int, *, user_id: int | None = None) -> None:
   from pathlib import Path
 
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_paper_or_404(session, paper_id, user_id=user_id)
 
   # Delete PDF file if exists
   if paper.file_path and isinstance(paper.file_path, str):
@@ -166,15 +159,15 @@ async def delete_paper(session: AsyncSession, paper_id: int) -> None:
   await session.commit()
 
 
-async def delete_papers_bulk(session: AsyncSession, paper_ids: list[int]) -> None:
-  """Delete multiple papers by ID."""
+async def delete_papers_bulk(session: AsyncSession, paper_ids: list[int], *, user_id: int | None = None) -> None:
   from pathlib import Path
 
   if not paper_ids:
     raise HTTPException(status_code=400, detail="No paper IDs provided")
 
-  # Fetch all papers at once
   query = select(Paper).where(Paper.id.in_(paper_ids))
+  if user_id is not None:
+    query = query.where(Paper.uploaded_by_id == user_id)
   result = await session.execute(query)
   papers = list(result.scalars().all())
 
@@ -202,9 +195,8 @@ async def delete_papers_bulk(session: AsyncSession, paper_ids: list[int]) -> Non
   await session.commit()
 
 
-async def increment_view_count(session: AsyncSession, paper_id: int) -> Paper:
-  """Increment view count and return paper with relations."""
-  paper = await get_paper_or_404(session, paper_id, with_relations=True)
+async def increment_view_count(session: AsyncSession, paper_id: int, *, user_id: int | None = None) -> Paper:
+  paper = await get_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
   paper.viewed_count = (paper.viewed_count or 0) + 1
   await session.commit()
   return paper
@@ -214,8 +206,9 @@ async def update_reading_status(
   session: AsyncSession,
   paper_id: int,
   reading_status: str,
+  *,
+  user_id: int | None = None,
 ) -> Paper:
-  """Update reading status for a paper."""
   from datetime import datetime, timezone
 
   valid_statuses = ["not_started", "in_progress", "read", "archived"]
@@ -225,7 +218,7 @@ async def update_reading_status(
       detail=f"Invalid reading status. Must be one of: {', '.join(valid_statuses)}",
     )
 
-  paper = await get_paper_or_404(session, paper_id, with_relations=True)
+  paper = await get_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
   paper.reading_status = reading_status
   paper.status_updated_at = datetime.now(timezone.utc)
   await session.commit()
@@ -239,8 +232,9 @@ async def update_priority(
   session: AsyncSession,
   paper_id: int,
   priority: str,
+  *,
+  user_id: int | None = None,
 ) -> Paper:
-  """Update priority for a paper."""
   valid_priorities = ["low", "medium", "high", "critical"]
   if priority not in valid_priorities:
     raise HTTPException(
@@ -248,7 +242,7 @@ async def update_priority(
       detail=f"Invalid priority. Must be one of: {', '.join(valid_priorities)}",
     )
 
-  paper = await get_paper_or_404(session, paper_id, with_relations=True)
+  paper = await get_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
   paper.priority = priority
   await session.commit()
   await session.refresh(paper, ["groups", "tags"])

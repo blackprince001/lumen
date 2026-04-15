@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException
 
+from app.dependencies import CurrentUser
 from app.services.task_status import (
   TaskStatus,
   get_active_tasks,

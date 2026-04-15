@@ -14,7 +14,7 @@ from app.api.crud.multi_chat_session import (
   list_multi_chat_sessions_for_group,
 )
 from app.core.logger import get_logger
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.multi_chat import MultiChatMessage, MultiChatSession
 from app.schemas.multi_chat import (
   MultiChatRequest,
@@ -70,6 +70,7 @@ def _serialize_session(session: MultiChatSession) -> dict:
 async def stream_group_chat_message(
   group_id: int,
   chat_request: MultiChatRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Stream a chat message with all papers in a group as context."""
@@ -98,10 +99,10 @@ async def stream_group_chat_message(
 @router.get("/groups/{group_id}/chat")
 async def get_group_chat_history(
   group_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Get the latest multi-chat session for a group."""
-  latest = await multi_chat_service.get_latest_session(session, group_id)
+  latest = await multi_chat_service.get_latest_session(session, group_id, user_id=scoped_user_id(user))
   if not latest:
     return None
   return _serialize_session(latest)
@@ -112,10 +113,10 @@ async def get_group_chat_history(
 )
 async def list_group_sessions(
   group_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """List all multi-chat sessions for a group."""
-  sessions = await list_multi_chat_sessions_for_group(session, group_id)
+  sessions = await list_multi_chat_sessions_for_group(session, group_id, user_id=scoped_user_id(user))
   return [_serialize_session(s) for s in sessions]
 
 
@@ -127,6 +128,7 @@ async def list_group_sessions(
 async def create_group_session(
   group_id: int,
   session_data: MultiChatSessionCreate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Create a new multi-chat session for a group."""
@@ -143,7 +145,7 @@ async def create_group_session(
 
   try:
     chat_session = await multi_chat_service.create_session(
-      session, paper_ids, group_id=group_id, name=session_data.name
+      session, paper_ids, group_id=group_id, name=session_data.name, user_id=scoped_user_id(user)
     )
     # Reload with relationships
     loaded = await multi_chat_service.get_session(session, cast(int, chat_session.id))
@@ -157,6 +159,7 @@ async def create_group_session(
 @router.post("/multi-chat/stream")
 async def stream_multi_chat_message(
   chat_request: MultiChatRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Stream a chat message with arbitrary papers as context."""
@@ -191,11 +194,11 @@ async def stream_multi_chat_message(
 @router.get("/multi-chat/sessions/{session_id}", response_model=MultiChatSessionSchema)
 async def get_multi_session(
   session_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Get a specific multi-chat session."""
   chat_session = await get_multi_chat_session_or_404(
-    session, session_id, with_messages=True, with_papers=True
+    session, session_id, with_messages=True, with_papers=True, user_id=scoped_user_id(user)
   )
   return _serialize_session(chat_session)
 
@@ -206,11 +209,11 @@ async def get_multi_session(
 async def update_multi_session(
   session_id: int,
   session_update: MultiChatSessionUpdate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Update a multi-chat session (rename)."""
   chat_session = await get_multi_chat_session_or_404(
-    session, session_id, with_messages=True, with_papers=True
+    session, session_id, with_messages=True, with_papers=True, user_id=scoped_user_id(user)
   )
   chat_session.name = session_update.name
   await session.commit()
@@ -221,21 +224,21 @@ async def update_multi_session(
 @router.delete("/multi-chat/sessions/{session_id}", status_code=204)
 async def delete_multi_session(
   session_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Delete a multi-chat session and all its messages."""
-  await delete_multi_chat_session(session, session_id)
+  await delete_multi_chat_session(session, session_id, user_id=scoped_user_id(user))
   return None
 
 
 @router.delete("/multi-chat/sessions/{session_id}/messages", status_code=204)
 async def clear_multi_session_messages(
   session_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Clear all messages from a multi-chat session."""
   chat_session = await get_multi_chat_session_or_404(
-    session, session_id, with_messages=True
+    session, session_id, with_messages=True, user_id=scoped_user_id(user)
   )
   stmt = delete(MultiChatMessage).where(MultiChatMessage.session_id == chat_session.id)
   await session.execute(stmt)

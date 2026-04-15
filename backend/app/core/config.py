@@ -39,6 +39,22 @@ class Settings(BaseSettings):
   REDIS_DB: int = 0
   REDIS_PASSWORD: str = ""
 
+  # JWT configuration
+  JWT_SECRET_KEY: str = ""
+  JWT_ALGORITHM: str = "HS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+  REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+  # Google OAuth
+  GOOGLE_CLIENT_ID: str = ""
+
+  # Admin credentials (base64-encoded)
+  ADMIN_USERNAME: str = ""
+  ADMIN_PASSWORD: str = ""
+
+  # Frontend URL for CORS
+  FRONTEND_URL: str = "http://localhost:5173"
+
   @property
   def REDIS_URL(self) -> str:
     """Construct Redis URL from components."""
@@ -61,6 +77,22 @@ class Settings(BaseSettings):
   )
 
   def model_post_init(self, __context):
+    # Auto-generate JWT secret in debug mode
+    if not self.JWT_SECRET_KEY:
+      if self.DEBUG:
+        import secrets
+
+        self.JWT_SECRET_KEY = secrets.token_hex(32)
+      else:
+        warnings.warn(
+          "JWT_SECRET_KEY is not set. Set it for production use.",
+          UserWarning,
+          stacklevel=2,
+        )
+        import secrets
+
+        self.JWT_SECRET_KEY = secrets.token_hex(32)
+
     # If DATABASE_URL is not explicitly set, construct it from components
     if not self.DATABASE_URL:
       # Use provided values or fall back to dev defaults

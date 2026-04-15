@@ -12,6 +12,7 @@ celery_app = Celery(
 # Define exchanges
 default_exchange = Exchange("default", type="direct")
 ai_exchange = Exchange("ai", type="direct")
+discovery_exchange = Exchange("discovery", type="direct")
 dead_letter_exchange = Exchange("dead_letter", type="direct")
 
 # Celery configuration
@@ -55,6 +56,16 @@ celery_app.conf.update(
         "x-dead-letter-routing-key": "dead_letter",
       },
     ),
+    # Discovery queue — external API calls + AI enhancements for paper discovery
+    Queue(
+      "discovery",
+      exchange=discovery_exchange,
+      routing_key="discovery",
+      queue_arguments={
+        "x-dead-letter-exchange": "dead_letter",
+        "x-dead-letter-routing-key": "dead_letter",
+      },
+    ),
     # Dead letter queue for failed tasks after max retries
     Queue(
       "dead_letter",
@@ -65,6 +76,7 @@ celery_app.conf.update(
   task_routes={
     "app.tasks.ai_tasks.*": {"queue": "ai"},
     "app.tasks.paper_processing.*": {"queue": "processing"},
+    "app.tasks.discovery_tasks.*": {"queue": "discovery"},
   },
   # Rate limiting for AI queue
   task_annotations={

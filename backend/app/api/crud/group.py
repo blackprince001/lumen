@@ -17,9 +17,11 @@ async def get_group_or_404(
   group_id: int,
   *,
   with_relations: bool = False,
+  user_id: int | None = None,
 ) -> Group:
-  """Fetch a group by ID or raise 404."""
   query = select(Group).where(Group.id == group_id)
+  if user_id is not None:
+    query = query.where(Group.user_id == user_id)
 
   if with_relations:
     query = query.options(
@@ -39,8 +41,7 @@ async def get_group_or_404(
   return group
 
 
-async def list_groups(session: AsyncSession) -> list[Group]:
-  """List all groups with papers and children."""
+async def list_groups(session: AsyncSession, *, user_id: int | None = None) -> list[Group]:
   query = (
     select(Group)
     .options(
@@ -49,6 +50,8 @@ async def list_groups(session: AsyncSession) -> list[Group]:
     )
     .order_by(Group.name)
   )
+  if user_id is not None:
+    query = query.where(Group.user_id == user_id)
   result = await session.execute(query)
   groups = list(result.scalars().all())
 
@@ -62,14 +65,14 @@ async def create_group(
   session: AsyncSession,
   name: str,
   parent_id: int | None = None,
+  user_id: int | None = None,
 ) -> Group:
-  """Create a new group."""
-  # Validate parent exists
   if parent_id is not None:
-    await get_group_or_404(session, parent_id)
+    await get_group_or_404(session, parent_id, user_id=user_id)
 
-  # Check name uniqueness within parent scope
   query = select(Group).where(Group.name == name)
+  if user_id is not None:
+    query = query.where(Group.user_id == user_id)
   if parent_id is not None:
     query = query.where(Group.parent_id == parent_id)
   else:
@@ -82,11 +85,11 @@ async def create_group(
       detail="Group with this name already exists in the specified parent",
     )
 
-  group = Group(name=name, parent_id=parent_id)
+  group = Group(name=name, parent_id=parent_id, user_id=user_id)
   session.add(group)
   await session.commit()
 
-  return await get_group_or_404(session, cast(int, group.id), with_relations=True)
+  return await get_group_or_404(session, cast(int, group.id), with_relations=True, user_id=user_id)
 
 
 async def update_group(
@@ -95,18 +98,16 @@ async def update_group(
   *,
   name: str | None = None,
   parent_id: int | None = None,
+  user_id: int | None = None,
 ) -> Group:
-  """Update a group."""
-  group = await get_group_or_404(session, group_id)
+  group = await get_group_or_404(session, group_id, user_id=user_id)
 
   new_parent_id = parent_id if parent_id is not None else group.parent_id
 
   # Handle parent_id update with cycle prevention
   if parent_id is not None and parent_id != group.parent_id:
     if new_parent_id is not None:
-      await get_group_or_404(
-        session, cast(int, new_parent_id)
-      )  # Validate parent exists
+      await get_group_or_404(session, cast(int, new_parent_id), user_id=user_id)
 
     # Check for cycles
     if await _check_group_cycle(session, group_id, cast(int, new_parent_id)):
@@ -119,6 +120,8 @@ async def update_group(
   # Handle name update
   if name is not None:
     query = select(Group).where(Group.name == name, Group.id != group_id)
+    if user_id is not None:
+      query = query.where(Group.user_id == user_id)
     if new_parent_id is not None:
       query = query.where(Group.parent_id == new_parent_id)
     else:
@@ -134,14 +137,15 @@ async def update_group(
 
   await session.commit()
 
-  return await get_group_or_404(session, group_id, with_relations=True)
+  return await get_group_or_404(session, group_id, with_relations=True, user_id=user_id)
 
 
-async def delete_group(session: AsyncSession, group_id: int) -> None:
-  """Delete a group (must have no children)."""
+async def delete_group(session: AsyncSession, group_id: int, *, user_id: int | None = None) -> None:
   query = (
     select(Group).options(selectinload(Group.children)).where(Group.id == group_id)
   )
+  if user_id is not None:
+    query = query.where(Group.user_id == user_id)
   result = await session.execute(query)
   group = result.scalar_one_or_none()
 

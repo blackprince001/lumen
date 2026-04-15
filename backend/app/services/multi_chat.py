@@ -59,14 +59,13 @@ class MultiChatService(BaseGoogleAIService):
     paper_ids: list[int],
     group_id: int | None = None,
     name: str = "New Session",
+    user_id: int | None = None,
   ) -> MultiChatSession:
-    """Create a new multi-chat session with the given papers."""
-    # Fetch papers to validate they exist
     papers = await self._fetch_papers(db_session, paper_ids)
     if not papers:
       raise ValueError("No valid papers found for the given IDs.")
 
-    chat_session = MultiChatSession(name=name, group_id=group_id)
+    chat_session = MultiChatSession(name=name, group_id=group_id, user_id=user_id)
     chat_session.papers = papers
     db_session.add(chat_session)
     await db_session.commit()
@@ -89,9 +88,8 @@ class MultiChatService(BaseGoogleAIService):
     return result.scalar_one_or_none()
 
   async def get_latest_session(
-    self, db_session: AsyncSession, group_id: int
+    self, db_session: AsyncSession, group_id: int, user_id: int | None = None
   ) -> MultiChatSession | None:
-    """Get the most recent multi-chat session for a group."""
     query = (
       select(MultiChatSession)
       .options(
@@ -99,9 +97,10 @@ class MultiChatService(BaseGoogleAIService):
         selectinload(MultiChatSession.papers),
       )
       .where(MultiChatSession.group_id == group_id)
-      .order_by(MultiChatSession.updated_at.desc())
-      .limit(1)
     )
+    if user_id is not None:
+      query = query.where(MultiChatSession.user_id == user_id)
+    query = query.order_by(MultiChatSession.updated_at.desc()).limit(1)
     result = await db_session.execute(query)
     return result.scalar_one_or_none()
 

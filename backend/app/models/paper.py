@@ -29,6 +29,9 @@ class Paper(Base):
   __tablename__ = "papers"
 
   id = Column(Integer, primary_key=True, index=True)
+  uploaded_by_id = Column(
+    Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+  )
   title = Column(String, nullable=False, index=True)
   doi = Column(String, unique=True, index=True, nullable=True)
   url = Column(String, nullable=True)
@@ -78,6 +81,7 @@ class Paper(Base):
     nullable=False,
   )
 
+  uploaded_by = relationship("User", back_populates="papers", foreign_keys=[uploaded_by_id])
   annotations = relationship(
     "Annotation", back_populates="paper", cascade="all, delete-orphan"
   )

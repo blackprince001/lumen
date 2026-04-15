@@ -9,10 +9,21 @@ from app.models.annotation import Annotation
 
 
 async def get_annotation_or_404(
-  session: AsyncSession, annotation_id: int
+  session: AsyncSession,
+  annotation_id: int,
+  *,
+  user_id: int | None = None,
 ) -> Annotation:
-  """Fetch an annotation by ID or raise 404."""
+  """Fetch an annotation by ID or raise 404.
+
+  If `user_id` is provided, only annotations owned by that user (or legacy
+  annotations with NULL user_id) are returned.
+  """
   query = select(Annotation).where(Annotation.id == annotation_id)
+  if user_id is not None:
+    query = query.where(
+      (Annotation.user_id == user_id) | (Annotation.user_id.is_(None))
+    )
   result = await session.execute(query)
   annotation = result.scalar_one_or_none()
 
@@ -23,17 +34,21 @@ async def get_annotation_or_404(
 
 
 async def list_annotations_for_paper(
-  session: AsyncSession, paper_id: int
+  session: AsyncSession,
+  paper_id: int,
+  *,
+  user_id: int | None = None,
 ) -> list[Annotation]:
-  """List all annotations for a paper."""
+  """List annotations for a paper, optionally scoped to a single user."""
   # Verify paper exists
   await get_paper_or_404(session, paper_id)
 
-  query = (
-    select(Annotation)
-    .where(Annotation.paper_id == paper_id)
-    .order_by(Annotation.created_at.desc())
-  )
+  query = select(Annotation).where(Annotation.paper_id == paper_id)
+  if user_id is not None:
+    query = query.where(
+      (Annotation.user_id == user_id) | (Annotation.user_id.is_(None))
+    )
+  query = query.order_by(Annotation.created_at.desc())
   result = await session.execute(query)
   return list(result.scalars().all())
 
@@ -42,6 +57,7 @@ async def create_annotation(
   session: AsyncSession,
   paper_id: int,
   *,
+  user_id: int | None = None,
   content: str | None = None,
   type: str = "annotation",
   highlighted_text: str | None = None,
@@ -55,6 +71,7 @@ async def create_annotation(
 
   annotation = Annotation(
     paper_id=paper_id,
+    user_id=user_id,
     content=content,
     type=type,
     highlighted_text=highlighted_text,
@@ -74,6 +91,7 @@ async def update_annotation(
   session: AsyncSession,
   annotation_id: int,
   *,
+  user_id: int | None = None,
   content: str | None = None,
   type: str | None = None,
   highlighted_text: str | None = None,
@@ -82,7 +100,7 @@ async def update_annotation(
   coordinate_data: dict | None = None,
 ) -> Annotation:
   """Update an annotation."""
-  annotation = await get_annotation_or_404(session, annotation_id)
+  annotation = await get_annotation_or_404(session, annotation_id, user_id=user_id)
 
   if content is not None:
     annotation.content = content
@@ -103,8 +121,13 @@ async def update_annotation(
   return annotation
 
 
-async def delete_annotation(session: AsyncSession, annotation_id: int) -> None:
+async def delete_annotation(
+  session: AsyncSession,
+  annotation_id: int,
+  *,
+  user_id: int | None = None,
+) -> None:
   """Delete an annotation."""
-  annotation = await get_annotation_or_404(session, annotation_id)
+  annotation = await get_annotation_or_404(session, annotation_id, user_id=user_id)
   await session.delete(annotation)
   await session.commit()

@@ -1,15 +1,18 @@
 import asyncio
 import json
+import uuid
 from datetime import datetime
 from typing import Any, AsyncGenerator, List, Optional, cast
 
+import redis as redis_sync
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.logger import get_logger
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.discovery import (
   DiscoveredPaper,
   DiscoverySession,
@@ -350,340 +353,160 @@ def _sse_event(event_type: str, data: dict) -> str:
   return f"event: {event_type}\ndata: {json_data}\n\n"
 
 
+
+
+def _redis_client() -> redis_sync.Redis:
+  return redis_sync.Redis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    password=settings.REDIS_PASSWORD or None,
+    decode_responses=True,
+  )
+
+
 @router.post("/ai-search/stream")
 async def ai_search_stream(
   request: AISearchRequest,
   session: AsyncSession = Depends(get_db),
 ):
-  """Stream AI-enhanced search results with real-time updates.
+  """Stream AI-enhanced search results via SSE.
 
-  Returns a stream of server-sent events (SSE) with progress updates
-  as each stage of the search completes.
-
-  Event types:
-  - status: Progress update with stage and message
-  - source_results: Results from a single source
-  - query_understanding: AI query analysis
-  - overview: AI-generated search overview
-  - clustering: Topic clustering results
-  - relevance: Relevance explanations
-  - complete: Final signal that stream is done
-  - error: Error information
+  Enqueues Celery tasks for each source search and AI enhancement,
+  then polls Redis for progress and streams results as they arrive.
+  The FastAPI event loop is free between polls.
   """
 
   async def event_generator() -> AsyncGenerator[str, None]:
+    from app.tasks.discovery_tasks import ai_enhance_task, search_source_task
+
     try:
       if not request.query or not request.query.strip():
         yield _sse_event("error", {"message": "Query cannot be empty"})
         return
 
-      # Stage 1: Parse query and prepare search
-      yield _sse_event(
-        "status",
-        {"stage": "starting", "message": "Starting search...", "progress": 0},
-      )
+      search_id = str(uuid.uuid4())
+      sources = request.sources or ["arxiv", "semantic_scholar"]
+      r = _redis_client()
 
-      # Convert filters
-      filters = None
-      if request.filters:
-        filters = SearchFilters(
-          year_from=request.filters.year_from,
-          year_to=request.filters.year_to,
-          authors=request.filters.authors,
-          min_citations=request.filters.min_citations,
-        )
+      yield _sse_event("status", {"stage": "starting", "message": "Starting search...", "progress": 0})
 
-      # Stage 2: Understand query (blocking for better search results)
-      yield _sse_event(
-        "status",
-        {
-          "stage": "understanding",
-          "message": "Analyzing query to improve search...",
-          "progress": 5,
-        },
-      )
-
-      query_understanding = None
+      # Query understanding runs in-request — it's fast (~1s) and needed to
+      # route queries correctly to providers before we enqueue tasks.
       search_query = request.query
-
       try:
-        query_understanding = await ai_search_service.understand_query(request.query)
-
-        if query_understanding:
-          # Use the optimized boolean query if available
-          if query_understanding.get("boolean_query"):
-            search_query = query_understanding["boolean_query"]
-
-          yield _sse_event(
-            "query_understanding",
-            {
-              "interpreted_query": query_understanding.get(
-                "interpreted_query", request.query
-              ),
-              "boolean_query": query_understanding.get("boolean_query"),
-              "key_concepts": query_understanding.get("key_concepts", []),
-              "search_terms": query_understanding.get("search_terms", []),
-              "domain_hints": query_understanding.get("domain_hints", []),
-              "query_type": query_understanding.get("query_type", "exploratory"),
-            },
-          )
+        yield _sse_event("status", {"stage": "understanding", "message": "Analyzing query...", "progress": 5})
+        qu = await asyncio.wait_for(ai_search_service.understand_query(request.query), timeout=10.0)
+        if qu:
+          if qu.get("boolean_query"):
+            search_query = qu["boolean_query"]
+          yield _sse_event("query_understanding", {
+            "interpreted_query": qu.get("interpreted_query", request.query),
+            "boolean_query": qu.get("boolean_query"),
+            "key_concepts": qu.get("key_concepts", []),
+            "search_terms": qu.get("search_terms", []),
+            "domain_hints": qu.get("domain_hints", []),
+            "query_type": qu.get("query_type", "exploratory"),
+          })
       except Exception as e:
-        logger.warning(f"Query understanding failed: {e}")
+        logger.warning("Query understanding failed", error=str(e))
 
-      # Stage 3: Search each source
-      sources = request.sources
-      all_papers: List[dict] = []
-      source_results: List[SourceSearchResult] = []
+      # Build filters dict for serialization into Celery task
+      filters_dict = None
+      if request.filters:
+        filters_dict = {k: v for k, v in request.filters.model_dump().items() if v is not None}
 
-      for i, source_name in enumerate(sources):
-        progress = 10 + (i * 30 // len(sources))
-        yield _sse_event(
-          "status",
-          {
-            "stage": "searching",
-            "message": f"Searching {source_name}...",
-            "progress": progress,
-            "source": source_name,
-          },
-        )
+      # Enqueue one search task per source
+      for source_name in sources:
+        provider_query = request.query if source_name in ("arxiv", "semantic_scholar") else search_query
+        search_source_task.delay(search_id, source_name, provider_query, filters_dict, request.limit or 20)
 
-        try:
-          # Use optimized boolean query for keyword engines (Google Scholar), 
-          # but fallback to natural language query for semantic/vector engines (searchthearxiv, semantic scholar)
-          provider_query = search_query
-          if source_name in ["arxiv", "semantic_scholar"]:
-            provider_query = request.query
-            
-          # Search single source with timeout
-          source_result = await asyncio.wait_for(
-            discovery_service.search_source(
-              session=session,
-              source=source_name,
-              query=provider_query,
-              filters=filters,
-              limit=request.limit,
-            ),
-            timeout=20.0,
-          )
+      yield _sse_event("status", {"stage": "searching", "message": f"Searching {len(sources)} sources...", "progress": 10})
 
-          papers = [
-            DiscoveredPaperPreview(
-              source=p["source"],
-              external_id=p["external_id"],
-              title=p["title"],
-              authors=p.get("authors", []),
-              abstract=p.get("abstract"),
-              year=p.get("year"),
-              doi=p.get("doi"),
-              url=p.get("url"),
-              pdf_url=p.get("pdf_url"),
-              citation_count=p.get("citation_count"),
-              relevance_score=p.get("relevance_score"),
-            )
-            for p in source_result.get("papers", [])
-          ]
+      # Poll Redis progress list until all sources report back, then AI completes
+      expected_source_events = set(sources)
+      received_sources: dict[str, list] = {}
+      ai_keys = {"overview", "clustering", "relevance"}
+      expected_ai = set()
+      if request.include_overview:
+        expected_ai.add("overview")
+      if request.include_clustering:
+        expected_ai.add("clustering")
+      if request.include_relevance:
+        expected_ai.add("relevance")
 
-          result = SourceSearchResult(
-            source=source_name,
-            papers=papers,
-            total_available=source_result.get("total_available"),
-            error=source_result.get("error"),
-          )
-          source_results.append(result)
-          all_papers.extend(source_result.get("papers", []))
+      ai_task_enqueued = False
+      progress_key = f"discovery:{search_id}:progress"
+      deadline = asyncio.get_event_loop().time() + 90.0  # 90s total timeout
 
-          # Stream this source's results immediately
-          yield _sse_event(
-            "source_results",
-            {
-              "source": source_name,
-              "papers": [p.model_dump() for p in papers],
-              "total_available": source_result.get("total_available"),
-              "paper_count": len(papers),
-            },
-          )
+      while True:
+        if asyncio.get_event_loop().time() > deadline:
+          yield _sse_event("error", {"message": "Search timed out"})
+          break
 
-        except asyncio.TimeoutError:
-          yield _sse_event(
-            "source_results",
-            {
-              "source": source_name,
-              "papers": [],
-              "error": f"{source_name} search timed out",
-            },
-          )
-        except Exception as e:
-          logger.error(f"Error searching {source_name}", error=str(e))
-          yield _sse_event(
-            "source_results",
-            {"source": source_name, "papers": [], "error": str(e)},
-          )
+        # Non-blocking poll — yields control to event loop between checks
+        raw = await asyncio.to_thread(r.blpop, progress_key, 2)
 
-      # Stage 4: Analysis complete (already done in Stage 2)
-      yield _sse_event(
-        "status",
-        {
-          "stage": "analyzing",
-          "message": "Analysis complete...",
-          "progress": 45,
-        },
-      )
-
-      # (Query understanding was already emitted in Stage 2)
-
-      # Stage 5: AI enhancements (parallel)
-      if all_papers and (
-        request.include_overview
-        or request.include_clustering
-        or request.include_relevance
-      ):
-        yield _sse_event(
-          "status",
-          {
-            "stage": "enhancing",
-            "message": "Generating AI insights...",
-            "progress": 50,
-          },
-        )
-
-        # Build paper results for AI service
-        from app.services.discovery.base_provider import ExternalPaperResult
-
-        paper_results = [
-          ExternalPaperResult(
-            source=p["source"],
-            external_id=p["external_id"],
-            title=p["title"],
-            authors=p.get("authors", []),
-            abstract=p.get("abstract"),
-            year=p.get("year"),
-            doi=p.get("doi"),
-            url=p.get("url"),
-            pdf_url=p.get("pdf_url"),
-            citation_count=p.get("citation_count"),
-            relevance_score=p.get("relevance_score"),
-          )
-          for p in all_papers
-        ]
-
-        # Create AI tasks
-        ai_tasks = {}
-        if request.include_overview:
-          ai_tasks["overview"] = asyncio.create_task(
-            ai_search_service.generate_search_overview(request.query, paper_results)
-          )
-        if request.include_clustering and len(paper_results) >= 3:
-          ai_tasks["clustering"] = asyncio.create_task(
-            ai_search_service.cluster_papers(paper_results)
-          )
-        if request.include_relevance:
-          ai_tasks["relevance"] = asyncio.create_task(
-            ai_search_service.explain_relevance(request.query, paper_results)
-          )
-
-        # Stream AI results as they complete
-        completed = set()
-        ai_timeout = 25.0
-        start_time = asyncio.get_event_loop().time()
-
-        while ai_tasks and len(completed) < len(ai_tasks):
-          elapsed = asyncio.get_event_loop().time() - start_time
-          if elapsed > ai_timeout:
-            logger.warning("AI enhancement timeout, returning partial results")
+        if raw is None:
+          # No progress yet — check if we're done
+          if not expected_source_events and (not expected_ai or not ai_task_enqueued):
             break
+          continue
 
-          # Wait for any task to complete
-          pending_tasks = [t for k, t in ai_tasks.items() if k not in completed]
-          if not pending_tasks:
-            break
+        _, marker_json = raw
+        marker = json.loads(marker_json)
+        event_type = marker.get("type")
 
-          done, _ = await asyncio.wait(
-            pending_tasks,
-            timeout=ai_timeout - elapsed,
-            return_when=asyncio.FIRST_COMPLETED,
-          )
+        if event_type == "source_results":
+          source_name = marker["source"]
+          expected_source_events.discard(source_name)
 
-          for task in done:
-            # Find which key this task belongs to
-            for key, t in ai_tasks.items():
-              if t == task and key not in completed:
-                completed.add(key)
-                progress = 50 + (len(completed) * 40 // len(ai_tasks))
+          if "error" in marker:
+            yield _sse_event("source_results", {"source": source_name, "papers": [], "error": marker["error"]})
+          else:
+            papers_data = json.loads(r.get(f"discovery:{search_id}:source:{source_name}") or "[]")
+            received_sources[source_name] = papers_data
+            yield _sse_event("source_results", {
+              "source": source_name,
+              "papers": papers_data,
+              "paper_count": len(papers_data),
+            })
 
-                try:
-                  result = task.result()
-                  if result:
-                    if key == "overview":
-                      yield _sse_event(
-                        "status",
-                        {
-                          "stage": "overview",
-                          "message": "Generated overview",
-                          "progress": progress,
-                        },
-                      )
-                      yield _sse_event(
-                        "overview",
-                        {
-                          "overview": result.get("overview", ""),
-                          "key_themes": result.get("key_themes", []),
-                          "notable_trends": result.get("notable_trends", []),
-                          "research_gaps": result.get("research_gaps", []),
-                          "suggested_followups": result.get("suggested_followups", []),
-                        },
-                      )
-                    elif key == "clustering":
-                      yield _sse_event(
-                        "status",
-                        {
-                          "stage": "clustering",
-                          "message": "Clustered papers",
-                          "progress": progress,
-                        },
-                      )
-                      yield _sse_event(
-                        "clustering",
-                        {
-                          "clusters": result.get("clusters", []),
-                          "unclustered_indices": result.get("unclustered_indices", []),
-                        },
-                      )
-                    elif key == "relevance":
-                      yield _sse_event(
-                        "status",
-                        {
-                          "stage": "relevance",
-                          "message": "Analyzed relevance",
-                          "progress": progress,
-                        },
-                      )
-                      yield _sse_event(
-                        "relevance",
-                        {"explanations": result.get("explanations", [])},
-                      )
-                except Exception as e:
-                  logger.error(f"AI task {key} failed", error=str(e))
-                break
+          # Once all sources are done, enqueue AI enhancement
+          if not expected_source_events and not ai_task_enqueued:
+            all_papers = [p for papers in received_sources.values() for p in papers]
+            if all_papers and expected_ai:
+              ai_enhance_task.delay(
+                search_id, request.query, all_papers,
+                request.include_overview or False,
+                request.include_clustering or False,
+                request.include_relevance or False,
+              )
+              ai_task_enqueued = True
+              yield _sse_event("status", {"stage": "enhancing", "message": "Generating AI insights...", "progress": 50})
+            else:
+              # No papers or no AI requested — we're done
+              break
 
-        # Cancel any remaining tasks
-        for key, task in ai_tasks.items():
-          if key not in completed and not task.done():
-            task.cancel()
+        elif event_type in ai_keys:
+          expected_ai.discard(event_type)
+          result_raw = r.get(f"discovery:{search_id}:ai:{event_type}")
+          if result_raw:
+            result = json.loads(result_raw)
+            label = {"overview": "Building overview...", "clustering": "Clustering topics...", "relevance": "Ranking relevance..."}
+            yield _sse_event("status", {"stage": event_type, "message": label.get(event_type, event_type), "progress": 50 + len(ai_keys - expected_ai) * 15})
+            yield _sse_event(event_type, result)
 
-      # Stage 6: Complete
-      yield _sse_event(
-        "status",
-        {"stage": "complete", "message": "Search complete", "progress": 100},
-      )
+        elif event_type == "complete":
+          break
 
-      yield _sse_event(
-        "complete",
-        {
-          "query": request.query,
-          "total_results": len(all_papers),
-          "sources_searched": [s.source for s in source_results],
-        },
-      )
+      all_papers = [p for papers in received_sources.values() for p in papers]
+      yield _sse_event("status", {"stage": "complete", "message": "Search complete", "progress": 100})
+      yield _sse_event("complete", {
+        "query": request.query,
+        "total_results": len(all_papers),
+        "sources_searched": list(received_sources.keys()),
+      })
 
     except Exception as e:
       logger.error("Stream error", error=str(e))
@@ -698,7 +521,6 @@ async def ai_search_stream(
       "X-Accel-Buffering": "no",
     },
   )
-
 
 @router.get("/paper/{source}/{external_id}")
 async def get_paper_details(
@@ -1059,14 +881,14 @@ async def list_cached_papers(
 
 @router.get("/sessions", response_model=List[DiscoverySessionSchema])
 async def list_discovery_sessions(
+  user: CurrentUser,
   limit: int = Query(default=50, le=100),
   offset: int = Query(default=0, ge=0),
   session: AsyncSession = Depends(get_db),
 ):
-  """List all saved discovery sessions."""
-  # Get sessions ordered by update time
   stmt = (
     select(DiscoverySession)
+    .where(DiscoverySession.user_id == scoped_user_id(user))
     .order_by(DiscoverySession.updated_at.desc())
     .offset(offset)
     .limit(limit)
@@ -1093,11 +915,11 @@ async def list_discovery_sessions(
 @router.post("/sessions", response_model=DiscoverySessionSchema)
 async def create_discovery_session(
   request: DiscoverySessionCreate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Save a new discovery session with papers and AI insights."""
-  # Create the session with all data
   discovery_session = DiscoverySession(
+    user_id=scoped_user_id(user),
     name=request.name,
     query=request.query,
     sources=request.sources,
@@ -1129,15 +951,18 @@ async def create_discovery_session(
 @router.get("/sessions/{session_id}", response_model=DiscoverySessionDetail)
 async def get_discovery_session(
   session_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Get a specific discovery session with its papers and AI insights."""
-  # Get the session
-  discovery_session = await session.get(DiscoverySession, session_id)
+  result = await session.execute(
+    select(DiscoverySession).where(
+      DiscoverySession.id == session_id, DiscoverySession.user_id == scoped_user_id(user)
+    )
+  )
+  discovery_session = result.scalar_one_or_none()
   if not discovery_session:
     raise HTTPException(status_code=404, detail="Discovery session not found")
 
-  # Get papers from stored JSON (faster than joins)
   papers_json = discovery_session.papers_json or []
   paper_previews = [
     DiscoveredPaperPreview(
@@ -1178,10 +1003,15 @@ async def get_discovery_session(
 @router.delete("/sessions/{session_id}")
 async def delete_discovery_session(
   session_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Delete a discovery session."""
-  discovery_session = await session.get(DiscoverySession, session_id)
+  result = await session.execute(
+    select(DiscoverySession).where(
+      DiscoverySession.id == session_id, DiscoverySession.user_id == scoped_user_id(user)
+    )
+  )
+  discovery_session = result.scalar_one_or_none()
   if not discovery_session:
     raise HTTPException(status_code=404, detail="Discovery session not found")
 
@@ -1194,11 +1024,16 @@ async def delete_discovery_session(
 @router.put("/sessions/{session_id}", response_model=DiscoverySessionSchema)
 async def update_discovery_session(
   session_id: int,
+  user: CurrentUser,
   name: Optional[str] = Query(default=None),
   session: AsyncSession = Depends(get_db),
 ):
-  """Update a discovery session (e.g., rename it)."""
-  discovery_session = await session.get(DiscoverySession, session_id)
+  result = await session.execute(
+    select(DiscoverySession).where(
+      DiscoverySession.id == session_id, DiscoverySession.user_id == scoped_user_id(user)
+    )
+  )
+  discovery_session = result.scalar_one_or_none()
   if not discovery_session:
     raise HTTPException(status_code=404, detail="Discovery session not found")
 
@@ -1208,14 +1043,13 @@ async def update_discovery_session(
   await session.commit()
   await session.refresh(discovery_session)
 
-  # Get paper count
   from sqlalchemy import func
 
   stmt = select(func.count(discovery_session_papers.c.discovered_paper_id)).where(
     discovery_session_papers.c.session_id == session_id
   )
-  result = await session.execute(stmt)
-  paper_count = result.scalar() or 0
+  count_result = await session.execute(stmt)
+  paper_count = count_result.scalar() or 0
 
   return DiscoverySessionSchema(
     id=cast(int, discovery_session.id),

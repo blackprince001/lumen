@@ -143,6 +143,7 @@ class IngestionService:
     text_content: str,
     embedding: list[float],
     metadata: dict[str, Any] | None,
+    user_id: int | None = None,
   ) -> Paper:
     return Paper(
       title=title,
@@ -152,6 +153,7 @@ class IngestionService:
       content_text=text_content,
       embedding=embedding,
       metadata_json=metadata,
+      uploaded_by_id=user_id,
       volume=normalize_optional_field(metadata.get("volume") if metadata else None),
       issue=normalize_optional_field(metadata.get("issue") if metadata else None),
       pages=normalize_optional_field(metadata.get("pages") if metadata else None),
@@ -183,6 +185,7 @@ class IngestionService:
     title: str | None = None,
     doi: str | None = None,
     group_ids: list[int] | None = None,
+    user_id: int | None = None,
   ) -> Paper:
     existing = await self.check_existing_paper(db_session, doi)
     if existing:
@@ -205,7 +208,7 @@ class IngestionService:
     embedding = await self.generate_embedding(title, text_content)
 
     paper = self.create_paper(
-      title, doi, url, file_path, text_content, embedding, metadata
+      title, doi, url, file_path, text_content, embedding, metadata, user_id
     )
     await self.assign_groups(db_session, paper, group_ids)
 
@@ -236,6 +239,7 @@ class IngestionService:
     title: str | None = None,
     doi: str | None = None,
     group_ids: list[int] | None = None,
+    user_id: int | None = None,
   ) -> Paper:
     existing = await self.check_existing_paper(db_session, doi)
     if existing:
@@ -262,7 +266,7 @@ class IngestionService:
     embedding = await self.generate_embedding(title, text_content)
 
     paper = self.create_paper(
-      title, doi, url, file_path, text_content, embedding, metadata
+      title, doi, url, file_path, text_content, embedding, metadata, user_id
     )
     await self.assign_groups(db_session, paper, group_ids)
 

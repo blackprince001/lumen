@@ -24,7 +24,7 @@ from app.api.crud import (
 )
 from app.api.crud.utils import ensure_loaded, sanitize_metadata
 from app.core.logger import get_logger
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.paper import Paper
 from app.models.reading_session import ReadingSession
 from app.schemas.paper import (
@@ -60,6 +60,7 @@ router = APIRouter()
 
 @router.get("/papers", response_model=PaperListResponse)
 async def list_papers_endpoint(
+  user: CurrentUser,
   page: int = Query(1, ge=1),
   page_size: int = Query(20, ge=1, le=100),
   search: Optional[str] = None,
@@ -86,6 +87,11 @@ async def list_papers_endpoint(
     selectinload(Paper.groups),
     selectinload(Paper.tags),
   )
+
+  # Scope to current user (admin sees all)
+  uid = scoped_user_id(user)
+  if uid is not None:
+    query = query.where(Paper.uploaded_by_id == uid)
 
   # Apply filters
   if search:
@@ -175,20 +181,21 @@ async def list_papers_endpoint(
 
 
 @router.get("/papers/{paper_id}", response_model=PaperSchema)
-async def get_paper_endpoint(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def get_paper_endpoint(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get a single paper by ID."""
-  paper = await increment_view_count(session, paper_id)
+  paper = await increment_view_count(session, paper_id, user_id=scoped_user_id(user))
   return PaperSchema.model_validate(paper)
 
 
 @router.patch("/papers/{paper_id}", response_model=PaperSchema)
 async def update_paper_endpoint(
-  paper_id: int, paper_update: PaperUpdate, session: AsyncSession = Depends(get_db)
+  paper_id: int, paper_update: PaperUpdate, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Update a paper."""
   paper = await update_paper(
     session,
     paper_id,
+    user_id=scoped_user_id(user),
     title=paper_update.title,
     doi=paper_update.doi,
     metadata_json=paper_update.metadata_json,
@@ -199,25 +206,27 @@ async def update_paper_endpoint(
 
 
 @router.delete("/papers/{paper_id}", status_code=204)
-async def delete_paper_endpoint(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def delete_paper_endpoint(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Delete a paper."""
-  await delete_paper(session, paper_id)
+  await delete_paper(session, paper_id, user_id=scoped_user_id(user))
   return None
 
 
 @router.delete("/papers", status_code=204)
 async def delete_papers_bulk_endpoint(
+  user: CurrentUser,
   paper_ids: list[int] = Query(..., description="List of paper IDs to delete"),
   session: AsyncSession = Depends(get_db),
 ):
   """Delete multiple papers by ID."""
-  await delete_papers_bulk(session, paper_ids)
+  await delete_papers_bulk(session, paper_ids, user_id=scoped_user_id(user))
   return None
 
 
 @router.get("/papers/{paper_id}/reference")
 async def get_paper_reference(
   paper_id: int,
+  user: CurrentUser,
   format: str = Query("apa", pattern="^(apa|mla|bibtex)$"),
   session: AsyncSession = Depends(get_db),
 ):
@@ -237,7 +246,7 @@ async def get_paper_reference(
 
 
 @router.get("/papers/{paper_id}/related", response_model=RelatedPapersResponse)
-async def get_related_papers(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def get_related_papers(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get related papers from library and external sources."""
   paper = await get_paper_or_404(session, paper_id, with_relations=True)
 
@@ -330,7 +339,7 @@ async def get_related_papers(paper_id: int, session: AsyncSession = Depends(get_
 
 @router.post("/papers/{paper_id}/regenerate-metadata", response_model=PaperSchema)
 async def regenerate_paper_metadata(
-  paper_id: int, session: AsyncSession = Depends(get_db)
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Regenerate metadata for a paper using AI extraction."""
   paper = await get_paper_or_404(session, paper_id, with_relations=True)
@@ -378,7 +387,7 @@ async def regenerate_paper_metadata(
 
 @router.post("/papers/regenerate-metadata-bulk", response_model=BulkRegenerateResponse)
 async def regenerate_paper_metadata_bulk(
-  request: BulkRegenerateRequest, session: AsyncSession = Depends(get_db)
+  request: BulkRegenerateRequest, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Regenerate metadata for multiple papers."""
   successful = []
@@ -433,7 +442,7 @@ async def regenerate_paper_metadata_bulk(
 
 @router.post("/papers/{paper_id}/extract-citations")
 async def extract_paper_citations(
-  paper_id: int, session: AsyncSession = Depends(get_db)
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Extract and store citations from a paper's PDF."""
   paper = await get_paper_or_404(session, paper_id)
@@ -468,10 +477,11 @@ async def extract_paper_citations(
 async def update_reading_status_endpoint(
   paper_id: int,
   status_update: ReadingStatusUpdate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Update reading status for a paper."""
-  paper = await update_reading_status(session, paper_id, status_update.reading_status)
+  paper = await update_reading_status(session, paper_id, status_update.reading_status, user_id=scoped_user_id(user))
   return PaperSchema.model_validate(paper)
 
 
@@ -479,15 +489,16 @@ async def update_reading_status_endpoint(
 async def update_priority_endpoint(
   paper_id: int,
   priority_update: PriorityUpdate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Update priority for a paper."""
-  paper = await update_priority(session, paper_id, priority_update.priority)
+  paper = await update_priority(session, paper_id, priority_update.priority, user_id=scoped_user_id(user))
   return PaperSchema.model_validate(paper)
 
 
 @router.get("/papers/{paper_id}/reading-progress", response_model=PaperReadingProgress)
-async def get_reading_progress(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def get_reading_progress(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get reading progress for a paper."""
   paper = await get_paper_or_404(session, paper_id)
 
@@ -505,7 +516,7 @@ async def get_reading_progress(paper_id: int, session: AsyncSession = Depends(ge
 @router.post(
   "/papers/{paper_id}/reading-session/start", response_model=ReadingSessionResponse
 )
-async def start_reading_session(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def start_reading_session(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Start a reading session for a paper."""
   paper = await get_paper_or_404(session, paper_id)
 
@@ -515,6 +526,7 @@ async def start_reading_session(paper_id: int, session: AsyncSession = Depends(g
 
   reading_session = ReadingSession(
     paper_id=paper_id,
+    user_id=user.id if user.role != "admin" else None,
     start_time=datetime.now(timezone.utc),
     duration_minutes=0,
     pages_viewed=0,
@@ -532,6 +544,7 @@ async def start_reading_session(paper_id: int, session: AsyncSession = Depends(g
 async def end_reading_session(
   paper_id: int,
   session_update: ReadingSessionUpdate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """End a reading session for a paper."""
@@ -542,6 +555,9 @@ async def end_reading_session(
     .order_by(ReadingSession.start_time.desc())
     .limit(1)
   )
+  uid = scoped_user_id(user)
+  if uid is not None:
+    query = query.where(ReadingSession.user_id == uid)
   result = await session.execute(query)
   reading_session = result.scalar_one_or_none()
 
@@ -580,10 +596,10 @@ async def end_reading_session(
 
 @router.get("/papers/{paper_id}/bookmarks", response_model=list[BookmarkResponse])
 async def list_bookmarks_endpoint(
-  paper_id: int, session: AsyncSession = Depends(get_db)
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """List all bookmarks for a paper."""
-  bookmarks = await list_bookmarks_for_paper(session, paper_id)
+  bookmarks = await list_bookmarks_for_paper(session, paper_id, user_id=scoped_user_id(user))
   return [BookmarkResponse.model_validate(b) for b in bookmarks]
 
 
@@ -593,19 +609,20 @@ async def list_bookmarks_endpoint(
 async def create_bookmark_endpoint(
   paper_id: int,
   bookmark_create: BookmarkCreate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Create a bookmark for a paper."""
   bookmark = await create_bookmark(
-    session, paper_id, bookmark_create.page_number, bookmark_create.note
+    session, paper_id, bookmark_create.page_number, bookmark_create.note, user_id=scoped_user_id(user)
   )
   return BookmarkResponse.model_validate(bookmark)
 
 
 @router.delete("/papers/{paper_id}/bookmarks/{bookmark_id}", status_code=204)
 async def delete_bookmark_endpoint(
-  paper_id: int, bookmark_id: int, session: AsyncSession = Depends(get_db)
+  paper_id: int, bookmark_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Delete a bookmark."""
-  await delete_bookmark(session, bookmark_id, paper_id)
+  await delete_bookmark(session, bookmark_id, paper_id, user_id=scoped_user_id(user))
   return None

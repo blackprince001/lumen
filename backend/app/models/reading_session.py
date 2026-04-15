@@ -8,6 +8,9 @@ class ReadingSession(Base):
   __tablename__ = "reading_sessions"
 
   id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+  )
   paper_id = Column(
     Integer, ForeignKey("papers.id", ondelete="CASCADE"), nullable=False, index=True
   )
@@ -17,3 +20,4 @@ class ReadingSession(Base):
   pages_viewed = Column(Integer, nullable=False, default=0)
 
   paper = relationship("Paper", back_populates="reading_sessions")
+  user = relationship("User", back_populates="reading_sessions")

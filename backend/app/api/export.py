@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db
 from app.models.paper import Paper
 from app.schemas.export import CitationExportRequest, ExportRequest
 from app.services.export_service import export_service

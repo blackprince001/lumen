@@ -1,6 +1,14 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Table
+from sqlalchemy import (
+  Column,
+  DateTime,
+  ForeignKey,
+  Integer,
+  String,
+  Table,
+  UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 
 from app.models.base import Base
@@ -22,7 +30,10 @@ class Tag(Base):
   __tablename__ = "tags"
 
   id = Column(Integer, primary_key=True, index=True)
-  name = Column(String, nullable=False, unique=True, index=True)
+  name = Column(String, nullable=False, index=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+  )
   created_at = Column(
     DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
   )
@@ -34,3 +45,6 @@ class Tag(Base):
   )
 
   papers = relationship("Paper", secondary=paper_tag_association, back_populates="tags")
+  user = relationship("User", back_populates="tags")
+
+  __table_args__ = (UniqueConstraint("name", "user_id", name="uq_tags_name_user_id"),)

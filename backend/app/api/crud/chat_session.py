@@ -15,9 +15,14 @@ async def get_chat_session_or_404(
   session_id: int,
   *,
   with_messages: bool = False,
+  user_id: int | None = None,
 ) -> ChatSession:
   """Fetch a chat session by ID or raise 404."""
   query = select(ChatSession).where(ChatSession.id == session_id)
+  if user_id is not None:
+    query = query.where(
+      (ChatSession.user_id == user_id) | (ChatSession.user_id.is_(None))
+    )
 
   if with_messages:
     query = query.options(selectinload(ChatSession.messages))
@@ -35,9 +40,12 @@ async def get_chat_session_or_404(
 
 
 async def list_chat_sessions_for_paper(
-  session: AsyncSession, paper_id: int
+  session: AsyncSession,
+  paper_id: int,
+  *,
+  user_id: int | None = None,
 ) -> list[ChatSession]:
-  """List all chat sessions for a paper."""
+  """List chat sessions for a paper, optionally scoped to a single user."""
   # Verify paper exists
   await get_paper_or_404(session, paper_id)
 
@@ -45,8 +53,12 @@ async def list_chat_sessions_for_paper(
     select(ChatSession)
     .options(selectinload(ChatSession.messages))
     .where(ChatSession.paper_id == paper_id)
-    .order_by(ChatSession.updated_at.desc())
   )
+  if user_id is not None:
+    query = query.where(
+      (ChatSession.user_id == user_id) | (ChatSession.user_id.is_(None))
+    )
+  query = query.order_by(ChatSession.updated_at.desc())
   result = await session.execute(query)
   sessions = list(result.scalars().all())
 
@@ -56,8 +68,13 @@ async def list_chat_sessions_for_paper(
   return sessions
 
 
-async def delete_chat_session(session: AsyncSession, session_id: int) -> None:
+async def delete_chat_session(
+  session: AsyncSession,
+  session_id: int,
+  *,
+  user_id: int | None = None,
+) -> None:
   """Delete a chat session."""
-  chat_session = await get_chat_session_or_404(session, session_id)
+  chat_session = await get_chat_session_or_404(session, session_id, user_id=user_id)
   await session.delete(chat_session)
   await session.commit()

@@ -10,6 +10,9 @@ class Bookmark(Base):
   __tablename__ = "bookmarks"
 
   id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+  )
   paper_id = Column(
     Integer, ForeignKey("papers.id", ondelete="CASCADE"), nullable=False, index=True
   )
@@ -20,3 +23,4 @@ class Bookmark(Base):
   )
 
   paper = relationship("Paper", back_populates="bookmarks")
+  user = relationship("User", back_populates="bookmarks")

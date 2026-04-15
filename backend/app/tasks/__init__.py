@@ -12,6 +12,10 @@ from app.tasks.paper_processing import (
   extract_citations_task,
   process_paper_full,
 )
+from app.tasks.discovery_tasks import (
+  search_source_task,
+  ai_enhance_task,
+)
 
 __all__ = [
   "generate_summary_task",
@@ -21,4 +25,6 @@ __all__ = [
   "generate_embedding_task",
   "extract_citations_task",
   "process_paper_full",
+  "search_source_task",
+  "ai_enhance_task",
 ]

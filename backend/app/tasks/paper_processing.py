@@ -278,11 +278,13 @@ def process_paper_full(self, paper_id: int, file_path: str) -> dict[str, Any]:
 
 
 @celery_app.task(base=BaseTask, name="processing.mark_paper_failed")
-def _mark_paper_failed(task_id: str, paper_id: int) -> dict[str, Any]:
+def _mark_paper_failed(paper_id: int, request, exc, traceback) -> dict[str, Any]:
   """Mark paper processing as failed when any task in the chain fails.
 
-  Called as an error callback (link_error). Receives the failed task's ID.
+  Called as an error callback (link_error). Celery passes (request, exc, traceback)
+  after any partial args supplied via .s().
   """
+  task_id = request.id if hasattr(request, "id") else str(request)
   session = get_sync_session()
   try:
     paper = session.query(Paper).filter(Paper.id == paper_id).first()

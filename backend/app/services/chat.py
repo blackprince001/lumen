@@ -301,10 +301,9 @@ class ChatService(BaseGoogleAIService):
     return "\n".join(context_parts)
 
   async def create_session(
-    self, db_session: AsyncSession, paper_id: int, name: str = "New Session"
+    self, db_session: AsyncSession, paper_id: int, name: str = "New Session", user_id: int | None = None
   ) -> ChatSession:
-    """Create a new chat session for a paper."""
-    chat_session = ChatSession(paper_id=paper_id, name=name)
+    chat_session = ChatSession(paper_id=paper_id, name=name, user_id=user_id)
     db_session.add(chat_session)
     await db_session.commit()
     await db_session.refresh(chat_session)
@@ -319,15 +318,15 @@ class ChatService(BaseGoogleAIService):
     return result.scalar_one_or_none()
 
   async def get_latest_session(
-    self, db_session: AsyncSession, paper_id: int
+    self, db_session: AsyncSession, paper_id: int, user_id: int | None = None
   ) -> ChatSession | None:
-    """Get the most recent chat session for a paper."""
     query = (
       select(ChatSession)
       .where(ChatSession.paper_id == paper_id)
-      .order_by(ChatSession.updated_at.desc())
-      .limit(1)
     )
+    if user_id is not None:
+      query = query.where(ChatSession.user_id == user_id)
+    query = query.order_by(ChatSession.updated_at.desc()).limit(1)
     result = await db_session.execute(query)
     return result.scalar_one_or_none()
 
@@ -336,8 +335,8 @@ class ChatService(BaseGoogleAIService):
     db_session: AsyncSession,
     paper_id: int,
     session_id: int | None,
+    user_id: int | None = None,
   ) -> tuple[ChatSession | None, str | None]:
-    """Get existing session or create new one. Returns (session, error)."""
     chat_session = None
     if session_id:
       chat_session = await self.get_session(db_session, session_id)
@@ -345,10 +344,10 @@ class ChatService(BaseGoogleAIService):
         return None, "Session does not belong to this paper"
 
     if not chat_session:
-      chat_session = await self.get_latest_session(db_session, paper_id)
+      chat_session = await self.get_latest_session(db_session, paper_id, user_id=user_id)
 
     if not chat_session:
-      chat_session = await self.create_session(db_session, paper_id)
+      chat_session = await self.create_session(db_session, paper_id, user_id=user_id)
 
     return chat_session, None
 
@@ -529,6 +528,7 @@ class ChatService(BaseGoogleAIService):
     user_message: str,
     references: dict[str, Any] | None = None,
     session_id: int | None = None,
+    user_id: int | None = None,
   ) -> AsyncGenerator[dict[str, Any], None]:
     """Stream a chat message response."""
     client = self._get_client()
@@ -540,7 +540,7 @@ class ChatService(BaseGoogleAIService):
       return
 
     chat_session, session_error = await self._get_or_create_session(
-      db_session, paper_id, session_id
+      db_session, paper_id, session_id, user_id=user_id
     )
     if session_error or not chat_session:
       yield {"type": "error", "error": session_error or "Failed to get session"}
@@ -605,6 +605,7 @@ class ChatService(BaseGoogleAIService):
     user_message: str,
     references: dict[str, Any] | None = None,
     session_id: int | None = None,
+    user_id: int | None = None,
   ) -> ChatMessage | None:
     """Send a chat message and get a response (non-streaming)."""
     client = self._get_client()
@@ -612,7 +613,7 @@ class ChatService(BaseGoogleAIService):
       raise ValueError("Google API key not configured. Please set GOOGLE_API_KEY.")
 
     chat_session, session_error = await self._get_or_create_session(
-      db_session, paper_id, session_id
+      db_session, paper_id, session_id, user_id=user_id
     )
     if session_error or not chat_session:
       raise ValueError(session_error or "Failed to get session")

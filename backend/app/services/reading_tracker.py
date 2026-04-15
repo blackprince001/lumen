@@ -9,72 +9,70 @@ from app.schemas.reading_progress import ReadingStatistics, ReadingStreak
 
 
 class ReadingTrackerService:
-  async def calculate_statistics(self, session: AsyncSession) -> ReadingStatistics:
-    """Calculate reading statistics for dashboard."""
+  async def calculate_statistics(self, session: AsyncSession, user_id: int | None = None) -> ReadingStatistics:
     now = datetime.now(timezone.utc)
     week_start = now - timedelta(days=now.weekday())
     month_start = now.replace(day=1)
     year_start = now.replace(month=1, day=1)
 
-    # Papers read this week/month/year
+    def _paper_filter(q):
+      if user_id is not None:
+        return q.where(Paper.uploaded_by_id == user_id)
+      return q
+
     papers_read_this_week = (
       await session.scalar(
-        select(func.count(Paper.id)).where(
+        _paper_filter(select(func.count(Paper.id)).where(
           Paper.reading_status == "read", Paper.status_updated_at >= week_start
-        )
+        ))
       )
       or 0
     )
 
     papers_read_this_month = (
       await session.scalar(
-        select(func.count(Paper.id)).where(
+        _paper_filter(select(func.count(Paper.id)).where(
           Paper.reading_status == "read", Paper.status_updated_at >= month_start
-        )
+        ))
       )
       or 0
     )
 
     papers_read_this_year = (
       await session.scalar(
-        select(func.count(Paper.id)).where(
+        _paper_filter(select(func.count(Paper.id)).where(
           Paper.reading_status == "read", Paper.status_updated_at >= year_start
-        )
+        ))
       )
       or 0
     )
 
-    # Total reading time
     total_reading_time = (
-      await session.scalar(select(func.sum(Paper.reading_time_minutes))) or 0
+      await session.scalar(_paper_filter(select(func.sum(Paper.reading_time_minutes)))) or 0
     )
 
-    # Average reading time per paper
-    total_papers = await session.scalar(select(func.count(Paper.id))) or 1
-    average_reading_time = (
-      total_reading_time / total_papers if total_papers > 0 else 0.0
-    )
+    total_papers = await session.scalar(_paper_filter(select(func.count(Paper.id)))) or 1
+    average_reading_time = total_reading_time / total_papers if total_papers > 0 else 0.0
 
-    # Reading streak
-    streak_data = await self._calculate_streak(session)
+    streak_data = await self._calculate_streak(session, user_id=user_id)
 
-    # Status distribution
     status_dist = await session.execute(
-      select(Paper.reading_status, func.count(Paper.id))
-      .group_by(Paper.reading_status)
-      .where(Paper.reading_status.isnot(None))
+      _paper_filter(
+        select(Paper.reading_status, func.count(Paper.id))
+        .group_by(Paper.reading_status)
+        .where(Paper.reading_status.isnot(None))
+      )
     )
     status_distribution = {status: count for status, count in status_dist.fetchall()}
 
-    # Priority distribution
     priority_dist = await session.execute(
-      select(Paper.priority, func.count(Paper.id))
-      .group_by(Paper.priority)
-      .where(Paper.priority.isnot(None))
+      _paper_filter(
+        select(Paper.priority, func.count(Paper.id))
+        .group_by(Paper.priority)
+        .where(Paper.priority.isnot(None))
+      )
     )
-    priority_distribution = {
-      priority: count for priority, count in priority_dist.fetchall()
-    }
+    priority_distribution = {priority: count for priority, count in priority_dist.fetchall()}
 
     return ReadingStatistics(
       papers_read_this_week=papers_read_this_week,
@@ -87,14 +85,15 @@ class ReadingTrackerService:
       priority_distribution=priority_distribution,
     )
 
-  async def _calculate_streak(self, session: AsyncSession) -> ReadingStreak:
-    """Calculate reading streak (consecutive days with reading activity)."""
-    # Get all reading sessions ordered by date
-    sessions = await session.execute(
+  async def _calculate_streak(self, session: AsyncSession, user_id: int | None = None) -> ReadingStreak:
+    q = (
       select(func.date(ReadingSession.start_time).label("date"))
       .distinct()
       .order_by(func.date(ReadingSession.start_time).desc())
     )
+    if user_id is not None:
+      q = q.where(ReadingSession.user_id == user_id)
+    sessions = await session.execute(q)
 
     dates_with_activity = [row[0] for row in sessions.fetchall() if row[0]]
 
@@ -158,9 +157,8 @@ class ReadingTrackerService:
       else None,
     )
 
-  async def get_reading_streak(self, session: AsyncSession) -> ReadingStreak:
-    """Get reading streak information."""
-    return await self._calculate_streak(session)
+  async def get_reading_streak(self, session: AsyncSession, user_id: int | None = None) -> ReadingStreak:
+    return await self._calculate_streak(session, user_id=user_id)
 
   async def aggregate_reading_time(self, session: AsyncSession, paper_id: int) -> int:
     """Aggregate reading time from sessions for a paper."""

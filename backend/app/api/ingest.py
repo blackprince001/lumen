@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.database import AsyncSessionLocal
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db
 from app.models.paper import Paper as PaperModel
 from app.schemas.paper import Paper, PaperBatchCreate, PaperCreate, PaperUploadResponse
 from app.services.duplicate_detection import duplicate_detection_service
@@ -63,6 +63,7 @@ def _dispatch_paper_processing(paper_id: int, file_path: str) -> str | None:
 @router.post("/ingest", response_model=Paper, status_code=201)
 async def ingest_paper_endpoint(
   paper_in: PaperCreate,
+  user: CurrentUser,
   check_duplicates: bool = True,
   session: AsyncSession = Depends(get_db),
 ):
@@ -106,6 +107,7 @@ async def ingest_paper_endpoint(
       title=paper_in.title,
       doi=paper_in.doi,
       group_ids=paper_in.group_ids,
+      user_id=user.id,
     )
 
     # Dispatch Celery task for full AI processing
@@ -137,6 +139,7 @@ MAX_FILES = 10
 
 @router.post("/ingest/upload", response_model=PaperUploadResponse, status_code=201)
 async def upload_files_endpoint(
+  user: CurrentUser,
   files: List[UploadFile] = File(...),
   group_ids: Optional[str] = Form(None),
   session: AsyncSession = Depends(get_db),
@@ -218,6 +221,7 @@ async def upload_files_endpoint(
           title=None,
           doi=None,
           group_ids=parsed_group_ids,
+          user_id=user.id,
         )
         await async_session.commit()
 
@@ -287,6 +291,7 @@ async def upload_files_endpoint(
 async def _ingest_single_url(
   url: str,
   group_ids: Optional[List[int]],
+  user_id: Optional[int] = None,
 ) -> tuple[Optional[int], Optional[str], Optional[dict]]:
   """Helper to ingest a single URL. Returns (paper_id, file_path, error_dict)."""
   try:
@@ -298,6 +303,7 @@ async def _ingest_single_url(
           title=None,
           doi=None,
           group_ids=group_ids,
+          user_id=user_id,
         )
         await session.commit()
 
@@ -321,6 +327,7 @@ async def _ingest_single_url(
 @router.post("/ingest/batch", response_model=PaperUploadResponse, status_code=201)
 async def ingest_batch_endpoint(
   batch: PaperBatchCreate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Ingest multiple papers from a list of URLs.
@@ -340,7 +347,7 @@ async def ingest_batch_endpoint(
 
   # Process URLs in parallel
   results = await asyncio.gather(
-    *[_ingest_single_url(str(url), batch.group_ids) for url in batch.urls],
+    *[_ingest_single_url(str(url), batch.group_ids, user.id) for url in batch.urls],
     return_exceptions=True,
   )
 
@@ -376,6 +383,7 @@ async def ingest_batch_endpoint(
 
 @router.post("/ingest/urls", response_model=PaperUploadResponse, status_code=201)
 async def ingest_urls_from_text_endpoint(
+  user: CurrentUser,
   text: str = Body(..., media_type="text/plain"),
   group_ids: Optional[List[int]] = None,
   session: AsyncSession = Depends(get_db),
@@ -405,7 +413,7 @@ async def ingest_urls_from_text_endpoint(
 
   # Process URLs in parallel
   results = await asyncio.gather(
-    *[_ingest_single_url(url, group_ids) for url in urls],
+    *[_ingest_single_url(url, group_ids, user.id) for url in urls],
     return_exceptions=True,
   )
 

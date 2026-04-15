@@ -11,6 +11,9 @@ class Group(Base):
 
   id = Column(Integer, primary_key=True, index=True)
   name = Column(String, nullable=False, index=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+  )
   parent_id = Column(
     Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=True, index=True
   )
@@ -30,6 +33,7 @@ class Group(Base):
     "Group", back_populates="parent", cascade="all, delete-orphan"
   )
 
+  user = relationship("User", back_populates="groups")
   papers = relationship("Paper", secondary="paper_groups", back_populates="groups")
 
   # Note: Unique constraints are handled via partial indexes in migrations

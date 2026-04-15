@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.crud import get_paper_or_404
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db
 from app.models.paper_citation import PaperCitation
 from app.schemas.paper import Paper as PaperSchema
 from app.services.graph_service import graph_service

@@ -12,7 +12,7 @@ from app.api.crud import (
   delete_saved_search,
   list_saved_searches,
 )
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.paper import Paper
 from app.schemas.paper import Paper as PaperSchema
 from app.schemas.search import (
@@ -38,9 +38,8 @@ router = APIRouter()
 
 @router.post("/search", response_model=SearchResponse)
 async def semantic_search(
-  search_request: SearchRequest, session: AsyncSession = Depends(get_db)
+  search_request: SearchRequest, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
-  """Perform semantic search using embeddings."""
   if not search_request.query or not search_request.query.strip():
     raise HTTPException(status_code=400, detail="Query cannot be empty")
 
@@ -48,6 +47,9 @@ async def semantic_search(
   similarity_threshold = search_request.threshold or 0.0
 
   vector_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+
+  uid = scoped_user_id(user)
+  user_filter = "AND uploaded_by_id = :user_id" if uid is not None else ""
 
   query_sql = text(f"""
         SELECT 
@@ -63,18 +65,17 @@ async def semantic_search(
             1 - (embedding <=> '{vector_str}'::vector) as similarity
         FROM papers
         WHERE embedding IS NOT NULL
+        {user_filter}
         AND (1 - (embedding <=> '{vector_str}'::vector)) >= :threshold
         ORDER BY embedding <=> '{vector_str}'::vector
         LIMIT :limit
     """)
 
-  result = await session.execute(
-    query_sql,
-    {
-      "threshold": similarity_threshold,
-      "limit": search_request.limit,
-    },
-  )
+  params: dict = {"threshold": similarity_threshold, "limit": search_request.limit}
+  if uid is not None:
+    params["user_id"] = uid
+
+  result = await session.execute(query_sql, params)
 
   rows = result.fetchall()
 
@@ -136,14 +137,13 @@ async def semantic_search(
 
 @router.post("/search/fulltext", response_model=SearchResponse)
 async def fulltext_search(
-  search_request: SearchRequest, session: AsyncSession = Depends(get_db)
+  search_request: SearchRequest, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
-  """Full-text search endpoint."""
   if not search_request.query or not search_request.query.strip():
     raise HTTPException(status_code=400, detail="Query cannot be empty")
 
   papers = await search_service.fulltext_search(
-    session, search_request.query, search_request.limit
+    session, search_request.query, search_request.limit, user_id=scoped_user_id(user)
   )
 
   results = [
@@ -156,13 +156,12 @@ async def fulltext_search(
 
 @router.post("/search/annotations")
 async def search_annotations(
-  query: str, limit: int = 10, session: AsyncSession = Depends(get_db)
+  query: str, user: CurrentUser, limit: int = 10, session: AsyncSession = Depends(get_db)
 ):
-  """Search within annotations."""
   if not query or not query.strip():
     raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-  annotations = await search_service.search_annotations(session, query, limit)
+  annotations = await search_service.search_annotations(session, query, limit, user_id=scoped_user_id(user))
 
   return {
     "annotations": [
@@ -179,20 +178,19 @@ async def search_annotations(
 
 
 @router.get("/saved-searches", response_model=list[SavedSearchResponse])
-async def list_saved_searches_endpoint(session: AsyncSession = Depends(get_db)):
-  """List all saved searches."""
-  searches = await list_saved_searches(session)
+async def list_saved_searches_endpoint(user: CurrentUser, session: AsyncSession = Depends(get_db)):
+  searches = await list_saved_searches(session, user_id=scoped_user_id(user))
   return [SavedSearchResponse.model_validate(s) for s in searches]
 
 
 @router.post("/saved-searches", response_model=SavedSearchResponse, status_code=201)
 async def create_saved_search_endpoint(
-  search_create: SavedSearchCreate, session: AsyncSession = Depends(get_db)
+  search_create: SavedSearchCreate, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
-  """Create a saved search."""
   saved_search = await create_saved_search(
     session,
     search_create.name,
+    user_id=scoped_user_id(user),
     description=search_create.description,
     query_params=search_create.query_params,
   )
@@ -201,8 +199,7 @@ async def create_saved_search_endpoint(
 
 @router.delete("/saved-searches/{search_id}", status_code=204)
 async def delete_saved_search_endpoint(
-  search_id: int, session: AsyncSession = Depends(get_db)
+  search_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
-  """Delete a saved search."""
-  await delete_saved_search(session, search_id)
+  await delete_saved_search(session, search_id, user_id=scoped_user_id(user))
   return None

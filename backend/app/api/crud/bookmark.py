@@ -12,11 +12,21 @@ async def get_bookmark_or_404(
   session: AsyncSession,
   bookmark_id: int,
   paper_id: int | None = None,
+  *,
+  user_id: int | None = None,
 ) -> Bookmark:
-  """Fetch a bookmark by ID or raise 404."""
+  """Fetch a bookmark by ID or raise 404.
+
+  If `user_id` is provided, only bookmarks owned by that user (or legacy
+  bookmarks with NULL user_id) are returned.
+  """
   query = select(Bookmark).where(Bookmark.id == bookmark_id)
   if paper_id is not None:
     query = query.where(Bookmark.paper_id == paper_id)
+  if user_id is not None:
+    query = query.where(
+      (Bookmark.user_id == user_id) | (Bookmark.user_id.is_(None))
+    )
 
   result = await session.execute(query)
   bookmark = result.scalar_one_or_none()
@@ -28,17 +38,21 @@ async def get_bookmark_or_404(
 
 
 async def list_bookmarks_for_paper(
-  session: AsyncSession, paper_id: int
+  session: AsyncSession,
+  paper_id: int,
+  *,
+  user_id: int | None = None,
 ) -> list[Bookmark]:
-  """List all bookmarks for a paper."""
+  """List bookmarks for a paper, optionally scoped to a single user."""
   # Verify paper exists
   await get_paper_or_404(session, paper_id)
 
-  query = (
-    select(Bookmark)
-    .where(Bookmark.paper_id == paper_id)
-    .order_by(Bookmark.page_number, Bookmark.created_at)
-  )
+  query = select(Bookmark).where(Bookmark.paper_id == paper_id)
+  if user_id is not None:
+    query = query.where(
+      (Bookmark.user_id == user_id) | (Bookmark.user_id.is_(None))
+    )
+  query = query.order_by(Bookmark.page_number, Bookmark.created_at)
   result = await session.execute(query)
   return list(result.scalars().all())
 
@@ -48,6 +62,8 @@ async def create_bookmark(
   paper_id: int,
   page_number: int,
   note: str | None = None,
+  *,
+  user_id: int | None = None,
 ) -> Bookmark:
   """Create a bookmark for a paper."""
   # Verify paper exists
@@ -55,6 +71,7 @@ async def create_bookmark(
 
   bookmark = Bookmark(
     paper_id=paper_id,
+    user_id=user_id,
     page_number=page_number,
     note=note,
   )
@@ -66,9 +83,15 @@ async def create_bookmark(
 
 
 async def delete_bookmark(
-  session: AsyncSession, bookmark_id: int, paper_id: int
+  session: AsyncSession,
+  bookmark_id: int,
+  paper_id: int,
+  *,
+  user_id: int | None = None,
 ) -> None:
   """Delete a bookmark."""
-  bookmark = await get_bookmark_or_404(session, bookmark_id, paper_id=paper_id)
+  bookmark = await get_bookmark_or_404(
+    session, bookmark_id, paper_id=paper_id, user_id=user_id
+  )
   await session.delete(bookmark)
   await session.commit()

@@ -16,7 +16,7 @@ from app.api.crud import (
   list_chat_sessions_for_paper,
 )
 from app.core.logger import get_logger
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.chat import ChatMessage, ChatSession
 from app.schemas.chat import (
   ChatMessage as ChatMessageSchema,
@@ -43,10 +43,10 @@ router = APIRouter()
 async def send_chat_message(
   paper_id: int,
   chat_request: ChatRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Send a message to chat about a paper."""
-  await get_paper_or_404(session, paper_id)
+  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   try:
     assistant_message = await chat_service.send_message(
@@ -55,11 +55,12 @@ async def send_chat_message(
       user_message=chat_request.message,
       references=chat_request.references,
       session_id=chat_request.session_id,
+      user_id=scoped_user_id(user),
     )
 
     session_id = assistant_message.session_id if assistant_message else None
     chat_session = await get_chat_session_or_404(
-      session, cast(int, session_id), with_messages=True
+      session, cast(int, session_id), with_messages=True, user_id=scoped_user_id(user)
     )
 
     return ChatResponse(
@@ -77,20 +78,20 @@ async def send_chat_message(
 @router.get("/papers/{paper_id}/chat", response_model=Optional[ChatSessionSchema])
 async def get_chat_history(
   paper_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Get the latest chat session for a paper."""
-  await get_paper_or_404(session, paper_id)
+  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   chat_session = await chat_service.get_latest_session(
-    db_session=session, paper_id=paper_id
+    db_session=session, paper_id=paper_id, user_id=scoped_user_id(user)
   )
 
   if not chat_session:
     return None
 
   chat_session = await get_chat_session_or_404(
-    session, cast(int, chat_session.id), with_messages=True
+    session, cast(int, chat_session.id), with_messages=True, user_id=scoped_user_id(user)
   )
   return ChatSessionSchema.model_validate(chat_session)
 
@@ -99,10 +100,10 @@ async def get_chat_history(
 async def stream_chat_message(
   paper_id: int,
   chat_request: ChatRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Stream a chat message response."""
-  await get_paper_or_404(session, paper_id)
+  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   async def generate_stream():
     try:
@@ -112,6 +113,7 @@ async def stream_chat_message(
         user_message=chat_request.message,
         references=chat_request.references,
         session_id=chat_request.session_id,
+        user_id=scoped_user_id(user),
       ):
         data = json.dumps(chunk)
         yield f"data: {data}\n\n"
@@ -133,12 +135,14 @@ async def stream_chat_message(
 @router.delete("/papers/{paper_id}/chat", status_code=204)
 async def clear_chat_history(
   paper_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Clear all chat sessions for a paper."""
-  await get_paper_or_404(session, paper_id)
+  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
-  session_query = select(ChatSession).where(ChatSession.paper_id == paper_id)
+  session_query = select(ChatSession).where(
+    ChatSession.paper_id == paper_id, ChatSession.user_id == scoped_user_id(user)
+  )
   session_result = await session.execute(session_query)
   chat_sessions = session_result.scalars().all()
 
@@ -234,17 +238,17 @@ async def stream_thread_message(
 async def create_new_session(
   paper_id: int,
   session_data: ChatSessionCreate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Create a new chat session for a paper."""
-  await get_paper_or_404(session, paper_id)
+  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   chat_session = await chat_service.create_session(
-    db_session=session, paper_id=paper_id, name=session_data.name
+    db_session=session, paper_id=paper_id, name=session_data.name, user_id=scoped_user_id(user)
   )
 
   chat_session = await get_chat_session_or_404(
-    session, cast(int, chat_session.id), with_messages=True
+    session, cast(int, chat_session.id), with_messages=True, user_id=scoped_user_id(user)
   )
   return ChatSessionSchema.model_validate(chat_session)
 
@@ -252,20 +256,22 @@ async def create_new_session(
 @router.get("/papers/{paper_id}/sessions", response_model=List[ChatSessionSchema])
 async def list_sessions(
   paper_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """List all chat sessions for a paper."""
-  sessions = await list_chat_sessions_for_paper(session, paper_id)
+  sessions = await list_chat_sessions_for_paper(session, paper_id, user_id=scoped_user_id(user))
   return [ChatSessionSchema.model_validate(s) for s in sessions]
 
 
 @router.get("/sessions/{session_id}", response_model=ChatSessionSchema)
 async def get_session(
   session_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Get a single chat session by ID."""
-  chat_session = await get_chat_session_or_404(session, session_id, with_messages=True)
+  chat_session = await get_chat_session_or_404(
+    session, session_id, with_messages=True, user_id=scoped_user_id(user)
+  )
   return ChatSessionSchema.model_validate(chat_session)
 
 
@@ -273,10 +279,12 @@ async def get_session(
 async def update_session(
   session_id: int,
   session_update: ChatSessionUpdate,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Update a chat session."""
-  chat_session = await get_chat_session_or_404(session, session_id, with_messages=True)
+  chat_session = await get_chat_session_or_404(
+    session, session_id, with_messages=True, user_id=scoped_user_id(user)
+  )
 
   chat_session.name = session_update.name
   await session.commit()
@@ -289,23 +297,23 @@ async def update_session(
 @router.delete("/sessions/{session_id}", status_code=204)
 async def delete_session(
   session_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Delete a chat session and all its messages."""
-  chat_session = await get_chat_session_or_404(session, session_id)
+  chat_session = await get_chat_session_or_404(session, session_id, user_id=scoped_user_id(user))
 
   logger.info(f"Deleting chat session {session_id} for paper {chat_session.paper_id}")
-  await delete_chat_session(session, session_id)
+  await delete_chat_session(session, session_id, user_id=scoped_user_id(user))
   return None
 
 
 @router.delete("/sessions/{session_id}/messages", status_code=204)
 async def clear_session_messages(
   session_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  """Clear all messages from a chat session."""
-  await get_chat_session_or_404(session, session_id)
+  await get_chat_session_or_404(session, session_id, user_id=scoped_user_id(user))
 
   messages_query = select(ChatMessage).where(ChatMessage.session_id == session_id)
   messages_result = await session.execute(messages_query)

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.crud import get_paper_or_404
 from app.core.config import settings
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db
 from app.schemas.ai_features import (
   FindingsResponse,
   ReadingGuideResponse,
@@ -28,6 +28,7 @@ router = APIRouter()
 @router.post("/papers/{paper_id}/generate-summary", response_model=SummaryResponse)
 async def generate_summary(
   paper_id: int,
+  user: CurrentUser,
   request: Optional[SummaryRequest] = None,
   session: AsyncSession = Depends(get_db),
 ):
@@ -47,7 +48,7 @@ async def generate_summary(
 
 
 @router.get("/papers/{paper_id}/summary", response_model=SummaryResponse)
-async def get_summary(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def get_summary(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get AI summary for a paper."""
   paper = await get_paper_or_404(session, paper_id)
 
@@ -69,6 +70,7 @@ async def get_summary(paper_id: int, session: AsyncSession = Depends(get_db)):
 @router.put("/papers/{paper_id}/summary", response_model=SummaryResponse)
 async def update_summary(
   paper_id: int,
+  user: CurrentUser,
   summary: str = Body(..., embed=True),
   session: AsyncSession = Depends(get_db),
 ):
@@ -89,6 +91,7 @@ async def update_summary(
 @router.post("/papers/{paper_id}/extract-findings", response_model=FindingsResponse)
 async def extract_findings(
   paper_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Trigger extraction of key findings."""
@@ -100,7 +103,7 @@ async def extract_findings(
 
 
 @router.get("/papers/{paper_id}/findings", response_model=FindingsResponse)
-async def get_findings(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def get_findings(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get key findings for a paper."""
   paper = await get_paper_or_404(session, paper_id)
 
@@ -118,6 +121,7 @@ async def get_findings(paper_id: int, session: AsyncSession = Depends(get_db)):
 @router.put("/papers/{paper_id}/findings", response_model=FindingsResponse)
 async def update_findings(
   paper_id: int,
+  user: CurrentUser,
   findings: dict = Body(..., embed=True),
   session: AsyncSession = Depends(get_db),
 ):
@@ -136,6 +140,7 @@ async def update_findings(
 )
 async def generate_reading_guide(
   paper_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Trigger reading guide generation."""
@@ -147,7 +152,7 @@ async def generate_reading_guide(
 
 
 @router.get("/papers/{paper_id}/reading-guide", response_model=ReadingGuideResponse)
-async def get_reading_guide(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def get_reading_guide(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get reading guide for a paper."""
   paper = await get_paper_or_404(session, paper_id)
 
@@ -163,6 +168,7 @@ async def get_reading_guide(paper_id: int, session: AsyncSession = Depends(get_d
 @router.put("/papers/{paper_id}/reading-guide", response_model=ReadingGuideResponse)
 async def update_reading_guide(
   paper_id: int,
+  user: CurrentUser,
   guide: dict = Body(..., embed=True),
   session: AsyncSession = Depends(get_db),
 ):
@@ -179,6 +185,7 @@ async def update_reading_guide(
 @router.post("/papers/{paper_id}/generate-highlights")
 async def generate_highlights(
   paper_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Trigger auto-highlights generation."""

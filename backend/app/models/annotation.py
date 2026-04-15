@@ -20,6 +20,9 @@ class Annotation(Base):
   __tablename__ = "annotations"
 
   id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+  )
   paper_id = Column(
     Integer, ForeignKey("papers.id", ondelete="CASCADE"), nullable=False, index=True
   )
@@ -45,3 +48,4 @@ class Annotation(Base):
   )
 
   paper = relationship("Paper", back_populates="annotations")
+  user = relationship("User", back_populates="annotations")

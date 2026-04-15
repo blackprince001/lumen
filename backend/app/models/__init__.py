@@ -8,8 +8,10 @@ from app.models.multi_chat import MultiChatMessage, MultiChatSession
 from app.models.paper import Paper
 from app.models.paper_citation import PaperCitation
 from app.models.reading_session import ReadingSession
+from app.models.refresh_token import RefreshToken
 from app.models.saved_search import SavedSearch
 from app.models.tag import Tag
+from app.models.user import User
 
 __all__ = [
   "Annotation",
@@ -25,6 +27,8 @@ __all__ = [
   "Paper",
   "PaperCitation",
   "ReadingSession",
+  "RefreshToken",
   "SavedSearch",
   "Tag",
+  "User",
 ]

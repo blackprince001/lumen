@@ -94,6 +94,9 @@ class DiscoverySession(Base):
   __tablename__ = "discovery_sessions"
 
   id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+  )
   name = Column(String, nullable=True)
   query = Column(String, nullable=False)
   sources = Column(JSON, default=list)  # List of source names used
@@ -115,6 +118,7 @@ class DiscoverySession(Base):
   )
 
   # Relationships
+  user = relationship("User", back_populates="discovery_sessions")
   papers = relationship(
     "DiscoveredPaper",
     secondary=discovery_session_papers,

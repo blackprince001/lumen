@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.crud import get_paper_or_404
-from app.dependencies import get_db
+from app.dependencies import CurrentUser, get_db
 from app.models.duplicate_log import DuplicateDetectionLog
 from app.schemas.duplicate import DuplicateMatch, MergePreview, MergeRequest
 from app.schemas.paper import Paper as PaperSchema

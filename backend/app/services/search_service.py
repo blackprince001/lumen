@@ -13,20 +13,17 @@ from app.schemas.search import SearchRequest
 
 class SearchService:
   async def fulltext_search(
-    self, session: AsyncSession, query: str, limit: int = 10
+    self, session: AsyncSession, query: str, limit: int = 10, user_id: int | None = None
   ) -> List[Paper]:
-    """Perform full-text search on papers."""
     if not query or not query.strip():
       return []
 
-    # Escape special characters for tsquery
     query_escaped = query.replace("'", "''").replace(":", "\\:")
-
-    # Build tsquery from query terms
     query_terms = query_escaped.split()
     tsquery = " & ".join([f"{term}:*" for term in query_terms])
 
-    sql_query = text("""
+    user_filter = "AND uploaded_by_id = :user_id" if user_id is not None else ""
+    sql_query = text(f"""
       SELECT id, ts_rank_cd(
         to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(content_text, '')),
         to_tsquery(:tsquery)
@@ -34,11 +31,16 @@ class SearchService:
       FROM papers
       WHERE to_tsvector('english', COALESCE(title, '') || ' ' || COALESCE(content_text, ''))
         @@ to_tsquery(:tsquery)
+      {user_filter}
       ORDER BY rank DESC
       LIMIT :limit
     """)
 
-    result = await session.execute(sql_query, {"tsquery": tsquery, "limit": limit})
+    params: dict = {"tsquery": tsquery, "limit": limit}
+    if user_id is not None:
+      params["user_id"] = user_id
+
+    result = await session.execute(sql_query, params)
     rows = result.fetchall()
 
     if not rows:
@@ -57,16 +59,14 @@ class SearchService:
     papers_result = await session.execute(papers_query)
     papers = list(papers_result.scalars().all())
 
-    # Sort by rank order
     rank_map = {row[0]: row[1] for row in rows}
     papers.sort(key=lambda p: rank_map.get(p.id, 0), reverse=True)
 
     return papers
 
   async def search_annotations(
-    self, session: AsyncSession, query: str, limit: int = 10
+    self, session: AsyncSession, query: str, limit: int = 10, user_id: int | None = None
   ) -> List[Annotation]:
-    """Search within annotations."""
     if not query or not query.strip():
       return []
 
@@ -74,10 +74,12 @@ class SearchService:
     query_terms = query_escaped.split()
     tsquery = " & ".join([f"{term}:*" for term in query_terms])
 
-    sql_query = text("""
+    user_filter = "AND user_id = :user_id" if user_id is not None else ""
+    sql_query = text(f"""
       SELECT id
       FROM annotations
       WHERE to_tsvector('english', COALESCE(content, '')) @@ to_tsquery(:tsquery)
+      {user_filter}
       ORDER BY ts_rank_cd(
         to_tsvector('english', COALESCE(content, '')),
         to_tsquery(:tsquery)
@@ -85,7 +87,11 @@ class SearchService:
       LIMIT :limit
     """)
 
-    result = await session.execute(sql_query, {"tsquery": tsquery, "limit": limit})
+    params: dict = {"tsquery": tsquery, "limit": limit}
+    if user_id is not None:
+      params["user_id"] = user_id
+
+    result = await session.execute(sql_query, params)
     rows = result.fetchall()
 
     if not rows:
@@ -94,9 +100,8 @@ class SearchService:
     annotation_ids = [row[0] for row in rows]
     annotations_query = select(Annotation).where(Annotation.id.in_(annotation_ids))
     annotations_result = await session.execute(annotations_query)
-    annotations = annotations_result.scalars().all()
 
-    return list(annotations)
+    return list(annotations_result.scalars().all())
 
   def apply_filters(
     self, query: Select, search_request: SearchRequest, session: AsyncSession

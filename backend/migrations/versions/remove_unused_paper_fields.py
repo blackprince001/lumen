@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "remove_unused_paper_fields"
-down_revision: Union[str, Sequence[str], None] = "cb71c2eaded1"
+down_revision: Union[str, Sequence[str], None] = "add_multi_chat_001"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

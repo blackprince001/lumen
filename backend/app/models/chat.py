@@ -10,6 +10,9 @@ class ChatSession(Base):
   __tablename__ = "chat_sessions"
 
   id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+  )
   paper_id = Column(
     Integer,
     ForeignKey("papers.id", ondelete="CASCADE"),
@@ -28,6 +31,7 @@ class ChatSession(Base):
   )
 
   paper = relationship("Paper")
+  user = relationship("User", back_populates="chat_sessions")
   messages = relationship(
     "ChatMessage",
     back_populates="session",

@@ -39,6 +39,9 @@ class MultiChatSession(Base):
   __tablename__ = "multi_chat_sessions"
 
   id = Column(Integer, primary_key=True, index=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+  )
   name = Column(String, server_default="New Session", nullable=False)
   group_id = Column(
     Integer,
@@ -59,6 +62,7 @@ class MultiChatSession(Base):
   )
 
   # Relationships
+  user = relationship("User", back_populates="multi_chat_sessions")
   group = relationship("Group")
   papers = relationship("Paper", secondary=multi_chat_session_papers)
   messages = relationship(
