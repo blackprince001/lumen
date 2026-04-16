@@ -41,16 +41,15 @@ export function PaperCard({
   const cardInner = (
     <div
       className={cn(
-        'group relative h-full rounded-2xl border p-5 overflow-hidden',
-        'transition-all duration-200 hover:border-[var(--foreground)]',
+        'group relative h-full rounded-2xl border overflow-hidden paper-card-hover flex flex-col',
         selected && 'ring-2 ring-[var(--foreground)]',
         selectionMode && 'cursor-pointer',
       )}
-      style={{ backgroundColor: theme.bg, borderColor: selected ? undefined : theme.border }}
+      style={{ backgroundColor: theme.bg, borderColor: selected ? undefined : theme.border, '--card-action': theme.action } as React.CSSProperties}
       onClick={handleClick}
     >
-      {/* ── Top row: status badges + year + actions ── */}
-      <div className="flex items-start justify-between gap-2 mb-3">
+      {/* ── Header: status badges + year + actions ── */}
+      <div className="flex items-start justify-between gap-2 px-4 pt-3.5 pb-2.5">
         <div className="flex flex-wrap items-center gap-1.5">
           {/* Selection checkbox */}
           {selectionMode && (
@@ -104,62 +103,68 @@ export function PaperCard({
         </div>
       </div>
 
-      {/* ── Title ── */}
-      <h4 className="text-body font-semibold leading-snug line-clamp-2 mb-1" style={{ color: theme.text }}>
-        {paper.title}
-      </h4>
+      {/* ── Inset content area ── */}
+      <div
+        className="rounded-t-xl border-t px-4 pt-3.5 pb-4 flex-1"
+        style={{ backgroundColor: theme.accent, borderColor: theme.border }}
+      >
+        {/* Title */}
+        <h4 className="text-body font-semibold leading-snug line-clamp-2 mb-1" style={{ color: theme.text }}>
+          {paper.title}
+        </h4>
 
-      {/* ── Authors ── */}
-      {authorText && (
-        <p className="text-caption truncate opacity-70 mb-2" style={{ color: theme.text }}>
-          {authorText}
-        </p>
-      )}
+        {/* Authors */}
+        {authorText && (
+          <p className="text-caption truncate opacity-70 mb-2" style={{ color: theme.text }}>
+            {authorText}
+          </p>
+        )}
 
-      {/* ── Abstract / content preview ── */}
-      {paper.content_text && (
-        <p className="text-caption line-clamp-2 leading-relaxed opacity-80 mb-3" style={{ color: theme.text }}>
-          {paper.content_text.slice(0, 200)}
-        </p>
-      )}
+        {/* Abstract / content preview */}
+        {paper.content_text && (
+          <p className="text-caption line-clamp-2 leading-relaxed opacity-80 mb-3" style={{ color: theme.text }}>
+            {paper.content_text.slice(0, 200)}
+          </p>
+        )}
 
-      {/* ── Tags ── */}
-      {paper.tags && paper.tags.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 mt-auto">
-          {paper.tags.slice(0, 4).map((tag) => (
-            <span
-              key={tag.id}
-              className="px-1.5 py-0.5 rounded text-micro font-semibold"
-              style={{ backgroundColor: theme.accent, color: theme.text }}
+        {/* Tags */}
+        {paper.tags && paper.tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+            {paper.tags.slice(0, 4).map((tag) => (
+              <span
+                key={tag.id}
+                className="px-1.5 py-0.5 rounded text-micro font-semibold"
+                style={{ backgroundColor: theme.bg, color: theme.text }}
+              >
+                {tag.name}
+              </span>
+            ))}
+            {paper.tags.length > 4 && (
+              <span className="text-micro opacity-50" style={{ color: theme.text }}>
+                +{paper.tags.length - 4}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Footer: source link */}
+        {paper.url && (
+          <div className="flex items-center justify-end mt-3 pt-2 border-t" style={{ borderColor: theme.border }}>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(paper.url, '_blank', 'noopener,noreferrer');
+              }}
+              className="inline-flex items-center gap-1 text-caption opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+              style={{ color: theme.text }}
             >
-              {tag.name}
-            </span>
-          ))}
-          {paper.tags.length > 4 && (
-            <span className="text-micro opacity-50" style={{ color: theme.text }}>
-              +{paper.tags.length - 4}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* ── Footer: date + source link ── */}
-      {paper.url && (
-        <div className="flex items-center justify-end mt-3 pt-2 border-t" style={{ borderColor: theme.border }}>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              window.open(paper.url, '_blank', 'noopener,noreferrer');
-            }}
-            className="inline-flex items-center gap-1 text-caption opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-            style={{ color: theme.text }}
-          >
-            Source <ExternalLink size={10} />
-          </button>
-        </div>
-      )}
+              Source <ExternalLink size={10} />
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 

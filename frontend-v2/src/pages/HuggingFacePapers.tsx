@@ -2,12 +2,13 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays, addDays, subMonths, addMonths, isToday, isFuture, parseISO, startOfMonth } from 'date-fns';
 import { motion } from 'motion/react';
-import { ExportSquare as ExternalLink, Like1 as ThumbsUp, Message as MessageSquare, Refresh as RefreshCw, ArrowLeft2 as ChevronLeft, ArrowRight2 as ChevronRight, ArrowDown2 as ChevronDown, ArrowUp2 as ChevronUp, MagicStar as Sparkles, Refresh as Loader2, DocumentText as FileText, Notepad2 as Newspaper, Bookmark2 as BookmarkPlus, Calendar } from 'iconsax-reactjs';
+import { ExportSquare as ExternalLink, Like1 as ThumbsUp, Message as MessageSquare, Refresh as RefreshCw, ArrowLeft2 as ChevronLeft, ArrowRight2 as ChevronRight, ArrowDown2 as ChevronDown, ArrowUp2 as ChevronUp, MagicStar as Sparkles, DocumentText as FileText, Notepad2 as Newspaper, Bookmark2 as BookmarkPlus, Calendar } from 'iconsax-reactjs';
 import { huggingfaceApi, type HFPaperItem } from '@/lib/api/huggingface';
 import { Button } from '@/components/ui/Button';
 import { getPaperTheme } from '@/lib/paper-themes';
 import { AddToLibraryDialog } from '@/components/discovery/AddToLibraryDialog';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 type ViewMode = 'daily' | 'monthly';
 
@@ -34,8 +35,8 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.15, ease: 'easeOut', delay: index * 0.03 }}
-      className="rounded-2xl border overflow-hidden transition-all duration-200 hover:border-[var(--foreground)]"
-      style={{ backgroundColor: theme.bg, borderColor: theme.border }}
+      className="rounded-2xl border overflow-hidden paper-card-hover flex flex-col"
+      style={{ backgroundColor: theme.bg, borderColor: theme.border, '--card-action': theme.action } as React.CSSProperties}
     >
       {/* Thumbnail / header strip */}
       <div className="relative overflow-hidden" style={{ backgroundColor: theme.accent }}>
@@ -64,8 +65,8 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
         </button>
       </div>
 
-      {/* Body */}
-      <div className="p-4">
+      {/* Inset content area */}
+      <div className="rounded-t-xl border-t p-4 flex-1" style={{ backgroundColor: theme.accent, borderColor: theme.border }}>
         <p className="text-caption font-medium mb-2 truncate opacity-60" style={{ color: theme.text }}>
           {paper.organization && <>{paper.organization.fullname} · </>}
           {authorNames}{hasMoreAuthors && ' et al.'}
@@ -95,7 +96,7 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
         {paper.paper.ai_keywords && paper.paper.ai_keywords.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {paper.paper.ai_keywords.slice(0, 3).map((kw, i) => (
-              <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-micro font-semibold rounded" style={{ backgroundColor: theme.accent, color: theme.text }}>
+              <span key={i} className="inline-flex items-center gap-1 px-1.5 py-0.5 text-micro font-semibold rounded" style={{ backgroundColor: theme.bg, color: theme.text }}>
                 <Sparkles size={9} />{kw}
               </span>
             ))}
@@ -226,9 +227,29 @@ export default function HuggingFacePapers() {
 
       {/* Loading */}
       {isLoading && (
-        <div className="flex flex-col items-center justify-center py-16 gap-3">
-          <Loader2 size={28} className="animate-spin text-[var(--muted-foreground)]" />
-          <p className="text-code text-[var(--muted-foreground)]">Loading papers for {dateLabel}...</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-[var(--border)] overflow-hidden">
+              {/* Header skeleton */}
+              <div className="h-16 bg-[var(--muted)]" />
+              {/* Inset content skeleton */}
+              <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] p-4 space-y-3">
+                <Skeleton className="h-3 w-40" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-2/3" />
+                <div className="flex gap-1.5 pt-1">
+                  <Skeleton className="h-5 w-16 rounded" />
+                  <Skeleton className="h-5 w-14 rounded" />
+                </div>
+                <div className="flex items-center justify-between pt-3 border-t border-[var(--border)]">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

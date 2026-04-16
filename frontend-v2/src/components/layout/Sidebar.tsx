@@ -169,9 +169,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       <div className={cn('flex items-center h-12 shrink-0', isOpen ? 'px-3 py-8 justify-between' : 'py-8 justify-center')}>
         {isOpen && (
           <Link to="/" className="group flex items-center gap-2.5">
-            <Logo size={44} className="shrink-0 group-hover:opacity-80 transition-opacity" />
+            <Logo size={52} className="shrink-0 group-hover:opacity-80 transition-opacity" />
             <span className="text-xl font-bold tracking-tight text-[var(--foreground)] group-hover:opacity-70 transition-opacity">
-              Papers
+              Lumen
             </span>
           </Link>
         )}

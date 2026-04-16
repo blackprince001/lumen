@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '@/contexts/AuthContext';
 import { Logo } from '@/components/Logo';
+import { useTheme } from '@/lib/theme';
 
 export default function Login() {
   const { loginWithGoogle, loginAsAdmin } = useAuth();
   const navigate = useNavigate();
+  const { theme } = useTheme();
 
   const [showAdmin, setShowAdmin] = useState(false);
   const [username, setUsername] = useState('');
@@ -47,9 +49,9 @@ export default function Login() {
         {/* Brand */}
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-4">
-            <Logo size={96} />
+            <Logo size={120} />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">Papers</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">Lumen</h1>
           <p className="mt-1 text-sm text-[var(--muted-foreground)]">Your research library</p>
         </div>
 
@@ -72,7 +74,7 @@ export default function Login() {
             }}
             onError={() => setError('Google sign-in was cancelled or failed')}
             useOneTap={false}
-            theme="outline"
+            theme={theme === 'dark' ? 'filled_black' : 'outline'}
             shape="pill"
             size="large"
             width="300"

@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { MagicStar as Sparkles, Refresh as Loader2, Warning2 as AlertCircle, Refresh as RefreshCw } from 'iconsax-reactjs';
+import { MagicStar as Sparkles, Warning2 as AlertCircle, Refresh as RefreshCw } from 'iconsax-reactjs';
 import { Link } from 'react-router-dom';
 import { discoveryApi } from '@/lib/api/discovery';
 import { DiscoveredPaperCard } from '@/components/discovery/DiscoveredPaperCard';
 import { Button } from '@/components/ui/Button';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function Recommendations() {
   const { data, isLoading, error, refetch, isFetching } = useQuery({
@@ -48,11 +49,27 @@ export default function Recommendations() {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-16">
-          <div className="flex flex-col items-center gap-3 text-[var(--muted-foreground)]">
-            <Loader2 size={32} className="animate-spin" />
-            <span className="text-code">Finding papers you might like...</span>
-          </div>
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-[var(--border)] overflow-hidden">
+              {/* Header skeleton */}
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <Skeleton className="h-5 w-20 rounded" />
+                <Skeleton className="h-4 w-12" />
+              </div>
+              {/* Inset content skeleton */}
+              <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] px-4 pt-3.5 pb-4 space-y-3">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-3 w-48" />
+                <div className="space-y-1.5 pt-1">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

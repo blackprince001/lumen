@@ -13,15 +13,15 @@ interface DiscoveredPaperCardProps {
   index?: number;
 }
 
-export function DiscoveredPaperCard({ 
-  paper, 
-  showCheckbox = false, 
-  isSelected = false, 
+export function DiscoveredPaperCard({
+  paper,
+  showCheckbox = false,
+  isSelected = false,
   onToggleSelect,
   index: _index = 0,
 }: DiscoveredPaperCardProps) {
   const [showDialog, setShowDialog] = useState(false);
-  
+
   const titleHash = paper.title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const theme = getPaperTheme(titleHash);
 
@@ -31,16 +31,15 @@ export function DiscoveredPaperCard({
     <>
       <div
         className={cn(
-          'group relative h-full rounded-2xl border p-5 overflow-hidden',
-          'transition-all duration-200 hover:border-[var(--foreground)]',
+          'group relative h-full rounded-2xl border overflow-hidden paper-card-hover flex flex-col',
           isSelected && 'ring-2 ring-[var(--foreground)]',
           showCheckbox && 'cursor-pointer',
         )}
-        style={{ backgroundColor: theme.bg, borderColor: isSelected ? undefined : theme.border }}
+        style={{ backgroundColor: theme.bg, borderColor: isSelected ? undefined : theme.border, '--card-action': theme.action } as React.CSSProperties}
         onClick={handleClick}
       >
-        {/* Top row: checkbox + source badge + year + add button */}
-        <div className="flex items-start justify-between gap-2 mb-3">
+        {/* Header: checkbox + source badge + year + actions */}
+        <div className="flex items-start justify-between gap-2 px-4 pt-3.5 pb-2.5">
           <div className="flex items-center gap-2">
             {showCheckbox && (
               <div className={cn(
@@ -56,7 +55,7 @@ export function DiscoveredPaperCard({
                 )}
               </div>
             )}
-            <span 
+            <span
               className="px-2 py-0.5 rounded text-micro font-bold uppercase tracking-wider"
               style={{ backgroundColor: theme.accent, color: theme.text }}
             >
@@ -92,30 +91,36 @@ export function DiscoveredPaperCard({
           </div>
         </div>
 
-        <h3 className="text-btn font-bold leading-snug mb-2 line-clamp-2" style={{ color: theme.text }}>
-          {paper.title}
-        </h3>
+        {/* Inset content area */}
+        <div
+          className="rounded-t-xl border-t px-4 pt-3.5 pb-4 flex-1"
+          style={{ backgroundColor: theme.accent, borderColor: theme.border }}
+        >
+          <h3 className="text-btn font-bold leading-snug mb-2 line-clamp-2" style={{ color: theme.text }}>
+            {paper.title}
+          </h3>
 
-        {paper.authors && paper.authors.length > 0 && (
-          <p className="text-caption mb-2 opacity-75 line-clamp-1" style={{ color: theme.text }}>
-            {paper.authors.slice(0, 3).join(', ')}
-            {paper.authors.length > 3 && ` +${paper.authors.length - 3} more`}
-          </p>
-        )}
-
-        {paper.abstract && (
-          <p className="text-code leading-relaxed line-clamp-2 mb-3 opacity-70" style={{ color: theme.text }}>
-            {paper.abstract}
-          </p>
-        )}
-
-        <div className="flex items-center gap-3 text-caption opacity-60" style={{ color: theme.text }}>
-          {paper.citation_count !== undefined && <span>{paper.citation_count} citations</span>}
-          {paper.relevance_score !== undefined && (
-            <span className="font-semibold opacity-100">
-              {Math.round(paper.relevance_score * 100)}% relevant
-            </span>
+          {paper.authors && paper.authors.length > 0 && (
+            <p className="text-caption mb-2 opacity-75 line-clamp-1" style={{ color: theme.text }}>
+              {paper.authors.slice(0, 3).join(', ')}
+              {paper.authors.length > 3 && ` +${paper.authors.length - 3} more`}
+            </p>
           )}
+
+          {paper.abstract && (
+            <p className="text-code leading-relaxed line-clamp-2 mb-3 opacity-70" style={{ color: theme.text }}>
+              {paper.abstract}
+            </p>
+          )}
+
+          <div className="flex items-center gap-3 text-caption opacity-60" style={{ color: theme.text }}>
+            {paper.citation_count !== undefined && <span>{paper.citation_count} citations</span>}
+            {paper.relevance_score !== undefined && (
+              <span className="font-semibold opacity-100">
+                {Math.round(paper.relevance_score * 100)}% relevant
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

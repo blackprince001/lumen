@@ -403,3 +403,11 @@ dialog::backdrop {
   background: var(--border-gray) !important;
   color: var(--charcoal) !important;
 }
+
+/* ===== Paper card hover glow ===== */
+.paper-card-hover {
+  transition: border-color 0.2s ease;
+}
+.paper-card-hover:hover {
+  border-color: var(--card-action) !important;
+}

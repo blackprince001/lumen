@@ -31,7 +31,7 @@ export default function Home() {
       <div className="flex flex-col items-center px-6 pt-20 pb-16">
         <div className="mb-8 text-center">
           <h1 className="text-display font-bold tracking-tight text-[var(--foreground)] leading-none mb-2">
-            Papers
+            Lumen
           </h1>
           <p className="text-btn text-[var(--muted-foreground)] max-w-sm mx-auto leading-relaxed">
             Your personal research library

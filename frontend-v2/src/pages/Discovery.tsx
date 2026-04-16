@@ -16,6 +16,7 @@ import { DiscoveryStatus } from '@/components/discovery/DiscoveryStatus';
 import { discoveryApi, type DiscoverySessionCreate, type DiscoveredPaperPreview, type DiscoverySearchFilters } from '@/lib/api/discovery';
 import { toastSuccess, toastError } from '@/lib/utils/toast';
 import { cn } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function Discovery() {
   const [query, setQuery] = useState('');
@@ -163,9 +164,9 @@ export default function Discovery() {
             variant="primary"
             className="absolute right-2 top-1/2 -translate-y-1/2 h-10"
             disabled={!query.trim() || selectedSources.length === 0 || isSearching}
-            icon={isSearching ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+            icon={isSearching ? <Loader2 size={16} className="animate-spin" /> : ""}
           >
-            Search
+            Discover
           </Button>
         </div>
       </form>
@@ -238,6 +239,32 @@ export default function Discovery() {
       <AnimatePresence>
         {isSearching && <DiscoveryStatus status={status} timeline={timeline} isSearching={isSearching} />}
       </AnimatePresence>
+
+      {/* Skeleton cards while searching */}
+      {isSearching && !hasResults && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-[var(--border)] overflow-hidden">
+              {/* Header skeleton */}
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <Skeleton className="h-5 w-20 rounded" />
+                <Skeleton className="h-4 w-12" />
+              </div>
+              {/* Inset content skeleton */}
+              <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] px-4 pt-3.5 pb-4 space-y-3">
+                <Skeleton className="h-5 w-full" />
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-3 w-48" />
+                <div className="space-y-1.5 pt-1">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Error */}
       {error && (

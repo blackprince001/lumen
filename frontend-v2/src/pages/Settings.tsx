@@ -232,7 +232,7 @@ function AppearanceSection() {
     <div className="space-y-6">
       <div>
         <h2 className="text-subheading font-semibold text-[var(--foreground)] mb-1">Appearance</h2>
-        <p className="text-code text-[var(--muted-foreground)]">Customise how Papers looks</p>
+        <p className="text-code text-[var(--muted-foreground)]">Customise how Lumen looks</p>
       </div>
 
       <div>
