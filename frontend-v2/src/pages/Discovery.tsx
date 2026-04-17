@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom';
 import { MagicStar as Sparkles, Refresh as Loader2, ArrowDown2 as ChevronDown, Save2 as Save, Filter, MenuBoard as List } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { SourceSelector, type SourceId } from '@/components/discovery/SourceSelector';
 import { ResearchOverview } from '@/components/discovery/ResearchOverview';
 import { DiscoveredPaperCard } from '@/components/discovery/DiscoveredPaperCard';
@@ -195,16 +196,16 @@ export default function Discovery() {
             ] as const).map(({ label, value, set }) => (
               <div key={label}>
                 <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">{label}</label>
-                <select
+                <Select
                   value={value}
                   onChange={(e) => set(e.target.value)}
-                  className="w-full h-8 px-2 rounded-lg border border-[var(--border)] bg-[var(--background)] text-code text-[var(--foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+                  className="!h-8"
                 >
                   <option value="">Any</option>
                   {Array.from({ length: new Date().getFullYear() - 1989 }, (_, i) => new Date().getFullYear() - i).map((y) => (
                     <option key={y} value={y}>{y}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             ))}
             <div>

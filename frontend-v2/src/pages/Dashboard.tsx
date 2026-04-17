@@ -88,7 +88,8 @@ export default function Dashboard() {
   const statusDist = stats?.status_distribution ?? {};
   const totalPapers = Object.values(statusDist).reduce((a, b) => a + b, 0);
   const readPapers = statusDist['read'] || 0;
-  const readingTimeHours = stats?.total_reading_time_minutes ? Math.round(stats.total_reading_time_minutes / 60) : 0;
+  const totalMins = stats?.total_reading_time_minutes ?? 0;
+  const readingTimeLabel = totalMins >= 60 ? `${Math.floor(totalMins / 60)}h ${totalMins % 60}m` : `${totalMins}m`;
   const papersReadThisWeek = stats?.papers_read_this_week ?? 0;
 
   // Prepare activity chart data
@@ -137,7 +138,7 @@ export default function Dashboard() {
           <>
             <StatCard label="Total Papers" value={totalPapers.toString()} icon={FileText} change={`${totalPapers} items`} />
             <StatCard label="Read This Week" value={readPapers.toString()} icon={BookOpen} change={`${papersReadThisWeek} this week`} />
-            <StatCard label="Reading Time" value={`${readingTimeHours}h`} icon={Clock} change="Total minutes" />
+            <StatCard label="Reading Time" value={readingTimeLabel} icon={Clock} change="Total minutes" />
             <StatCard label="Current Streak" value={currentStreak.toString()} icon={TrendingUp} change={`Best: ${longestStreak}`} />
           </>
         )}

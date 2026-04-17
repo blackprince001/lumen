@@ -1,12 +1,23 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { annotationsApi, type Annotation } from '@/lib/api/annotations';
-import { getAuthHeaders } from '@/lib/api/client';
-import { DocumentText as FileText, Message as MessageSquare, Magicpen as Highlighter, Trash as Trash2, Edit as Edit2, CloseCircle as X, TickCircle as Check } from 'iconsax-reactjs';
+import { papersApi, type Paper } from '@/lib/api/papers';
+import {
+  DocumentText as FileText,
+  Message as MessageSquare,
+  Magicpen as Highlighter,
+  Trash as Trash2,
+  Edit as Edit2,
+  CloseCircle as X,
+  TickCircle as Check,
+  ArrowRight2 as ChevronRight,
+  Copy,
+  ExportSquare,
+} from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent } from '@/components/ui/Card';
 import { SearchInput } from '@/components/ui/SearchInput';
+import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
 import { Textarea } from '@/components/ui/Textarea';
@@ -15,57 +26,58 @@ import { cn } from '@/lib/utils';
 import { toastSuccess, toastError } from '@/lib/utils/toast';
 
 type FilterType = 'all' | 'highlight' | 'note';
+type CitationFormat = 'apa' | 'mla' | 'bibtex';
+
+type AnnotationWithPaper = Annotation & { paperTitle: string; paperId: number };
+
+interface PaperGroup {
+  paper: Paper;
+  annotations: AnnotationWithPaper[];
+}
 
 export default function Annotations() {
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const [citationFormat, setCitationFormat] = useState<CitationFormat>('apa');
+  const [exportingPaperId, setExportingPaperId] = useState<number | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { confirm, dialogProps } = useConfirmDialog();
 
-  // Fetch all papers first
   const { data: papersData, isLoading: papersLoading } = useQuery({
-    queryKey: ['all-papers'],
+    queryKey: ['all-papers-for-annotations'],
     queryFn: async () => {
-      const allPapers: any[] = [];
+      const all: Paper[] = [];
       let page = 1;
       let hasMore = true;
-
-      while (hasMore)
-      {
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/papers?page=${page}&page_size=100`, {
-          headers: { ...getAuthHeaders() },
-        });
-        const data = await response.json();
-        allPapers.push(...data.papers);
-        hasMore = data.papers.length === 100 && allPapers.length < data.total;
+      while (hasMore) {
+        const data = await papersApi.list(page, 100);
+        all.push(...data.papers);
+        hasMore = data.papers.length === 100 && all.length < data.total;
         page++;
       }
-      return allPapers;
+      return all;
     },
   });
 
-  // Fetch annotations for all papers in parallel
   const { data: allAnnotations = [], isLoading: annotationsLoading } = useQuery({
-    queryKey: ['all-annotations', papersData?.map(p => p.id)],
-    queryFn: async () => {
+    queryKey: ['all-annotations', papersData?.map((p) => p.id)],
+    queryFn: async (): Promise<AnnotationWithPaper[]> => {
       if (!papersData || papersData.length === 0) return [];
-
-      const annotationPromises = papersData.map(async (paper: any) => {
-        try
-        {
-          const annotations = await annotationsApi.list(paper.id);
-          return annotations.map(ann => ({ ...ann, paperTitle: paper.title, paperId: paper.id }));
-        } catch (error)
-        {
-          console.error(`Failed to fetch annotations for paper ${paper.id}:`, error);
-          return [];
-        }
-      });
-
-      const results = await Promise.all(annotationPromises);
+      const results = await Promise.all(
+        papersData.map(async (paper) => {
+          try {
+            const list = await annotationsApi.list(paper.id);
+            return list.map((ann) => ({ ...ann, paperTitle: paper.title, paperId: paper.id }));
+          } catch (err) {
+            console.error(`Failed to fetch annotations for paper ${paper.id}`, err);
+            return [] as AnnotationWithPaper[];
+          }
+        }),
+      );
       return results.flat();
     },
     enabled: !!papersData && papersData.length > 0,
@@ -75,7 +87,7 @@ export default function Annotations() {
     mutationFn: ({ id, content }: { id: number; content: string }) =>
       annotationsApi.update(id, { content }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['annotations'] });
+      queryClient.invalidateQueries({ queryKey: ['all-annotations'] });
       setEditingId(null);
       toastSuccess('Annotation updated');
     },
@@ -85,7 +97,7 @@ export default function Annotations() {
   const deleteMutation = useMutation({
     mutationFn: (id: number) => annotationsApi.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['annotations'] });
+      queryClient.invalidateQueries({ queryKey: ['all-annotations'] });
       toastSuccess('Annotation deleted');
     },
     onError: () => toastError('Failed to delete annotation'),
@@ -107,8 +119,7 @@ export default function Annotations() {
   };
 
   const saveEdit = () => {
-    if (editingId && editContent.trim())
-    {
+    if (editingId && editContent.trim()) {
       updateMutation.mutate({ id: editingId, content: editContent });
     }
   };
@@ -118,37 +129,90 @@ export default function Annotations() {
     setEditContent('');
   };
 
-  const handleAnnotationClick = (annotation: Annotation & { paperId?: number }) => {
-    if (annotation.paperId)
-    {
-      const page = annotation.coordinate_data?.page;
-      navigate(`/papers/${annotation.paperId}${page ? `?page=${page}` : ''}`);
+  const openPaper = (paperId: number, page?: number) => {
+    navigate(`/papers/${paperId}${page ? `?page=${page}` : ''}`);
+  };
+
+  const toggleGroup = (paperId: number) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(paperId)) next.delete(paperId);
+      else next.add(paperId);
+      return next;
+    });
+  };
+
+  const exportCitation = async (paperId: number) => {
+    setExportingPaperId(paperId);
+    try {
+      const { reference } = await papersApi.getReference(paperId, citationFormat);
+      try {
+        await navigator.clipboard.writeText(reference);
+      } catch {
+        const el = document.createElement('textarea');
+        el.value = reference;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
+      toastSuccess(`${citationFormat.toUpperCase()} citation copied`);
+    } catch {
+      toastError('Failed to generate citation');
+    } finally {
+      setExportingPaperId(null);
     }
   };
 
-  // Filter annotations
-  const filteredAnnotations = allAnnotations.filter(ann => {
-    if (filter === 'highlight' && ann.type !== 'annotation') return false;
-    if (filter === 'note' && ann.type !== 'note') return false;
-    if (searchQuery && !ann.content?.toLowerCase().includes(searchQuery.toLowerCase()) &&
-      !ann.highlighted_text?.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    return true;
-  });
+  const filteredAnnotations = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return allAnnotations.filter((ann) => {
+      if (filter === 'highlight' && ann.type !== 'annotation') return false;
+      if (filter === 'note' && ann.type !== 'note') return false;
+      if (q) {
+        const matchContent = ann.content?.toLowerCase().includes(q);
+        const matchHighlight = ann.highlighted_text?.toLowerCase().includes(q);
+        const matchPaper = ann.paperTitle?.toLowerCase().includes(q);
+        if (!matchContent && !matchHighlight && !matchPaper) return false;
+      }
+      return true;
+    });
+  }, [allAnnotations, filter, searchQuery]);
 
-  const getIcon = (type: string) => {
-    return type === 'note' ? MessageSquare : Highlighter;
-  };
+  const groups = useMemo<PaperGroup[]>(() => {
+    if (!papersData) return [];
+    const map = new Map<number, AnnotationWithPaper[]>();
+    filteredAnnotations.forEach((ann) => {
+      if (!map.has(ann.paperId)) map.set(ann.paperId, []);
+      map.get(ann.paperId)!.push(ann);
+    });
+    return papersData
+      .filter((p) => map.has(p.id))
+      .map((p) => ({
+        paper: p,
+        annotations: (map.get(p.id) ?? []).sort((a, b) => {
+          const pa = (a.coordinate_data?.page as number | undefined) ?? 0;
+          const pb = (b.coordinate_data?.page as number | undefined) ?? 0;
+          if (pa !== pb) return pa - pb;
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        }),
+      }))
+      .sort((a, b) => a.paper.title.localeCompare(b.paper.title));
+  }, [papersData, filteredAnnotations]);
 
   const isLoading = papersLoading || annotationsLoading;
+  const totalAnnotations = filteredAnnotations.length;
 
-  if (isLoading)
-  {
+  const expandAll = () => setExpanded(new Set(groups.map((g) => g.paper.id)));
+  const collapseAll = () => setExpanded(new Set());
+
+  if (isLoading) {
     return (
       <div className="max-w-content mx-auto px-6 py-8">
         <Skeleton className="w-64 h-8 mb-2" />
         <Skeleton className="w-96 h-5 mb-8" />
-        <div className="space-y-4">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="w-full h-32" />)}
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="w-full h-14" />)}
         </div>
       </div>
     );
@@ -161,13 +225,27 @@ export default function Annotations() {
           <div>
             <h1>Annotations</h1>
             <p className="text-btn text-[var(--muted-foreground)] mt-1">
-              All your highlights and notes across papers
+              Manage highlights, notes and references across your library
             </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-caption text-[var(--muted-foreground)]">Citation</span>
+            <div className="w-24">
+              <Select
+                value={citationFormat}
+                onChange={(e) => setCitationFormat(e.target.value as CitationFormat)}
+                className="!h-8"
+              >
+                <option value="apa">APA</option>
+                <option value="mla">MLA</option>
+                <option value="bibtex">BibTeX</option>
+              </Select>
+            </div>
           </div>
         </div>
 
         {/* Filters and search */}
-        <div className="flex items-center gap-3 mb-6">
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setFilter('all')}
@@ -175,7 +253,7 @@ export default function Annotations() {
                 'h-8 px-3 text-code font-medium rounded-lg transition-colors',
                 filter === 'all'
                   ? 'bg-[var(--primary)] [color:var(--primary-foreground)]'
-                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]'
+                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]',
               )}
             >
               All
@@ -186,7 +264,7 @@ export default function Annotations() {
                 'h-8 px-3 text-code font-medium rounded-lg transition-colors flex items-center gap-1.5',
                 filter === 'highlight'
                   ? 'bg-[var(--primary)] [color:var(--primary-foreground)]'
-                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]'
+                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]',
               )}
             >
               <Highlighter size={14} />
@@ -198,112 +276,234 @@ export default function Annotations() {
                 'h-8 px-3 text-code font-medium rounded-lg transition-colors flex items-center gap-1.5',
                 filter === 'note'
                   ? 'bg-[var(--primary)] [color:var(--primary-foreground)]'
-                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]'
+                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]',
               )}
             >
               <MessageSquare size={14} />
               <span>Notes</span>
             </button>
           </div>
-          <div className="flex-1 max-w-md">
+          <div className="flex-1 min-w-48 max-w-md">
             <SearchInput
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search annotations..."
+              placeholder="Search annotations or papers..."
             />
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="sm" onClick={expandAll} disabled={groups.length === 0}>
+              Expand all
+            </Button>
+            <Button variant="ghost" size="sm" onClick={collapseAll} disabled={expanded.size === 0}>
+              Collapse all
+            </Button>
           </div>
         </div>
 
-        {/* Annotations list */}
-        {filteredAnnotations.length === 0 ? (
-          <div className="text-center py-12 text-[var(--muted-foreground)]">
-            <FileText size={48} className="mx-auto mb-4 opacity-20" />
-            <p className="text-body">No annotations found</p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-caption text-[var(--muted-foreground)]">
+            {groups.length} paper{groups.length !== 1 ? 's' : ''} · {totalAnnotations} annotation{totalAnnotations !== 1 ? 's' : ''}
+          </p>
+        </div>
+
+        {/* Grouped annotations table */}
+        {groups.length === 0 ? (
+          <div className="text-center py-16 border border-dashed border-[var(--border)] rounded-xl">
+            <FileText size={48} className="mx-auto mb-3 text-[var(--muted-foreground)] opacity-40" />
+            <p className="text-body text-[var(--muted-foreground)]">No annotations found</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {filteredAnnotations.map((annotation) => {
-              const Icon = getIcon(annotation.type ?? 'annotation');
+          <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--card)]">
+            {/* Header */}
+            <div className="grid grid-cols-[1fr_120px_160px_140px] items-center gap-3 px-4 py-2.5 border-b border-[var(--border)] bg-[var(--muted)]">
+              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Paper</span>
+              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Annotations</span>
+              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Last updated</span>
+              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider text-right">Actions</span>
+            </div>
+
+            {groups.map((group, idx) => {
+              const isOpen = expanded.has(group.paper.id);
+              const latest = group.annotations.reduce((acc, a) => {
+                const t = new Date(a.updated_at).getTime();
+                return t > acc ? t : acc;
+              }, 0);
+              const authors = group.paper.authors?.split(',').slice(0, 2).join(', ');
+
               return (
-                <Card key={annotation.id} variant="feature">
-                  <CardContent>
-                    <div className="flex items-start gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-[var(--muted)] flex items-center justify-center shrink-0 mt-0.5">
-                        <Icon size={16} className="text-[var(--muted-foreground)]" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-2">
-                          <button
-                            onClick={() => handleAnnotationClick(annotation)}
-                            className="text-code font-medium text-[var(--sky-blue)] hover:underline"
-                          >
-                            {annotation.paperTitle || 'Unknown Paper'}
-                          </button>
-                          <div className="flex items-center gap-1">
-                            {editingId !== annotation.id && (
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  className="!h-7 !w-7 !p-0"
-                                  onClick={() => startEdit(annotation)}
-                                >
-                                  <Edit2 size={14} />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  className="!h-7 !w-7 !p-0 text-[var(--destructive)]"
-                                  onClick={() => handleDelete(annotation.id)}
-                                >
-                                  <Trash2 size={14} />
-                                </Button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {annotation.highlighted_text && (
-                          <div className="mb-2 p-2 bg-[var(--muted)]  rounded">
-                            <p className="text-code text-[var(--foreground)]">
-                              {annotation.highlighted_text}
-                            </p>
-                          </div>
+                <div
+                  key={group.paper.id}
+                  className={cn(idx > 0 && 'border-t border-[var(--border)]')}
+                >
+                  {/* Collapsible header row */}
+                  <div className="grid grid-cols-[1fr_120px_160px_140px] items-center gap-3 px-4 py-3 hover:bg-[var(--muted)] transition-colors">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.paper.id)}
+                      aria-expanded={isOpen}
+                      className="flex items-center gap-2 min-w-0 text-left focus:outline-none"
+                    >
+                      <ChevronRight
+                        size={14}
+                        className={cn(
+                          'shrink-0 text-[var(--muted-foreground)] transition-transform duration-150',
+                          isOpen && 'rotate-90',
                         )}
+                      />
+                      <div className="min-w-0">
+                        <p className="text-code font-medium text-[var(--foreground)] truncate">
+                          {group.paper.title}
+                        </p>
+                        {authors && (
+                          <p className="text-caption text-[var(--muted-foreground)] truncate">
+                            {authors}{group.paper.authors && group.paper.authors.split(',').length > 2 ? ' et al.' : ''}
+                            {(() => {
+                              const year = (group.paper.metadata_json as Record<string, unknown> | undefined)?.year;
+                              return typeof year === 'number' || typeof year === 'string' ? <span> · {year}</span> : null;
+                            })()}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.paper.id)}
+                      className="text-code text-[var(--muted-foreground)] text-left focus:outline-none"
+                    >
+                      {group.annotations.length}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.paper.id)}
+                      className="text-caption text-[var(--muted-foreground)] text-left focus:outline-none"
+                    >
+                      {latest ? format(new Date(latest), 'MMM d, yyyy') : '—'}
+                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => exportCitation(group.paper.id)}
+                        disabled={exportingPaperId === group.paper.id}
+                        icon={
+                          exportingPaperId === group.paper.id ? (
+                            <Copy size={12} className="animate-pulse" />
+                          ) : (
+                            <ExportSquare size={12} />
+                          )
+                        }
+                      >
+                        Cite
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openPaper(group.paper.id)}
+                      >
+                        Open
+                      </Button>
+                    </div>
+                  </div>
 
-                        {editingId === annotation.id ? (
-                          <div className="space-y-2">
-                            <Textarea
-                              value={editContent}
-                              onChange={(e) => setEditContent(e.target.value)}
-                              rows={3}
-                              className="text-code"
-                            />
-                            <div className="flex items-center gap-2">
-                              <Button variant="primary" className="!h-7 !px-3 text-caption" onClick={saveEdit}>
-                                <Check size={12} className="mr-1" />
-                                Save
-                              </Button>
-                              <Button variant="ghost" className="!h-7 !px-3 text-caption" onClick={cancelEdit}>
-                                <X size={12} className="mr-1" />
-                                Cancel
-                              </Button>
+                  {/* Annotations list */}
+                  {isOpen && (
+                    <div className="border-t border-[var(--border)] bg-[var(--background)] px-4 py-3 space-y-2">
+                      {group.annotations.map((annotation) => {
+                        const Icon = annotation.type === 'note' ? MessageSquare : Highlighter;
+                        const page = annotation.coordinate_data?.page as number | undefined;
+                        const isEditing = editingId === annotation.id;
+
+                        return (
+                          <div
+                            key={annotation.id}
+                            className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-3"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="w-7 h-7 rounded-md bg-[var(--muted)] flex items-center justify-center shrink-0 mt-0.5">
+                                <Icon size={14} className="text-[var(--muted-foreground)]" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-1.5">
+                                  <div className="flex items-center gap-2 text-caption text-[var(--muted-foreground)]">
+                                    {page !== undefined && <span>Page {page}</span>}
+                                    {page !== undefined && <span>·</span>}
+                                    <span>{format(new Date(annotation.created_at), 'MMM d, yyyy')}</span>
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    {!isEditing && (
+                                      <>
+                                        <Button
+                                          variant="ghost"
+                                          className="!h-7 !w-7 !p-0"
+                                          onClick={() => startEdit(annotation)}
+                                          aria-label="Edit annotation"
+                                        >
+                                          <Edit2 size={12} />
+                                        </Button>
+                                        <Button
+                                          variant="ghost"
+                                          className="!h-7 !w-7 !p-0 text-[var(--destructive)]"
+                                          onClick={() => handleDelete(annotation.id)}
+                                          aria-label="Delete annotation"
+                                        >
+                                          <Trash2 size={12} />
+                                        </Button>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {annotation.highlighted_text && (
+                                  <div
+                                    className="mb-2 px-2.5 py-1.5 bg-[var(--muted)] rounded border-l-2 border-[var(--foreground)]/40 cursor-pointer"
+                                    onClick={() => openPaper(annotation.paperId, page)}
+                                  >
+                                    <p className="text-code text-[var(--foreground)] line-clamp-3">
+                                      {annotation.highlighted_text}
+                                    </p>
+                                  </div>
+                                )}
+
+                                {isEditing ? (
+                                  <div className="space-y-2">
+                                    <Textarea
+                                      value={editContent}
+                                      onChange={(e) => setEditContent(e.target.value)}
+                                      rows={3}
+                                      className="text-code"
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="primary"
+                                        className="!h-7 !px-3 text-caption"
+                                        onClick={saveEdit}
+                                      >
+                                        <Check size={12} className="mr-1" />
+                                        Save
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        className="!h-7 !px-3 text-caption"
+                                        onClick={cancelEdit}
+                                      >
+                                        <X size={12} className="mr-1" />
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : annotation.content ? (
+                                  <p className="text-code text-[var(--muted-foreground)] whitespace-pre-wrap">
+                                    {annotation.content}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
                           </div>
-                        ) : annotation.content ? (
-                          <p className="text-code text-[var(--muted-foreground)] whitespace-pre-wrap">
-                            {annotation.content}
-                          </p>
-                        ) : null}
-
-                        <div className="flex items-center gap-3 mt-2 text-caption text-[var(--muted-foreground)]">
-                          {(annotation.coordinate_data?.page as number | undefined) && (
-                            <span>Page {annotation.coordinate_data!.page as number}</span>
-                          )}
-                          <span>{format(new Date(annotation.created_at), 'MMM d, yyyy')}</span>
-                        </div>
-                      </div>
+                        );
+                      })}
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
               );
             })}
           </div>

@@ -4,6 +4,7 @@ import { SearchNormal as Search, Shield, ShieldSlash as ShieldOff, Trash as Tras
 import { usersApi } from '@/lib/api/usersApi';
 import type { User } from '@/lib/api/authApi';
 import { toastSuccess as toastS, toastError as toastE } from '@/lib/utils/toast';
+import { Select } from '@/components/ui/Select';
 import { formatDistanceToNow } from 'date-fns';
 
 function RoleBadge({ role }: { role: string }) {
@@ -140,24 +141,26 @@ export default function UserManagement() {
             className="w-full h-9 pl-8 pr-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
           />
         </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="h-9 px-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm focus:outline-none"
-        >
-          <option value="">All roles</option>
-          <option value="user">User</option>
-          <option value="admin">Admin</option>
-        </select>
-        <select
-          value={activeFilter === undefined ? '' : String(activeFilter)}
-          onChange={(e) => setActiveFilter(e.target.value === '' ? undefined : e.target.value === 'true')}
-          className="h-9 px-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm focus:outline-none"
-        >
-          <option value="">All statuses</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </select>
+        <div className="w-40">
+          <Select
+            value={roleFilter}
+            onChange={(e) => setRoleFilter(e.target.value)}
+          >
+            <option value="">All roles</option>
+            <option value="user">User</option>
+            <option value="admin">Admin</option>
+          </Select>
+        </div>
+        <div className="w-40">
+          <Select
+            value={activeFilter === undefined ? '' : String(activeFilter)}
+            onChange={(e) => setActiveFilter(e.target.value === '' ? undefined : e.target.value === 'true')}
+          >
+            <option value="">All statuses</option>
+            <option value="true">Active</option>
+            <option value="false">Inactive</option>
+          </Select>
+        </div>
       </div>
 
       {/* Table */}

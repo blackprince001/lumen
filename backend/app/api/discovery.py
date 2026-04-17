@@ -18,7 +18,8 @@ from app.models.discovery import (
   DiscoverySession,
   discovery_session_papers,
 )
-from app.models.paper import Paper
+from app.models.group import Group
+from app.models.paper import Paper, paper_group_association
 from app.schemas.discovery import (
   AddToLibraryResponse,
   AISearchRequest,
@@ -764,39 +765,71 @@ async def explore_citations(
 @router.post("/recommendations", response_model=RecommendationResponse)
 async def get_recommendations(
   request: RecommendationRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Get paper recommendations.
 
   Can be based on:
   - A specific paper (provide paper_id)
-  - The entire library (default)
+  - The current user's library (default)
   - A specific group (provide group_id)
   """
   recommendations = []
+  uid = scoped_user_id(user)
 
   if request.based_on == "paper" and request.paper_id:
-    # Get recommendations for a specific paper
-    paper = await session.get(Paper, request.paper_id)
+    # Get recommendations for a specific paper — must be in user's library
+    paper_stmt = select(Paper).where(Paper.id == request.paper_id)
+    if uid is not None:
+      paper_stmt = paper_stmt.where(Paper.uploaded_by_id == uid)
+    paper = (await session.execute(paper_stmt)).scalar_one_or_none()
     if not paper:
       raise HTTPException(status_code=404, detail="Paper not found")
 
-    # Use DOI or title to find in external sources
     for source in request.sources:
-      # Try to get recommendations from each source
-      # First need to find the paper in that source
       if paper.doi:
         results = await discovery_service.get_recommendations(
           session, source, cast(str, paper.doi), request.limit
         )
         recommendations.extend(results)
 
+  elif request.based_on == "group" and request.group_id:
+    # Get recommendations based on a specific group owned by the user
+    group_stmt = select(Group).where(Group.id == request.group_id)
+    if uid is not None:
+      group_stmt = group_stmt.where(Group.user_id == uid)
+    group = (await session.execute(group_stmt)).scalar_one_or_none()
+    if not group:
+      raise HTTPException(status_code=404, detail="Group not found")
+
+    seed_stmt = (
+      select(Paper)
+      .join(paper_group_association, Paper.id == paper_group_association.c.paper_id)
+      .where(
+        paper_group_association.c.group_id == request.group_id,
+        Paper.doi.isnot(None),
+      )
+      .order_by(Paper.created_at.desc())
+      .limit(5)
+    )
+    papers = (await session.execute(seed_stmt)).scalars().all()
+
+    for paper in papers:
+      for source in request.sources:
+        if paper.doi:
+          results = await discovery_service.get_recommendations(
+            session, source, cast(str, paper.doi), max(1, request.limit // 5)
+          )
+          recommendations.extend(results)
+
   elif request.based_on == "library":
-    # Get recommendations based on library
-    # This is a more complex operation - for now, get recent papers
-    # and find recommendations for them
-    stmt = select(Paper).where(Paper.doi.isnot(None)).limit(5)
-    papers = (await session.execute(stmt)).scalars().all()
+    # Get recommendations based on the current user's own library
+    seed_stmt = select(Paper).where(Paper.doi.isnot(None))
+    if uid is not None:
+      seed_stmt = seed_stmt.where(Paper.uploaded_by_id == uid)
+    seed_stmt = seed_stmt.order_by(Paper.created_at.desc()).limit(5)
+    papers = (await session.execute(seed_stmt)).scalars().all()
 
     for paper in papers:
       for source in request.sources:

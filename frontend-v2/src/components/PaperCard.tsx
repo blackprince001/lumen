@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { ExportSquare as ExternalLink, Trash as Trash2 } from 'iconsax-reactjs';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { getPaperTheme } from '@/lib/paper-themes';
 import { ReadingStatusBadge } from '@/components/ReadingStatusBadge';
@@ -31,6 +30,14 @@ export function PaperCard({
     const list = paper.metadata_json?.authors_list;
     if (Array.isArray(list) && list.length > 0) return list.join(', ');
     if (paper.metadata_json?.author) return String(paper.metadata_json.author);
+    return null;
+  })();
+
+  const publicationYear = (() => {
+    const pubDate = paper.metadata_json?.publication_date;
+    if (pubDate) return String(pubDate).slice(0, 4);
+    const year = paper.metadata_json?.year;
+    if (year) return String(year);
     return null;
   })();
 
@@ -85,9 +92,9 @@ export function PaperCard({
 
         {/* Year + delete icon */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {paper.created_at && (
+          {publicationYear && (
             <span className="text-caption font-semibold opacity-60" style={{ color: theme.text }}>
-              {format(new Date(paper.created_at), 'yyyy')}
+              {publicationYear}
             </span>
           )}
           {!selectionMode && onDelete && (

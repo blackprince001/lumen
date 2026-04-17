@@ -27,15 +27,36 @@ class ReferenceFormatter:
     return authors if authors else [author_string]
 
   @staticmethod
+  def _extract_publication_year(paper: Paper) -> str:
+    metadata = paper.metadata_json or {}
+    # Try publication_date first (set by PDF parser)
+    pub_date = metadata.get("publication_date")
+    if pub_date:
+      try:
+        return str(datetime.strptime(str(pub_date)[:10], "%Y-%m-%d").year)
+      except ValueError:
+        try:
+          return str(datetime.strptime(str(pub_date)[:4], "%Y").year)
+        except ValueError:
+          pass
+    # Try year field (set by arXiv/Semantic Scholar ingestion)
+    year = metadata.get("year")
+    if year:
+      try:
+        return str(int(str(year)[:4]))
+      except (ValueError, TypeError):
+        pass
+    return "n.d."
+
+  @staticmethod
   def format_apa(paper: Paper) -> str:
     metadata = paper.metadata_json or {}
 
     # Authors
     authors = ReferenceFormatter.parse_authors(metadata.get("author"))
     if authors:
-      # Format: Last, F. M., Last2, F. M., & Last3, F. M.
       author_parts = []
-      for author in authors[:8]:  # Limit to 8 authors
+      for author in authors[:8]:
         parts = author.split()
         if len(parts) >= 2:
           last = parts[-1]
@@ -53,36 +74,10 @@ class ReferenceFormatter:
     else:
       author_str = "Unknown"
 
-    # Year - try metadata first, then paper created_at
-    year = "n.d."
-    if metadata.get("created_at"):
-      try:
-        date_str = str(metadata.get("created_at"))
-        if date_str:
-          for fmt in ["%Y-%m-%d", "%Y", "%Y-%m"]:
-            try:
-              dt = datetime.strptime(date_str[:10], fmt)
-              year = str(dt.year)
-              break
-            except ValueError:
-              continue
-      except (ValueError, TypeError):
-        pass
-
-    # Fallback to paper's created_at if no year found
-    if year == "n.d." and paper.created_at:
-      try:
-        year = str(paper.created_at.year)
-      except (AttributeError, TypeError, ValueError):
-        pass
-
-    # Title
+    year = ReferenceFormatter._extract_publication_year(paper)
     title = paper.title or "Untitled"
-
-    # Publisher/Journal (if available)
     publisher = metadata.get("producer") or metadata.get("creator") or ""
 
-    # DOI
     doi_str = ""
     if paper.doi:
       if paper.doi.startswith("arxiv:"):
@@ -90,7 +85,6 @@ class ReferenceFormatter:
       else:
         doi_str = f" https://doi.org/{paper.doi}"
 
-    # Construct APA reference
     reference = f"{author_str} ({year}). {title}."
     if publisher:
       reference += f" {publisher}."
@@ -103,12 +97,10 @@ class ReferenceFormatter:
   def format_mla(paper: Paper) -> str:
     metadata = paper.metadata_json or {}
 
-    # Authors
     authors = ReferenceFormatter.parse_authors(metadata.get("author"))
     if authors:
-      # Format: Last, First, and First Last
       author_parts = []
-      for author in authors[:3]:  # MLA typically shows first 3
+      for author in authors[:3]:
         parts = author.split()
         if len(parts) >= 2:
           last = parts[-1]
@@ -126,36 +118,10 @@ class ReferenceFormatter:
     else:
       author_str = "Unknown"
 
-    # Title
     title = paper.title or "Untitled"
-
-    # Publisher
     publisher = metadata.get("producer") or metadata.get("creator") or "Unknown"
+    year = ReferenceFormatter._extract_publication_year(paper)
 
-    # Year - try metadata first, then paper created_at
-    year = "n.d."
-    if metadata.get("created_at"):
-      try:
-        date_str = str(metadata.get("created_at"))
-        if date_str:
-          for fmt in ["%Y-%m-%d", "%Y", "%Y-%m"]:
-            try:
-              dt = datetime.strptime(date_str[:10], fmt)
-              year = str(dt.year)
-              break
-            except ValueError:
-              continue
-      except (ValueError, TypeError):
-        pass
-
-    # Fallback to paper's created_at if no year found
-    if year == "n.d." and paper.created_at:
-      try:
-        year = str(paper.created_at.year)
-      except (AttributeError, TypeError, ValueError):
-        pass
-
-    # DOI
     doi_str = ""
     if paper.doi:
       if paper.doi.startswith("arxiv:"):
@@ -163,61 +129,29 @@ class ReferenceFormatter:
       else:
         doi_str = f" https://doi.org/{paper.doi}."
 
-    # Construct MLA reference
-    reference = f'{author_str}. "{title}." {publisher}, {year}.{doi_str}'
-
-    return reference
+    return f'{author_str}. "{title}." {publisher}, {year}.{doi_str}'
 
   @staticmethod
   def format_bibtex(paper: Paper) -> str:
     metadata = paper.metadata_json or {}
 
-    # Generate citation key from title or DOI
     citation_key = "paper"
     if paper.doi:
       citation_key = paper.doi.replace(":", "_").replace("/", "_").replace(".", "_")
     elif paper.title:
-      # Use first few words of title
       words = paper.title.split()[:3]
       citation_key = "_".join([w.lower()[:8] for w in words if w.isalnum()])
 
-    # Authors
     authors = ReferenceFormatter.parse_authors(metadata.get("author"))
     author_str = " and ".join(authors) if authors else "Unknown"
-
-    # Title
     title = paper.title or "Untitled"
+    year = ReferenceFormatter._extract_publication_year(paper)
 
-    # Year - try metadata first, then paper created_at
-    year = "n.d."
-    if metadata.get("created_at"):
-      try:
-        date_str = str(metadata.get("created_at"))
-        if date_str:
-          for fmt in ["%Y-%m-%d", "%Y", "%Y-%m"]:
-            try:
-              dt = datetime.strptime(date_str[:10], fmt)
-              year = str(dt.year)
-              break
-            except ValueError:
-              continue
-      except (ValueError, TypeError):
-        pass
-
-    # Fallback to paper's created_at if no year found
-    if year == "n.d." and paper.created_at:
-      try:
-        year = str(paper.created_at.year)
-      except (AttributeError, TypeError, ValueError):
-        pass
-
-    # Build BibTeX entry
     bibtex = f"@article{{{citation_key},\n"
     bibtex += f"  author = {{{author_str}}},\n"
     bibtex += f"  title = {{{{{title}}}}},\n"
     bibtex += f"  year = {{{year}}}"
 
-    # Add optional fields
     if paper.doi:
       if paper.doi.startswith("arxiv:"):
         bibtex += f",\n  eprint = {{{paper.doi.replace('arxiv:', '')}}}"
@@ -235,7 +169,6 @@ class ReferenceFormatter:
       bibtex += f",\n  publisher = {{{{{metadata.get('publisher')}}}}}"
 
     bibtex += "\n}"
-
     return bibtex
 
   @staticmethod
@@ -263,27 +196,7 @@ class ReferenceFormatter:
     else:
       author_str = "Unknown"
 
-    year = "n.d."
-    if metadata.get("created_at"):
-      try:
-        date_str = str(metadata.get("created_at"))
-        if date_str:
-          for fmt in ["%Y-%m-%d", "%Y", "%Y-%m"]:
-            try:
-              dt = datetime.strptime(date_str[:10], fmt)
-              year = str(dt.year)
-              break
-            except ValueError:
-              continue
-      except (ValueError, TypeError):
-        pass
-
-    if year == "n.d." and paper.created_at:
-      try:
-        year = str(paper.created_at.year)
-      except (AttributeError, TypeError, ValueError):
-        pass
-
+    year = ReferenceFormatter._extract_publication_year(paper)
     title = paper.title or "Untitled"
     publisher = metadata.get("producer") or metadata.get("creator") or ""
 
@@ -320,27 +233,7 @@ class ReferenceFormatter:
 
     title = paper.title or "Untitled"
     journal = metadata.get("journal") or metadata.get("producer") or ""
-
-    year = "n.d."
-    if metadata.get("created_at"):
-      try:
-        date_str = str(metadata.get("created_at"))
-        if date_str:
-          for fmt in ["%Y-%m-%d", "%Y", "%Y-%m"]:
-            try:
-              dt = datetime.strptime(date_str[:10], fmt)
-              year = str(dt.year)
-              break
-            except ValueError:
-              continue
-      except (ValueError, TypeError):
-        pass
-
-    if year == "n.d." and paper.created_at:
-      try:
-        year = str(paper.created_at.year)
-      except (AttributeError, TypeError, ValueError):
-        pass
+    year = ReferenceFormatter._extract_publication_year(paper)
 
     reference = f'{author_str}, "{title},"'
     if journal:

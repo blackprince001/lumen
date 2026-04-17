@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { chatApi, type ChatMessage, type ChatReferences } from '@/lib/api/chat';
 import { Button } from '@/components/ui/Button';
+import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MarkdownMessage } from '@/components/MarkdownMessage';
 import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
@@ -306,18 +307,20 @@ export function ChatTab({ paperId }: ChatTabProps) {
         {/* Session selector */}
         <div className="shrink-0 border-b border-[var(--border)] p-3 bg-[var(--card)]">
           <div className="flex items-center gap-2 mb-2">
-            <select
-              value={currentSessionId ?? ''}
-              onChange={(e) => switchSession(Number(e.target.value))}
-              className="flex-1 h-8 px-2 text-code bg-[var(--white)] border border-[var(--border)] rounded-lg focus:outline-none focus:border-[var(--primary)]"
-            >
-              {sessions.length === 0 && (
-                <option value="">No sessions - send a message to start</option>
-              )}
-              {sessions.map((s) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
+            <div className="flex-1">
+              <Select
+                value={currentSessionId ?? ''}
+                onChange={(e) => e.target.value && switchSession(Number(e.target.value))}
+                className="!h-8"
+              >
+                {sessions.length === 0 && (
+                  <option value="">No sessions — send a message to start</option>
+                )}
+                {sessions.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </Select>
+            </div>
             <Button 
               variant="ghost" 
               className="!h-8 !w-8 !p-0" 
