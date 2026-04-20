@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from scalar_fastapi import get_scalar_api_reference
 
 from app.api.ai_features import router as ai_features_router
 from app.api.annotations import router as annotations_router
@@ -93,7 +94,13 @@ async def lifespan(app: FastAPI):
   yield
 
 
-app = FastAPI(title="Papers Research Engine", version="1.0.0", lifespan=lifespan)
+app = FastAPI(
+  title="Papers Research Engine",
+  version="1.0.0",
+  lifespan=lifespan,
+  docs_url=None,
+  redoc_url=None,
+)
 
 # CORS — allow configured frontend + localhost for dev
 allowed_origins = [settings.FRONTEND_URL]
@@ -143,6 +150,15 @@ app.mount("/storage", StaticFiles(directory=str(storage_path)), name="storage")
 @app.get("/")
 def read_root():
   return {"message": "Welcome to Papers API", "version": "1.0.0"}
+
+
+@app.get("/api-docs", include_in_schema=False)
+async def api_docs():
+  return get_scalar_api_reference(
+    openapi_url=app.openapi_url,
+    title="Papers Research Engine API",
+    scalar_proxy_url="https://proxy.scalar.com",
+  )
 
 
 @app.get("/health")
