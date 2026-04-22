@@ -3,13 +3,13 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from scalar_fastapi import get_scalar_api_reference
 
 from app.api.ai_features import router as ai_features_router
 from app.api.annotations import router as annotations_router
 from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
+from app.api.citation_canvas import router as citation_canvas_router
 from app.api.discovery import router as discovery_router
 from app.api.duplicates import router as duplicates_router
 from app.api.export import router as export_router
@@ -127,6 +127,7 @@ _admin_dep = [Depends(require_admin)]
 app.include_router(users_router, prefix="/api/v1", tags=["users"], dependencies=_admin_dep)
 app.include_router(ingest_router, prefix="/api/v1", tags=["ingest"], dependencies=_auth_dep)
 app.include_router(relationships_router, prefix="/api/v1", tags=["relationships"], dependencies=_auth_dep)
+app.include_router(citation_canvas_router, prefix="/api/v1", tags=["citation-canvas"], dependencies=_auth_dep)
 app.include_router(papers_router, prefix="/api/v1", tags=["papers"], dependencies=_auth_dep)
 app.include_router(annotations_router, prefix="/api/v1", tags=["annotations"], dependencies=_auth_dep)
 app.include_router(groups_router, prefix="/api/v1", tags=["groups"], dependencies=_auth_dep)
@@ -144,7 +145,7 @@ app.include_router(
   huggingface_router, prefix="/api/v1/huggingface", tags=["huggingface"], dependencies=_auth_dep
 )
 
-app.mount("/storage", StaticFiles(directory=str(storage_path)), name="storage")
+# PDF files are served via the authenticated GET /papers/{id}/file endpoint
 
 
 @app.get("/")

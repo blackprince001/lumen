@@ -13,6 +13,7 @@ from app.api.crud.multi_chat_session import (
   get_multi_chat_session_or_404,
   list_multi_chat_sessions_for_group,
 )
+from app.api.crud.group import get_visible_group_or_404
 from app.core.logger import get_logger
 from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.multi_chat import MultiChatMessage, MultiChatSession
@@ -74,6 +75,7 @@ async def stream_group_chat_message(
   session: AsyncSession = Depends(get_db),
 ):
   """Stream a chat message with all papers in a group as context."""
+  await get_visible_group_or_404(session, group_id, user_id=scoped_user_id(user))
 
   async def generate_stream():
     async for chunk in multi_chat_service.stream_message(
@@ -102,6 +104,7 @@ async def get_group_chat_history(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
+  await get_visible_group_or_404(session, group_id, user_id=scoped_user_id(user))
   latest = await multi_chat_service.get_latest_session(session, group_id, user_id=scoped_user_id(user))
   if not latest:
     return None
@@ -116,6 +119,7 @@ async def list_group_sessions(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
+  await get_visible_group_or_404(session, group_id, user_id=scoped_user_id(user))
   sessions = await list_multi_chat_sessions_for_group(session, group_id, user_id=scoped_user_id(user))
   return [_serialize_session(s) for s in sessions]
 
@@ -132,6 +136,7 @@ async def create_group_session(
   session: AsyncSession = Depends(get_db),
 ):
   """Create a new multi-chat session for a group."""
+  await get_visible_group_or_404(session, group_id, user_id=scoped_user_id(user))
   # Get paper IDs from the group
   paper_ids = session_data.paper_ids
   if not paper_ids:

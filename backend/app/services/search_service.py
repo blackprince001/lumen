@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.annotation import Annotation
 from app.models.paper import Paper, paper_group_association
+from app.models.sharing import UserPaperState
 from app.models.tag import paper_tag_association
 from app.schemas.search import SearchRequest
 
@@ -104,7 +105,7 @@ class SearchService:
     return list(annotations_result.scalars().all())
 
   def apply_filters(
-    self, query: Select, search_request: SearchRequest, session: AsyncSession
+    self, query: Select, search_request: SearchRequest, session: AsyncSession, *, user_id: int | None = None
   ):
     """Apply advanced filters to search query."""
     # Date range filters
@@ -154,13 +155,26 @@ class SearchService:
         paper_tag_association.c.tag_id.in_(search_request.tag_ids)
       )
 
-    # Reading status filter
-    if search_request.reading_status:
-      query = query.where(Paper.reading_status == search_request.reading_status)
-
-    # Priority filter
-    if search_request.priority:
-      query = query.where(Paper.priority == search_request.priority)
+    # Per-user state filters (reading_status, priority, reading_time)
+    needs_state_join = (
+      search_request.reading_status
+      or search_request.priority
+      or search_request.reading_time_min is not None
+      or search_request.reading_time_max is not None
+    )
+    if needs_state_join and user_id is not None:
+      query = query.join(
+        UserPaperState,
+        (UserPaperState.paper_id == Paper.id) & (UserPaperState.user_id == user_id),
+      )
+      if search_request.reading_status:
+        query = query.where(UserPaperState.reading_status == search_request.reading_status)
+      if search_request.priority:
+        query = query.where(UserPaperState.priority == search_request.priority)
+      if search_request.reading_time_min is not None:
+        query = query.where(UserPaperState.reading_time_minutes >= search_request.reading_time_min)
+      if search_request.reading_time_max is not None:
+        query = query.where(UserPaperState.reading_time_minutes <= search_request.reading_time_max)
 
     # Group filter
     if search_request.group_ids:
@@ -185,12 +199,6 @@ class SearchService:
       else:
         subquery = select(AnnModel.paper_id).where(AnnModel.type == "note").distinct()
         query = query.where(~Paper.id.in_(subquery))
-
-    # Reading time range
-    if search_request.reading_time_min is not None:
-      query = query.where(Paper.reading_time_minutes >= search_request.reading_time_min)
-    if search_request.reading_time_max is not None:
-      query = query.where(Paper.reading_time_minutes <= search_request.reading_time_max)
 
     return query
 

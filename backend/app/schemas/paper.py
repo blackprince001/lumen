@@ -55,14 +55,14 @@ class PaperUpdate(BaseModel):
   pages: Optional[str] = None
   isbn: Optional[str] = None
   issn: Optional[str] = None
-  reading_status: Optional[str] = None
-  priority: Optional[str] = None
 
 
 class Paper(PaperBase):
   id: int
+  uploaded_by_id: Optional[int] = None
   url: Optional[str] = None
   file_path: Optional[str] = None
+  file_url: Optional[str] = None
   content_text: Optional[str] = None
   volume: Optional[str] = None
   issue: Optional[str] = None
@@ -89,9 +89,18 @@ class Paper(PaperBase):
   task_id: Optional[str] = None  # Celery task ID for tracking background processing
   processing_status: str = "pending"  # pending, processing, completed, failed
   processing_error: Optional[str] = None
+  my_permission: str = "owner"
+  is_shared: bool = False
+  shared_by: Optional["SharedByInfo"] = None
 
   class Config:
     from_attributes = True
+
+
+class SharedByInfo(BaseModel):
+  id: int
+  display_name: str
+  email: str
 
 
 class PaperListResponse(BaseModel):

@@ -50,6 +50,7 @@ from app.schemas.discovery import (
 )
 from app.services.discovery import SearchFilters, discovery_service
 from app.services.discovery.ai_search_service import ai_search_service
+from app.services.access import apply_visible_papers_filter
 from app.services.ingestion import ingestion_service
 
 logger = get_logger(__name__)
@@ -781,8 +782,7 @@ async def get_recommendations(
   if request.based_on == "paper" and request.paper_id:
     # Get recommendations for a specific paper — must be in user's library
     paper_stmt = select(Paper).where(Paper.id == request.paper_id)
-    if uid is not None:
-      paper_stmt = paper_stmt.where(Paper.uploaded_by_id == uid)
+    paper_stmt = apply_visible_papers_filter(paper_stmt, uid)
     paper = (await session.execute(paper_stmt)).scalar_one_or_none()
     if not paper:
       raise HTTPException(status_code=404, detail="Paper not found")
@@ -826,8 +826,7 @@ async def get_recommendations(
   elif request.based_on == "library":
     # Get recommendations based on the current user's own library
     seed_stmt = select(Paper).where(Paper.doi.isnot(None))
-    if uid is not None:
-      seed_stmt = seed_stmt.where(Paper.uploaded_by_id == uid)
+    seed_stmt = apply_visible_papers_filter(seed_stmt, uid)
     seed_stmt = seed_stmt.order_by(Paper.created_at.desc()).limit(5)
     papers = (await session.execute(seed_stmt)).scalars().all()
 

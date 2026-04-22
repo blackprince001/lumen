@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.api.crud.utils import ensure_loaded
 from app.models.group import Group
 from app.models.paper import Paper
+from app.services.access import visible_groups_clause
 
 
 async def get_group_or_404(
@@ -41,6 +42,35 @@ async def get_group_or_404(
   return group
 
 
+async def get_visible_group_or_404(
+  session: AsyncSession,
+  group_id: int,
+  *,
+  with_relations: bool = False,
+  user_id: int | None = None,
+) -> Group:
+  query = select(Group).where(Group.id == group_id)
+  if user_id is not None:
+    query = query.where(visible_groups_clause(user_id))
+
+  if with_relations:
+    query = query.options(
+      selectinload(Group.papers).selectinload(Paper.tags),
+      selectinload(Group.children).selectinload(Group.papers).selectinload(Paper.tags),
+    )
+
+  result = await session.execute(query)
+  group = result.scalar_one_or_none()
+
+  if not group:
+    raise HTTPException(status_code=404, detail="Group not found")
+
+  if with_relations:
+    ensure_loaded(group, "papers")
+
+  return group
+
+
 async def list_groups(session: AsyncSession, *, user_id: int | None = None) -> list[Group]:
   query = (
     select(Group)
@@ -51,7 +81,7 @@ async def list_groups(session: AsyncSession, *, user_id: int | None = None) -> l
     .order_by(Group.name)
   )
   if user_id is not None:
-    query = query.where(Group.user_id == user_id)
+    query = query.where(visible_groups_clause(user_id))
   result = await session.execute(query)
   groups = list(result.scalars().all())
 
@@ -104,12 +134,10 @@ async def update_group(
 
   new_parent_id = parent_id if parent_id is not None else group.parent_id
 
-  # Handle parent_id update with cycle prevention
   if parent_id is not None and parent_id != group.parent_id:
     if new_parent_id is not None:
       await get_group_or_404(session, cast(int, new_parent_id), user_id=user_id)
 
-    # Check for cycles
     if await _check_group_cycle(session, group_id, cast(int, new_parent_id)):
       raise HTTPException(
         status_code=400, detail="Cannot set parent: would create a cycle"
@@ -117,7 +145,6 @@ async def update_group(
 
     group.parent_id = new_parent_id
 
-  # Handle name update
   if name is not None:
     query = select(Group).where(Group.name == name, Group.id != group_id)
     if user_id is not None:
@@ -165,7 +192,6 @@ async def delete_group(session: AsyncSession, group_id: int, *, user_id: int | N
 async def _check_group_cycle(
   session: AsyncSession, group_id: int, new_parent_id: int
 ) -> bool:
-  """Check if setting new_parent_id as parent would create a cycle."""
   if new_parent_id == group_id:
     return True
 

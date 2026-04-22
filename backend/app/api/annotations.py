@@ -12,7 +12,7 @@ from app.api.crud import (
   list_annotations_for_paper,
   update_annotation,
 )
-from app.dependencies import CurrentUser, get_db
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.schemas.annotation import (
   Annotation as AnnotationSchema,
 )
@@ -37,7 +37,7 @@ async def create_annotation_endpoint(
   annotation = await create_annotation(
     session,
     paper_id,
-    user_id=user.id,
+    user_id=scoped_user_id(user),
     content=annotation_in.content,
     type=annotation_in.type or "annotation",
     highlighted_text=annotation_in.highlighted_text,
@@ -53,8 +53,14 @@ async def list_annotations_endpoint(
   paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """List all annotations for a paper."""
-  annotations = await list_annotations_for_paper(session, paper_id, user_id=user.id)
-  return [AnnotationSchema.model_validate(a) for a in annotations]
+  annotations = await list_annotations_for_paper(session, paper_id, user_id=scoped_user_id(user))
+  result = []
+  for a in annotations:
+    schema = AnnotationSchema.model_validate(a)
+    if a.user:
+      schema.user_display_name = a.user.display_name
+    result.append(schema)
+  return result
 
 
 @router.get("/annotations/{annotation_id}", response_model=AnnotationSchema)
@@ -62,7 +68,7 @@ async def get_annotation_endpoint(
   annotation_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Get a single annotation by ID."""
-  annotation = await get_annotation_or_404(session, annotation_id, user_id=user.id)
+  annotation = await get_annotation_or_404(session, annotation_id, user_id=scoped_user_id(user))
   return AnnotationSchema.model_validate(annotation)
 
 
@@ -77,7 +83,7 @@ async def update_annotation_endpoint(
   annotation = await update_annotation(
     session,
     annotation_id,
-    user_id=user.id,
+    user_id=scoped_user_id(user),
     content=annotation_update.content,
     type=annotation_update.type,
     highlighted_text=annotation_update.highlighted_text,
@@ -93,5 +99,5 @@ async def delete_annotation_endpoint(
   annotation_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Delete an annotation."""
-  await delete_annotation(session, annotation_id, user_id=user.id)
+  await delete_annotation(session, annotation_id, user_id=scoped_user_id(user))
   return None

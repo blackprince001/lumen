@@ -29,6 +29,7 @@ class AnnotationUpdate(BaseModel):
 class Annotation(AnnotationBase):
   id: int
   paper_id: int
+  user_display_name: Optional[str] = None
   created_at: datetime
   updated_at: datetime
 

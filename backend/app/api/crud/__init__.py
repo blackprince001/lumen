@@ -33,6 +33,7 @@ from app.api.crud.group import (
   create_group,
   delete_group,
   get_group_or_404,
+  get_visible_group_or_404,
   list_groups,
   update_group,
 )
@@ -49,6 +50,7 @@ from app.api.crud.paper import (
   delete_paper,
   delete_papers_bulk,
   get_paper_or_404,
+  get_visible_paper_or_404,
   increment_view_count,
   list_papers,
   update_paper,
@@ -62,6 +64,12 @@ from app.api.crud.saved_search import (
   delete_saved_search,
   get_saved_search_or_404,
   list_saved_searches,
+)
+
+# UserPaperState
+from app.api.crud.user_paper_state import (
+  batch_get_states,
+  get_or_create_state,
 )
 
 # Tag
@@ -80,6 +88,7 @@ __all__ = [
   "sanitize_metadata",
   # Paper
   "get_paper_or_404",
+  "get_visible_paper_or_404",
   "list_papers",
   "update_paper",
   "delete_paper",
@@ -101,6 +110,7 @@ __all__ = [
   "delete_annotation",
   # Group
   "get_group_or_404",
+  "get_visible_group_or_404",
   "list_groups",
   "create_group",
   "update_group",
@@ -123,4 +133,7 @@ __all__ = [
   "list_bookmarks_for_paper",
   "create_bookmark",
   "delete_bookmark",
+  # UserPaperState
+  "get_or_create_state",
+  "batch_get_states",
 ]

@@ -44,6 +44,19 @@ class User(Base):
   tags = relationship("Tag", back_populates="user")
   annotations = relationship("Annotation", back_populates="user")
   bookmarks = relationship("Bookmark", back_populates="user")
+  paper_states = relationship("UserPaperState", back_populates="user")
+  paper_shares = relationship(
+    "PaperShare", foreign_keys="PaperShare.recipient_id", back_populates="recipient"
+  )
+  shared_papers = relationship(
+    "PaperShare", foreign_keys="PaperShare.shared_by_id", back_populates="shared_by"
+  )
+  group_shares = relationship(
+    "GroupShare", foreign_keys="GroupShare.recipient_id", back_populates="recipient"
+  )
+  shared_groups = relationship(
+    "GroupShare", foreign_keys="GroupShare.shared_by_id", back_populates="shared_by"
+  )
   reading_sessions = relationship("ReadingSession", back_populates="user")
   chat_sessions = relationship("ChatSession", back_populates="user")
   multi_chat_sessions = relationship("MultiChatSession", back_populates="user")
@@ -51,4 +64,7 @@ class User(Base):
   discovery_sessions = relationship("DiscoverySession", back_populates="user")
   refresh_tokens = relationship(
     "RefreshToken", back_populates="user", cascade="all, delete-orphan"
+  )
+  canvas_items = relationship(
+    "CitationCanvasItem", back_populates="user", cascade="all, delete-orphan"
   )

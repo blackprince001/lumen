@@ -62,6 +62,9 @@ export type { SummaryResponse, FindingsResponse, ReadingGuideResponse } from './
 export { exportApi } from './export';
 export type { ExportRequest, CitationExportRequest } from './export';
 
+export { paperSharingApi, groupSharingApi } from './sharing';
+export type { SharePermission, ShareRecipient, ShareListResponse } from './sharing';
+
 export { statisticsApi } from './statistics';
 export type { ReadingStatistics, ReadingStreak } from './statistics';
 

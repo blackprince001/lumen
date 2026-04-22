@@ -61,6 +61,7 @@ export default function PapersList() {
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters]         = useState<PaperListFilters>({ sort_by: 'date_added', sort_order: 'desc' });
+  const [ownership, setOwnership]     = useState<'all' | 'mine' | 'shared'>('all');
 
   /* ---- Selection state ---- */
   const [selectionMode, setSelectionMode]   = useState(false);
@@ -72,8 +73,8 @@ export default function PapersList() {
 
   /* ---- Queries ---- */
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ['papers', page, pageSize, searchQuery, filters],
-    queryFn: () => papersApi.list(page, pageSize, searchQuery || undefined, filters),
+    queryKey: ['papers', page, pageSize, searchQuery, filters, ownership],
+    queryFn: () => papersApi.list(page, pageSize, searchQuery || undefined, { ...filters, ownership }),
     placeholderData: keepPreviousData,
     refetchInterval: (query) => {
       const papers = query.state.data?.papers ?? [];
@@ -179,7 +180,7 @@ export default function PapersList() {
   });
 
   const handleRegenerate = async () => {
-    const ids = papers.filter((p) => p.file_path).map((p) => p.id);
+    const ids = papers.filter((p) => p.file_path || p.file_url).map((p) => p.id);
     if (!ids.length) { toastInfo('No papers with PDF files on this page'); return; }
     const ok = await confirm({
       title: 'Regenerate Metadata',
@@ -290,6 +291,23 @@ export default function PapersList() {
         onFiltersChange={handleFiltersChange}
         onReset={() => setPage(1)}
       />
+
+      {/* ===== Ownership filter tabs ===== */}
+      <div className="flex gap-1.5 mb-3">
+        {(['all', 'mine', 'shared'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => { setOwnership(tab); setPage(1); }}
+            className={`px-3 py-1 text-caption rounded-full transition-colors ${
+              ownership === tab
+                ? 'bg-[var(--foreground)] text-[var(--white)]'
+                : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+            }`}
+          >
+            {tab === 'all' ? 'All' : tab === 'mine' ? 'My Papers' : 'Shared with me'}
+          </button>
+        ))}
+      </div>
 
       {/* ===== Toolbar row (view toggle + selection + actions) ===== */}
       {papers.length > 0 && (

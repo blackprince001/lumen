@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { groupsApi, type Group } from '@/lib/api/groups';
-import { Add as Plus, DocumentText as FileText, FolderOpen, Edit as Edit2, Trash as Trash2, DocumentDownload } from 'iconsax-reactjs';
+import { Add as Plus, DocumentText as FileText, FolderOpen, Edit as Edit2, Trash as Trash2, DocumentDownload, People } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -10,16 +10,18 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
 import { getPaperTheme, type PaperTheme } from '@/lib/paper-themes';
 import { toastSuccess, toastError } from '@/lib/utils/toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface FolderCardProps {
   group: Group;
   theme: PaperTheme;
+  isShared?: boolean;
   onEdit: (group: Group) => void;
   onDelete: (id: number) => void;
   onExport: (group: Group) => void;
 }
 
-function FolderCard({ group, theme, onEdit, onDelete, onExport }: FolderCardProps) {
+function FolderCard({ group, theme, isShared, onEdit, onDelete, onExport }: FolderCardProps) {
   const [hovered, setHovered] = useState(false);
 
   const bg = hovered ? theme.bg : 'var(--card)';
@@ -79,6 +81,12 @@ function FolderCard({ group, theme, onEdit, onDelete, onExport }: FolderCardProp
           >
             <FileText size={13} />
             <span>{group.papers?.length || group.paper_count || 0} papers</span>
+            {isShared && (
+              <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]">
+                <People size={10} />
+                Shared
+              </span>
+            )}
           </div>
         </div>
       </Link>
@@ -97,26 +105,30 @@ function FolderCard({ group, theme, onEdit, onDelete, onExport }: FolderCardProp
             <DocumentDownload size={14} />
           </Button>
         )}
-        <Button
-          variant="ghost"
-          className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm"
-          onClick={(e) => {
-            e.preventDefault();
-            onEdit(group);
-          }}
-        >
-          <Edit2 size={14} />
-        </Button>
-        <Button
-          variant="ghost"
-          className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm text-[var(--destructive)]"
-          onClick={(e) => {
-            e.preventDefault();
-            onDelete(group.id);
-          }}
-        >
-          <Trash2 size={14} />
-        </Button>
+        {!isShared && (
+          <>
+            <Button
+              variant="ghost"
+              className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm"
+              onClick={(e) => {
+                e.preventDefault();
+                onEdit(group);
+              }}
+            >
+              <Edit2 size={14} />
+            </Button>
+            <Button
+              variant="ghost"
+              className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm text-[var(--destructive)]"
+              onClick={(e) => {
+                e.preventDefault();
+                onDelete(group.id);
+              }}
+            >
+              <Trash2 size={14} />
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );
@@ -129,11 +141,15 @@ export default function Groups() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { confirm, dialogProps } = useConfirmDialog();
+  const { user } = useAuth();
 
   const { data: groups = [], isLoading } = useQuery({
     queryKey: ['groups'],
     queryFn: () => groupsApi.list(),
   });
+
+  const myGroups = groups.filter(g => g.parent_id == null && (!g.user_id || g.user_id === user?.id));
+  const sharedGroups = groups.filter(g => g.user_id != null && g.user_id !== user?.id);
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string }) => groupsApi.create(data),
@@ -247,18 +263,44 @@ export default function Groups() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {groups.filter(g => g.parent_id == null).map((group, index) => (
-              <FolderCard
-                key={group.id}
-                group={group}
-                theme={getPaperTheme(index)}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-                onExport={handleExport}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myGroups.map((group, index) => (
+                <FolderCard
+                  key={group.id}
+                  group={group}
+                  theme={getPaperTheme(index)}
+                  onEdit={handleEdit}
+                  onDelete={handleDelete}
+                  onExport={handleExport}
+                />
+              ))}
+            </div>
+
+            {sharedGroups.length > 0 && (
+              <>
+                <div className="mt-10 mb-4">
+                  <h2 className="text-body font-semibold text-[var(--foreground)] flex items-center gap-2">
+                    <People size={16} />
+                    Shared with me
+                  </h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {sharedGroups.map((group, index) => (
+                    <FolderCard
+                      key={group.id}
+                      group={group}
+                      theme={getPaperTheme(myGroups.length + index)}
+                      isShared
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onExport={handleExport}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         )}
       </div>
 

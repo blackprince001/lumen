@@ -96,6 +96,10 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - FRONTEND_URL=https://${FRONTEND_DOMAIN}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_ENABLED=${EMAIL_ENABLED}
+      - APP_URL=https://${FRONTEND_DOMAIN}
     depends_on:
       postgres:
         condition: service_healthy
@@ -145,6 +149,10 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - FRONTEND_URL=https://${FRONTEND_DOMAIN}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_ENABLED=${EMAIL_ENABLED}
+      - APP_URL=https://${FRONTEND_DOMAIN}
     depends_on:
       postgres:
         condition: service_healthy

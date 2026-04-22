@@ -9,11 +9,13 @@ export interface Tag {
 
 export interface Paper {
   id: number;
+  uploaded_by_id?: number;
   title: string;
   authors?: string;
   doi?: string;
   url?: string;
   file_path?: string;
+  file_url?: string;
   content_text?: string;
   metadata_json?: Record<string, unknown>;
   volume?: string;
@@ -35,6 +37,9 @@ export interface Paper {
   task_id?: string;
   processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
   processing_error?: string;
+  my_permission?: 'owner' | 'editor' | 'viewer';
+  is_shared?: boolean;
+  shared_by?: { id: number; display_name: string; email: string };
 }
 
 export interface PaperCreate {
@@ -121,6 +126,7 @@ export interface PaperListFilters {
   has_file?: boolean;
   date_from?: string;
   date_to?: string;
+  ownership?: 'all' | 'mine' | 'shared';
 }
 
 export type ReadingStatus = 'not_started' | 'in_progress' | 'read' | 'archived';
@@ -159,6 +165,7 @@ export const papersApi = {
       if (filters.tag_id !== undefined) params.append('tag_id', filters.tag_id.toString());
       if (filters.date_from) params.append('date_from', filters.date_from);
       if (filters.date_to) params.append('date_to', filters.date_to);
+      if (filters.ownership && filters.ownership !== 'all') params.append('ownership', filters.ownership);
     }
     return api.get<PaperListResponse>(`/papers?${params}`);
   },

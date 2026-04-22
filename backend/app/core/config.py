@@ -55,6 +55,12 @@ class Settings(BaseSettings):
   # Frontend URL for CORS
   FRONTEND_URL: str = "http://localhost:5173"
 
+  # Email (Resend)
+  RESEND_API_KEY: str | None = None
+  EMAIL_FROM: str = "noreply@papers.local"
+  EMAIL_ENABLED: bool = False
+  APP_URL: str = "http://localhost:5173"
+
   @property
   def REDIS_URL(self) -> str:
     """Construct Redis URL from components."""

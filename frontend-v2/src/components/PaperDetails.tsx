@@ -2,13 +2,17 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Trash as Trash2, Edit as Pencil, TickCircle as Check, CloseCircle as X, ExportSquare as ExternalLink, Calendar, Link as LinkIcon, FingerScan as Fingerprint, Refresh } from 'iconsax-reactjs';
+import { Trash as Trash2, Edit as Pencil, TickCircle as Check, CloseCircle as X, ExportSquare as ExternalLink, Calendar, Link as LinkIcon, FingerScan as Fingerprint, Refresh, Share } from 'iconsax-reactjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type Paper, papersApi } from '@/lib/api/papers';
 import { Button } from '@/components/ui/Button';
 import { TagInput } from '@/components/TagInput';
 import { TagList } from '@/components/TagList';
 import { PaperCitationsList } from '@/components/PaperCitationsList';
+import { ShareDialog } from '@/components/ShareDialog';
+import { isOwner } from '@/lib/utils/permissions';
+import { paperSharingApi } from '@/lib/api/sharing';
+import { useNavigate } from 'react-router-dom';
 
 interface PaperDetailsProps {
   paper: Paper;
@@ -17,9 +21,11 @@ interface PaperDetailsProps {
 
 export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState(paper.title);
   const [isAbstractExpanded, setIsAbstractExpanded] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   const paperId = paper.id;
 
@@ -78,6 +84,30 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
         <div className="flex items-center justify-between gap-4 mb-4">
           <h3 className="text-btn font-semibold text-[var(--foreground)]">Information</h3>
           <div className="flex items-center gap-1.5">
+            {paper.is_shared && !isOwner(paper) && (
+              <Button
+                variant="ghost"
+                className="h-8 text-caption text-[var(--destructive)]"
+                onClick={async () => {
+                  await paperSharingApi.leave(paper.id);
+                  queryClient.invalidateQueries({ queryKey: ['papers'] });
+                  navigate('/');
+                }}
+                title="Leave share"
+              >
+                Leave
+              </Button>
+            )}
+            {isOwner(paper) && (
+            <Button
+              variant="ghost"
+              className="h-8 w-8 p-0"
+              onClick={() => setShareOpen(true)}
+              title="Share Paper"
+            >
+              <Share size={14} />
+            </Button>
+            )}
             <Button
               variant="ghost"
               className="h-8 w-8 p-0"
@@ -87,7 +117,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
             >
               <Refresh size={14} className={extractCitationsMutation.isPending ? 'animate-spin' : ''} />
             </Button>
-            {onDelete && (
+            {onDelete && isOwner(paper) && (
               <Button
                 variant="ghost"
                 className="h-8 w-8 p-0 text-[var(--destructive)] hover:bg-[var(--destructive)]/10"
@@ -124,6 +154,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
           ) : (
             <div className="flex items-start justify-between gap-2">
               <h1 className="text-body-lg font-bold leading-snug text-[var(--foreground)] flex-1">{paper.title}</h1>
+              {isOwner(paper) && (
               <Button
                 variant="ghost"
                 className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -131,6 +162,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
               >
                 <Pencil size={13} />
               </Button>
+              )}
             </div>
           )}
         </div>
@@ -264,6 +296,14 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
           />
         </div>
       </div>
+
+      <ShareDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        resourceId={paperId}
+        resourceType="paper"
+        resourceTitle={paper.title}
+      />
     </div>
   );
 }

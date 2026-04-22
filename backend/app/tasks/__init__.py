@@ -8,13 +8,13 @@ from app.tasks.ai_tasks import (
   generate_reading_guide_task,
   generate_summary_task,
 )
+from app.tasks.discovery_tasks import (
+  ai_enhance_task,
+  search_source_task,
+)
 from app.tasks.paper_processing import (
   extract_citations_task,
   process_paper_full,
-)
-from app.tasks.discovery_tasks import (
-  search_source_task,
-  ai_enhance_task,
 )
 
 __all__ = [

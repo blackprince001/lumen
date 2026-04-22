@@ -1,15 +1,16 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { SearchNormal as Search, Hierarchy as GitBranch, Refresh as Loader2, Refresh as RefreshCw, Hierarchy3 as Network } from 'iconsax-reactjs';
 import { papersApi } from '@/lib/api/papers';
 import { PaperCitationsList } from '@/components/PaperCitationsList';
+import { CitationCanvas } from '@/components/CitationCanvas';
+import { CanvasPaperPicker } from '@/components/CanvasPaperPicker';
 import { Button } from '@/components/ui/Button';
 import { toastSuccess, toastError } from '@/lib/utils/toast';
 import { cn } from '@/lib/utils';
-import ForceGraph2D from 'react-force-graph-2d';
 
-type ViewTab = 'list' | 'graph';
+type ViewTab = 'list' | 'canvas';
 
 export default function Citations() {
   const navigate = useNavigate();
@@ -38,12 +39,6 @@ export default function Citations() {
     enabled: !!selectedPaperId,
   });
 
-  const { data: graphData, isLoading: graphLoading } = useQuery({
-    queryKey: ['citation-graph', selectedPaperId],
-    queryFn: () => papersApi.getCitationGraph(selectedPaperId!),
-    enabled: !!selectedPaperId && activeTab === 'graph',
-  });
-
   const extractMutation = useMutation({
     mutationFn: () => papersApi.extractCitations(selectedPaperId!),
     onSuccess: (data) => toastSuccess(`Extracted ${data.citations_extracted} citations`),
@@ -54,19 +49,6 @@ export default function Citations() {
     () => papersData?.papers.find((p) => p.id === selectedPaperId) ?? null,
     [selectedPaperId, papersData]
   );
-
-  // Transform graph data for react-force-graph-2d
-  const forceGraphData = useMemo(() => {
-    if (!graphData) return { nodes: [], links: [] };
-    return {
-      nodes: graphData.nodes.map((n) => ({ id: n.id, label: n.title, type: n.type })),
-      links: graphData.edges.map((e) => ({ source: e.source, target: e.target })),
-    };
-  }, [graphData]);
-
-  const handleNodeClick = useCallback((node: any) => {
-    if (typeof node.id === 'number') navigate(`/papers/${node.id}`);
-  }, [navigate]);
 
   return (
     <div className="max-w-content mx-auto px-6 py-8">
@@ -152,7 +134,7 @@ export default function Citations() {
 
           {/* List / Graph tabs */}
           <div className="flex items-center gap-1 mb-6 border-b border-[var(--border)]">
-            {([['list', 'List', GitBranch], ['graph', 'Graph', Network]] as const).map(([id, label, Icon]) => (
+            {([['list', 'List', GitBranch], ['canvas', 'Canvas', Network]] as const).map(([id, label, Icon]) => (
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
@@ -175,29 +157,11 @@ export default function Citations() {
               error={citationsError}
             />
           ) : (
-            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden" style={{ height: 500 }}>
-              {graphLoading ? (
-                <div className="h-full flex items-center justify-center">
-                  <Loader2 size={24} className="animate-spin text-[var(--muted-foreground)]" />
-                </div>
-              ) : forceGraphData.nodes.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center gap-2">
-                  <GitBranch size={36} className="text-[var(--border)]" />
-                  <p className="text-code text-[var(--muted-foreground)]">No citation graph data available</p>
-                  <p className="text-caption text-[var(--muted-foreground)]">Try extracting citations first</p>
-                </div>
-              ) : (
-                <ForceGraph2D
-                  graphData={forceGraphData}
-                  nodeLabel="label"
-                  nodeColor={(n: any) => n.type === 'paper' ? '#232927' : '#A1AAA6'}
-                  linkColor={() => '#E2E4E3'}
-                  onNodeClick={handleNodeClick}
-                  nodeRelSize={5}
-                  width={undefined}
-                  height={500}
-                />
-              )}
+            <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden flex" style={{ height: 600 }}>
+              <CanvasPaperPicker className="w-64 shrink-0" />
+              <div className="flex-1">
+                <CitationCanvas />
+              </div>
             </div>
           )}
         </>

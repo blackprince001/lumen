@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.crud.paper import get_paper_or_404
+from app.api.crud.paper import get_visible_paper_or_404
 from app.api.crud.utils import ensure_loaded
 from app.models.chat import ChatSession
 
@@ -47,7 +47,7 @@ async def list_chat_sessions_for_paper(
 ) -> list[ChatSession]:
   """List chat sessions for a paper, optionally scoped to a single user."""
   # Verify paper exists
-  await get_paper_or_404(session, paper_id)
+  await get_visible_paper_or_404(session, paper_id)
 
   query = (
     select(ChatSession)

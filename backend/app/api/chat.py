@@ -12,7 +12,7 @@ from app.api.crud import (
   delete_chat_session,
   ensure_loaded,
   get_chat_session_or_404,
-  get_paper_or_404,
+  get_visible_paper_or_404,
   list_chat_sessions_for_paper,
 )
 from app.core.logger import get_logger
@@ -46,7 +46,7 @@ async def send_chat_message(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   try:
     assistant_message = await chat_service.send_message(
@@ -81,7 +81,7 @@ async def get_chat_history(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   chat_session = await chat_service.get_latest_session(
     db_session=session, paper_id=paper_id, user_id=scoped_user_id(user)
@@ -103,7 +103,7 @@ async def stream_chat_message(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   async def generate_stream():
     try:
@@ -138,7 +138,7 @@ async def clear_chat_history(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   session_query = select(ChatSession).where(
     ChatSession.paper_id == paper_id, ChatSession.user_id == scoped_user_id(user)
@@ -153,15 +153,27 @@ async def clear_chat_history(
   return None
 
 
-@router.get("/messages/{message_id}/thread", response_model=List[ChatMessageSchema])
-async def get_thread_messages(
-  message_id: int,
-  session: AsyncSession = Depends(get_db),
+async def _get_thread_parent_or_404(
+  session: AsyncSession, message_id: int, user: CurrentUser
 ):
-  """Get all replies in a thread."""
+  """Validate thread parent message exists and its paper is visible to the user."""
   parent_message = await chat_service.get_message_by_id(session, message_id)
   if not parent_message:
     raise HTTPException(status_code=404, detail="Message not found")
+  # Verify the paper behind this chat is visible
+  chat_session = await get_chat_session_or_404(session, cast(int, parent_message.session_id))
+  await get_visible_paper_or_404(session, cast(int, chat_session.paper_id), user_id=scoped_user_id(user))
+  return parent_message
+
+
+@router.get("/messages/{message_id}/thread", response_model=List[ChatMessageSchema])
+async def get_thread_messages(
+  message_id: int,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
+):
+  """Get all replies in a thread."""
+  await _get_thread_parent_or_404(session, message_id, user)
 
   thread_messages = await chat_service.get_thread_messages(session, message_id)
   return [ChatMessageSchema.model_validate(msg) for msg in thread_messages]
@@ -171,9 +183,12 @@ async def get_thread_messages(
 async def send_thread_message(
   message_id: int,
   request: ThreadRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Send a message in a thread and get AI response."""
+  await _get_thread_parent_or_404(session, message_id, user)
+
   try:
     user_msg, assistant_msg = await chat_service.send_thread_message(
       db_session=session,
@@ -202,12 +217,11 @@ async def send_thread_message(
 async def stream_thread_message(
   message_id: int,
   request: ThreadRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Stream AI response in a thread."""
-  parent_message = await chat_service.get_message_by_id(session, message_id)
-  if not parent_message:
-    raise HTTPException(status_code=404, detail="Message not found")
+  await _get_thread_parent_or_404(session, message_id, user)
 
   async def generate_stream():
     try:
@@ -241,7 +255,7 @@ async def create_new_session(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  await get_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   chat_session = await chat_service.create_session(
     db_session=session, paper_id=paper_id, name=session_data.name, user_id=scoped_user_id(user)

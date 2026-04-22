@@ -7,6 +7,7 @@ export type { Paper } from './papers';
 export interface Group {
   id: number;
   name: string;
+  user_id?: number | null;
   parent_id?: number | null;
   description?: string;
   created_at: string;

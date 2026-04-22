@@ -4,8 +4,9 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.crud.paper import get_paper_or_404
+from app.api.crud.paper import get_visible_paper_or_404
 from app.models.bookmark import Bookmark
+from app.services.access import get_effective_paper_permission
 
 
 async def get_bookmark_or_404(
@@ -15,24 +16,28 @@ async def get_bookmark_or_404(
   *,
   user_id: int | None = None,
 ) -> Bookmark:
-  """Fetch a bookmark by ID or raise 404.
-
-  If `user_id` is provided, only bookmarks owned by that user (or legacy
-  bookmarks with NULL user_id) are returned.
-  """
   query = select(Bookmark).where(Bookmark.id == bookmark_id)
   if paper_id is not None:
     query = query.where(Bookmark.paper_id == paper_id)
-  if user_id is not None:
-    query = query.where(
-      (Bookmark.user_id == user_id) | (Bookmark.user_id.is_(None))
-    )
 
   result = await session.execute(query)
   bookmark = result.scalar_one_or_none()
 
   if not bookmark:
     raise HTTPException(status_code=404, detail="Bookmark not found")
+
+  # Only the bookmark author or the paper owner can delete
+  if user_id is not None:
+    is_author = bookmark.user_id == user_id or bookmark.user_id is None
+    if not is_author:
+      from app.models.paper import Paper
+
+      paper_result = await session.execute(
+        select(Paper.uploaded_by_id).where(Paper.id == bookmark.paper_id)
+      )
+      paper_owner_id = paper_result.scalar_one_or_none()
+      if paper_owner_id != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this bookmark")
 
   return bookmark
 
@@ -43,16 +48,14 @@ async def list_bookmarks_for_paper(
   *,
   user_id: int | None = None,
 ) -> list[Bookmark]:
-  """List bookmarks for a paper, optionally scoped to a single user."""
-  # Verify paper exists
-  await get_paper_or_404(session, paper_id)
+  await get_visible_paper_or_404(session, paper_id, user_id=user_id)
 
-  query = select(Bookmark).where(Bookmark.paper_id == paper_id)
-  if user_id is not None:
-    query = query.where(
-      (Bookmark.user_id == user_id) | (Bookmark.user_id.is_(None))
-    )
-  query = query.order_by(Bookmark.page_number, Bookmark.created_at)
+  # All bookmarks on the paper are visible to anyone with access
+  query = (
+    select(Bookmark)
+    .where(Bookmark.paper_id == paper_id)
+    .order_by(Bookmark.page_number, Bookmark.created_at)
+  )
   result = await session.execute(query)
   return list(result.scalars().all())
 
@@ -65,9 +68,12 @@ async def create_bookmark(
   *,
   user_id: int | None = None,
 ) -> Bookmark:
-  """Create a bookmark for a paper."""
-  # Verify paper exists
-  await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=user_id)
+
+  if user_id is not None and paper.uploaded_by_id != user_id:
+    perm = await get_effective_paper_permission(session, user_id, paper)
+    if perm not in ("owner", "editor"):
+      raise HTTPException(status_code=403, detail="Editor permission required to bookmark")
 
   bookmark = Bookmark(
     paper_id=paper_id,
@@ -89,7 +95,6 @@ async def delete_bookmark(
   *,
   user_id: int | None = None,
 ) -> None:
-  """Delete a bookmark."""
   bookmark = await get_bookmark_or_404(
     session, bookmark_id, paper_id=paper_id, user_id=user_id
   )

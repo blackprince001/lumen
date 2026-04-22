@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { ArrangeVertical as ArrowUpDown, Trash as Trash2 } from 'iconsax-reactjs';
+import { ArrangeVertical as ArrowUpDown, Trash as Trash2, People } from 'iconsax-reactjs';
 import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table';
 import { Button } from '@/components/ui/Button';
@@ -128,10 +128,17 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
 
                 {/* Reading status */}
                 <TableCell className="hidden md:table-cell">
-                  {paper.reading_status
-                    ? <ReadingStatusBadge status={paper.reading_status} />
-                    : <span className="text-[var(--muted-foreground)] text-caption">—</span>
-                  }
+                  <div className="flex items-center gap-1.5">
+                    {paper.reading_status
+                      ? <ReadingStatusBadge status={paper.reading_status} />
+                      : <span className="text-[var(--muted-foreground)] text-caption">—</span>
+                    }
+                    {paper.is_shared && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]" title="Shared with you">
+                        <People size={10} />
+                      </span>
+                    )}
+                  </div>
                 </TableCell>
 
                 {/* Priority */}

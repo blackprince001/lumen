@@ -7,8 +7,9 @@ from app.models.paper import Paper
 
 
 class ExportService:
-  def export_csv(self, papers: List[Paper]) -> str:
+  def export_csv(self, papers: List[Paper], user_states: dict | None = None) -> str:
     """Export papers to CSV format."""
+    user_states = user_states or {}
     output = io.StringIO()
     writer = csv.writer(output)
 
@@ -44,6 +45,7 @@ class ExportService:
       )
       tags = ", ".join([tag.name for tag in getattr(paper, "tags", [])])
       groups = ", ".join([group.name for group in getattr(paper, "groups", [])])
+      state = user_states.get(paper.id)
 
       writer.writerow(
         [
@@ -55,28 +57,30 @@ class ExportService:
           journal,
           tags,
           groups,
-          getattr(paper, "reading_status", "not_started"),
-          getattr(paper, "priority", "low"),
-          getattr(paper, "reading_time_minutes", 0),
+          state.reading_status if state else "not_started",
+          state.priority if state else "low",
+          state.reading_time_minutes if state else 0,
           paper.created_at.isoformat() if paper.created_at else "",
         ]
       )
 
     return output.getvalue()
 
-  def export_json(self, papers: List[Paper], include_annotations: bool = False) -> str:
+  def export_json(self, papers: List[Paper], include_annotations: bool = False, user_states: dict | None = None) -> str:
     """Export papers to JSON format."""
+    user_states = user_states or {}
     papers_data = []
     for paper in papers:
+      state = user_states.get(paper.id)
       paper_dict = {
         "id": paper.id,
         "title": paper.title,
         "doi": paper.doi,
         "url": paper.url,
         "metadata": paper.metadata_json,
-        "reading_status": getattr(paper, "reading_status", "not_started"),
-        "priority": getattr(paper, "priority", "low"),
-        "reading_time_minutes": getattr(paper, "reading_time_minutes", 0),
+        "reading_status": state.reading_status if state else "not_started",
+        "priority": state.priority if state else "low",
+        "reading_time_minutes": state.reading_time_minutes if state else 0,
         "created_at": paper.created_at.isoformat() if paper.created_at else None,
       }
       if include_annotations:

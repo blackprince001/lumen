@@ -45,13 +45,6 @@ class Paper(Base):
   isbn = Column(String, nullable=True)
   issn = Column(String, nullable=True)
   viewed_count = Column(Integer, default=0, nullable=False)
-  reading_status = Column(
-    Enum("not_started", "in_progress", "read", "archived", name="readingstatus"),
-    nullable=False,
-    default="not_started",
-    server_default="not_started",
-    index=True,  # Added index for filtering by reading status
-  )
   # Processing status for background AI tasks
   processing_status = Column(
     Enum("pending", "processing", "completed", "failed", name="processingstatus"),
@@ -61,16 +54,6 @@ class Paper(Base):
     index=True,
   )
   processing_error = Column(Text, nullable=True)
-  reading_time_minutes = Column(Integer, default=0, nullable=False, server_default="0")
-  last_read_page = Column(Integer, nullable=True)
-  priority = Column(
-    Enum("low", "medium", "high", "critical", name="prioritylevel"),
-    nullable=False,
-    default="low",
-    server_default="low",
-  )
-  status_updated_at = Column(DateTime(timezone=True), nullable=True)
-  last_read_at = Column(DateTime(timezone=True), nullable=True)
   created_at = Column(
     DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
   )
@@ -80,6 +63,12 @@ class Paper(Base):
     onupdate=lambda: datetime.now(timezone.utc),
     nullable=False,
   )
+
+  @property
+  def file_url(self) -> str | None:
+    if not self.file_path or self.id is None:
+      return None
+    return f"/papers/{self.id}/file"
 
   uploaded_by = relationship("User", back_populates="papers", foreign_keys=[uploaded_by_id])
   annotations = relationship(
@@ -92,6 +81,10 @@ class Paper(Base):
   reading_sessions = relationship(
     "ReadingSession", back_populates="paper", cascade="all, delete-orphan"
   )
+  user_states = relationship(
+    "UserPaperState", back_populates="paper", cascade="all, delete-orphan"
+  )
+  shares = relationship("PaperShare", back_populates="paper", cascade="all, delete-orphan")
   bookmarks = relationship(
     "Bookmark", back_populates="paper", cascade="all, delete-orphan"
   )

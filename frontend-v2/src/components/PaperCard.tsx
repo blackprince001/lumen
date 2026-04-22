@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ExportSquare as ExternalLink, Trash as Trash2 } from 'iconsax-reactjs';
+import { ExportSquare as ExternalLink, Trash as Trash2, People } from 'iconsax-reactjs';
 import { cn } from '@/lib/utils';
 import { getPaperTheme } from '@/lib/paper-themes';
 import { ReadingStatusBadge } from '@/components/ReadingStatusBadge';
@@ -25,6 +25,7 @@ export function PaperCard({
   onSelect,
 }: PaperCardProps) {
   const theme = getPaperTheme(paper.id);
+  const isShared = paper.is_shared === true;
 
   const authorText = (() => {
     const list = paper.metadata_json?.authors_list;
@@ -82,6 +83,14 @@ export function PaperCard({
           {/* Reading status */}
           {paper.reading_status && (
             <ReadingStatusBadge status={paper.reading_status} />
+          )}
+
+          {/* Shared indicator */}
+          {isShared && (
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]">
+              <People size={10} />
+              Shared
+            </span>
           )}
 
           {/* Priority (only medium and above) */}

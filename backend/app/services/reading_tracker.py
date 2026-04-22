@@ -3,8 +3,8 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.paper import Paper
 from app.models.reading_session import ReadingSession
+from app.models.sharing import UserPaperState
 from app.schemas.reading_progress import ReadingStatistics, ReadingStreak
 
 
@@ -15,15 +15,16 @@ class ReadingTrackerService:
     month_start = now.replace(day=1)
     year_start = now.replace(month=1, day=1)
 
-    def _paper_filter(q):
+    def _state_filter(q):
       if user_id is not None:
-        return q.where(Paper.uploaded_by_id == user_id)
+        return q.where(UserPaperState.user_id == user_id)
       return q
 
     papers_read_this_week = (
       await session.scalar(
-        _paper_filter(select(func.count(Paper.id)).where(
-          Paper.reading_status == "read", Paper.status_updated_at >= week_start
+        _state_filter(select(func.count()).select_from(UserPaperState).where(
+          UserPaperState.reading_status == "read",
+          UserPaperState.status_updated_at >= week_start,
         ))
       )
       or 0
@@ -31,8 +32,9 @@ class ReadingTrackerService:
 
     papers_read_this_month = (
       await session.scalar(
-        _paper_filter(select(func.count(Paper.id)).where(
-          Paper.reading_status == "read", Paper.status_updated_at >= month_start
+        _state_filter(select(func.count()).select_from(UserPaperState).where(
+          UserPaperState.reading_status == "read",
+          UserPaperState.status_updated_at >= month_start,
         ))
       )
       or 0
@@ -40,36 +42,47 @@ class ReadingTrackerService:
 
     papers_read_this_year = (
       await session.scalar(
-        _paper_filter(select(func.count(Paper.id)).where(
-          Paper.reading_status == "read", Paper.status_updated_at >= year_start
+        _state_filter(select(func.count()).select_from(UserPaperState).where(
+          UserPaperState.reading_status == "read",
+          UserPaperState.status_updated_at >= year_start,
         ))
       )
       or 0
     )
 
     total_reading_time = (
-      await session.scalar(_paper_filter(select(func.sum(Paper.reading_time_minutes)))) or 0
+      await session.scalar(
+        _state_filter(select(func.sum(UserPaperState.reading_time_minutes)).select_from(UserPaperState))
+      )
+      or 0
     )
 
-    total_papers = await session.scalar(_paper_filter(select(func.count(Paper.id)))) or 1
+    total_papers = (
+      await session.scalar(
+        _state_filter(select(func.count()).select_from(UserPaperState))
+      )
+      or 1
+    )
     average_reading_time = total_reading_time / total_papers if total_papers > 0 else 0.0
 
     streak_data = await self._calculate_streak(session, user_id=user_id)
 
     status_dist = await session.execute(
-      _paper_filter(
-        select(Paper.reading_status, func.count(Paper.id))
-        .group_by(Paper.reading_status)
-        .where(Paper.reading_status.isnot(None))
+      _state_filter(
+        select(UserPaperState.reading_status, func.count())
+        .select_from(UserPaperState)
+        .group_by(UserPaperState.reading_status)
+        .where(UserPaperState.reading_status.isnot(None))
       )
     )
     status_distribution = {status: count for status, count in status_dist.fetchall()}
 
     priority_dist = await session.execute(
-      _paper_filter(
-        select(Paper.priority, func.count(Paper.id))
-        .group_by(Paper.priority)
-        .where(Paper.priority.isnot(None))
+      _state_filter(
+        select(UserPaperState.priority, func.count())
+        .select_from(UserPaperState)
+        .group_by(UserPaperState.priority)
+        .where(UserPaperState.priority.isnot(None))
       )
     )
     priority_distribution = {priority: count for priority, count in priority_dist.fetchall()}
@@ -105,11 +118,9 @@ class ReadingTrackerService:
         last_reading_date=None,
       )
 
-    # Sort dates descending
     dates_with_activity = sorted(set(dates_with_activity), reverse=True)
     last_reading_date = dates_with_activity[0]
 
-    # Calculate current streak
     current_streak = 0
     today = datetime.now(timezone.utc).date()
     expected_date = today
@@ -121,7 +132,6 @@ class ReadingTrackerService:
       elif date < expected_date:
         break
 
-    # Calculate longest streak
     longest_streak = 0
     current_run = 0
     prev_date = None
@@ -161,7 +171,6 @@ class ReadingTrackerService:
     return await self._calculate_streak(session, user_id=user_id)
 
   async def aggregate_reading_time(self, session: AsyncSession, paper_id: int) -> int:
-    """Aggregate reading time from sessions for a paper."""
     total_minutes = await session.scalar(
       select(func.sum(ReadingSession.duration_minutes)).where(
         ReadingSession.paper_id == paper_id

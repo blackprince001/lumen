@@ -7,6 +7,8 @@ import {
   Folder, DocumentDownload, ArrowRight, CloseCircle,
 } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
+import { ShareDialog } from '@/components/ShareDialog';
+import { Share } from 'iconsax-reactjs';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -26,6 +28,7 @@ export default function GroupDetail() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editName, setEditName] = useState('');
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Subgroup state
   const [isSubgroupOpen, setIsSubgroupOpen] = useState(false);
@@ -176,6 +179,9 @@ export default function GroupDetail() {
             </Button>
             <Button variant="secondary" icon={<Folder size={14} />} onClick={() => setIsSubgroupOpen(true)}>
               Add Subgroup
+            </Button>
+            <Button variant="ghost" className="!h-9 !w-9 !p-0" onClick={() => setShareOpen(true)} title="Share Group">
+              <Share size={16} />
             </Button>
             <Button variant="ghost" className="!h-9 !w-9 !p-0" onClick={() => { setEditName(displayGroup.name); setIsEditOpen(true); }}>
               <Edit2 size={16} />
@@ -333,6 +339,14 @@ export default function GroupDetail() {
       )}
 
       <ConfirmDialog {...dialogProps} />
+
+      <ShareDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        resourceId={groupId}
+        resourceType="group"
+        resourceTitle={displayGroup?.name || 'Group'}
+      />
     </>
   );
 }

@@ -5,8 +5,8 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.crud import get_paper_or_404
-from app.dependencies import CurrentUser, get_db
+from app.api.crud import get_visible_paper_or_404
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.duplicate_log import DuplicateDetectionLog
 from app.schemas.duplicate import DuplicateMatch, MergePreview, MergeRequest
 from app.schemas.paper import Paper as PaperSchema
@@ -18,11 +18,12 @@ router = APIRouter()
 @router.post("/papers/{paper_id}/find-duplicates", response_model=List[DuplicateMatch])
 async def find_duplicates(
   paper_id: int,
+  user: CurrentUser,
   threshold: float = 0.8,
   session: AsyncSession = Depends(get_db),
 ):
   """Find duplicates for a paper."""
-  await get_paper_or_404(session, paper_id)  # Validate paper exists
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   duplicates = await duplicate_detection_service.find_duplicates(
     session, paper_id, threshold
@@ -39,12 +40,13 @@ async def find_duplicates(
 
 
 @router.post("/papers/merge", response_model=PaperSchema)
-async def merge_papers(request: MergeRequest, session: AsyncSession = Depends(get_db)):
+async def merge_papers(
+  request: MergeRequest, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Merge duplicate papers."""
   if request.primary_paper_id == request.duplicate_paper_id:
     raise HTTPException(status_code=400, detail="Cannot merge paper with itself")
 
-  # Create log entry
   log_entry = DuplicateDetectionLog(
     paper_id=request.primary_paper_id,
     duplicate_paper_id=request.duplicate_paper_id,
@@ -55,7 +57,9 @@ async def merge_papers(request: MergeRequest, session: AsyncSession = Depends(ge
   session.add(log_entry)
   await session.commit()
 
-  paper = await get_paper_or_404(session, request.primary_paper_id, with_relations=True)
+  paper = await get_visible_paper_or_404(
+    session, request.primary_paper_id, with_relations=True, user_id=scoped_user_id(user)
+  )
   return PaperSchema.model_validate(paper)
 
 
@@ -63,12 +67,16 @@ async def merge_papers(request: MergeRequest, session: AsyncSession = Depends(ge
 async def get_merge_preview(
   primary_paper_id: int,
   duplicate_paper_id: int,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Get preview of merge operation."""
-  primary_paper = await get_paper_or_404(session, primary_paper_id, with_relations=True)
-  duplicate_paper = await get_paper_or_404(
-    session, duplicate_paper_id, with_relations=True
+  uid = scoped_user_id(user)
+  primary_paper = await get_visible_paper_or_404(
+    session, primary_paper_id, with_relations=True, user_id=uid
+  )
+  duplicate_paper = await get_visible_paper_or_404(
+    session, duplicate_paper_id, with_relations=True, user_id=uid
   )
 
   return MergePreview(

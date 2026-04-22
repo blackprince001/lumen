@@ -1,6 +1,7 @@
 from app.models.annotation import Annotation
 from app.models.bookmark import Bookmark
 from app.models.chat import ChatMessage, ChatSession
+from app.models.citation_canvas import CitationCanvasItem
 from app.models.discovery import DiscoveredPaper, DiscoverySession
 from app.models.duplicate_log import DuplicateDetectionLog
 from app.models.group import Group
@@ -10,6 +11,7 @@ from app.models.paper_citation import PaperCitation
 from app.models.reading_session import ReadingSession
 from app.models.refresh_token import RefreshToken
 from app.models.saved_search import SavedSearch
+from app.models.sharing import GroupShare, PaperShare, UserPaperState
 from app.models.tag import Tag
 from app.models.user import User
 
@@ -18,6 +20,7 @@ __all__ = [
   "Bookmark",
   "ChatMessage",
   "ChatSession",
+  "CitationCanvasItem",
   "MultiChatMessage",
   "MultiChatSession",
   "DiscoveredPaper",
@@ -29,6 +32,9 @@ __all__ = [
   "ReadingSession",
   "RefreshToken",
   "SavedSearch",
+  "UserPaperState",
+  "PaperShare",
+  "GroupShare",
   "Tag",
   "User",
 ]

@@ -6,9 +6,9 @@ from typing import Optional, cast
 from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.crud import get_paper_or_404
+from app.api.crud import get_visible_paper_or_404
 from app.core.config import settings
-from app.dependencies import CurrentUser, get_db
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.schemas.ai_features import (
   FindingsResponse,
   ReadingGuideResponse,
@@ -33,7 +33,7 @@ async def generate_summary(
   session: AsyncSession = Depends(get_db),
 ):
   """Trigger AI summary generation task."""
-  await get_paper_or_404(session, paper_id)
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   if not settings.GOOGLE_API_KEY:
     raise HTTPException(
@@ -50,7 +50,7 @@ async def generate_summary(
 @router.get("/papers/{paper_id}/summary", response_model=SummaryResponse)
 async def get_summary(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get AI summary for a paper."""
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   if not paper.ai_summary:
     # If no summary, it might be pending or not requested
@@ -75,7 +75,7 @@ async def update_summary(
   session: AsyncSession = Depends(get_db),
 ):
   """Update AI summary manually."""
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   paper.ai_summary = summary
   await session.commit()
@@ -95,7 +95,7 @@ async def extract_findings(
   session: AsyncSession = Depends(get_db),
 ):
   """Trigger extraction of key findings."""
-  await get_paper_or_404(session, paper_id)
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   extract_findings_task.delay(paper_id)
 
@@ -105,7 +105,7 @@ async def extract_findings(
 @router.get("/papers/{paper_id}/findings", response_model=FindingsResponse)
 async def get_findings(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get key findings for a paper."""
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   findings = (
     paper.key_findings
@@ -126,7 +126,7 @@ async def update_findings(
   session: AsyncSession = Depends(get_db),
 ):
   """Update key findings manually."""
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   paper.key_findings = findings
   await session.commit()
@@ -144,7 +144,7 @@ async def generate_reading_guide(
   session: AsyncSession = Depends(get_db),
 ):
   """Trigger reading guide generation."""
-  await get_paper_or_404(session, paper_id)
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   generate_reading_guide_task.delay(paper_id)
 
@@ -154,7 +154,7 @@ async def generate_reading_guide(
 @router.get("/papers/{paper_id}/reading-guide", response_model=ReadingGuideResponse)
 async def get_reading_guide(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Get reading guide for a paper."""
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   guide = (
     paper.reading_guide
@@ -173,7 +173,7 @@ async def update_reading_guide(
   session: AsyncSession = Depends(get_db),
 ):
   """Update reading guide manually."""
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   paper.reading_guide = guide
   await session.commit()
@@ -189,7 +189,7 @@ async def generate_highlights(
   session: AsyncSession = Depends(get_db),
 ):
   """Trigger auto-highlights generation."""
-  await get_paper_or_404(session, paper_id)
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   generate_highlights_task.delay(paper_id)
 

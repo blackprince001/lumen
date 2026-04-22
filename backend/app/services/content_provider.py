@@ -44,6 +44,13 @@ class ContentProvider(BaseGoogleAIService):
   def _resolve_absolute_path(self, file_path: Path) -> Path | None:
     if file_path.exists():
       return file_path
+
+    # Fall back: try the filename in STORAGE_PATH (handles Docker vs local path mismatch)
+    storage_path = Path(settings.STORAGE_PATH)
+    fallback = storage_path / file_path.name
+    if fallback.exists():
+      return fallback
+
     return None
 
   def _resolve_relative_path(self, file_path: Path) -> Path | None:

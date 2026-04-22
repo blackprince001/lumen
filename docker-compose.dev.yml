@@ -89,6 +89,10 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - FRONTEND_URL=${FRONTEND_URL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@papers.local}
+      - EMAIL_ENABLED=${EMAIL_ENABLED:-false}
+      - APP_URL=${APP_URL:-${FRONTEND_URL}}
     volumes:
       - storage_data:/app/storage
     depends_on:
@@ -137,6 +141,10 @@ services:
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
       - FRONTEND_URL=${FRONTEND_URL}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_ENABLED=${EMAIL_ENABLED}
+      - APP_URL=${APP_URL}
     volumes:
       - storage_data:/app/storage
     depends_on:

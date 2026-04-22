@@ -35,6 +35,7 @@ class Group(Base):
 
   user = relationship("User", back_populates="groups")
   papers = relationship("Paper", secondary="paper_groups", back_populates="groups")
+  shares = relationship("GroupShare", back_populates="group", cascade="all, delete-orphan")
 
   # Note: Unique constraints are handled via partial indexes in migrations
   # to correctly handle NULL parent_id values

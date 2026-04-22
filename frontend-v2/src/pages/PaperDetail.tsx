@@ -36,7 +36,7 @@ export default function PaperDetail() {
 
   const paperTab = tabs.find((t) => t.paperId === paperId);
   const currentPage = paperTab?.currentPage ?? 1;
-  const isReadingActive = !!paper?.file_path && paperTab?.id === activeTabId;
+  const isReadingActive = !!(paper?.file_url || paper?.file_path) && paperTab?.id === activeTabId;
   useReadingSession(paperId!, isReadingActive, currentPage);
 
   // Register this paper in the tab system

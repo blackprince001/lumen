@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.crud import get_paper_or_404
-from app.dependencies import CurrentUser, get_db
+from app.api.crud import get_visible_paper_or_404
+from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.paper_citation import PaperCitation
 from app.schemas.paper import Paper as PaperSchema
 from app.services.graph_service import graph_service
@@ -20,21 +20,24 @@ router = APIRouter()
 @router.get("/papers/{paper_id}/citation-graph")
 async def get_citation_graph(
   paper_id: int,
+  user: CurrentUser,
   bidirectional: bool = Query(True, description="Include papers that cite this paper"),
   max_hops: int = Query(1, ge=1, le=2, description="Maximum number of hops (1 or 2)"),
   session: AsyncSession = Depends(get_db),
 ):
   """Get citation graph for a paper with bidirectional connections."""
-  await get_paper_or_404(session, paper_id)  # Validate paper exists
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
   return await graph_service.build_citation_graph(
     session, paper_id, bidirectional, max_hops
   )
 
 
 @router.get("/papers/{paper_id}/citations-list")
-async def get_citations_list(paper_id: int, session: AsyncSession = Depends(get_db)):
+async def get_citations_list(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Get list of citations for a paper with full details."""
-  await get_paper_or_404(session, paper_id)  # Validate paper exists
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   citations_query = (
     select(PaperCitation)
@@ -70,11 +73,12 @@ async def get_citations_list(paper_id: int, session: AsyncSession = Depends(get_
 @router.get("/papers/{paper_id}/citations")
 async def get_citations(
   paper_id: int,
+  user: CurrentUser,
   limit: int = Query(10, ge=1, le=50),
   session: AsyncSession = Depends(get_db),
 ):
   """Get papers that cite this paper."""
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   identifier = semantic_scholar_service._get_identifier(
     doi=cast(str, paper.doi), arxiv=None
@@ -94,11 +98,12 @@ async def get_citations(
 @router.get("/papers/{paper_id}/cited-by")
 async def get_cited_by(
   paper_id: int,
+  user: CurrentUser,
   limit: int = Query(10, ge=1, le=50),
   session: AsyncSession = Depends(get_db),
 ):
   """Get papers cited by this paper."""
-  paper = await get_paper_or_404(session, paper_id)
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   identifier = semantic_scholar_service._get_identifier(
     doi=cast(str, paper.doi), arxiv=None
@@ -124,9 +129,10 @@ async def get_timeline(session: AsyncSession = Depends(get_db)):
 @router.get("/papers/{paper_id}/semantic-graph")
 async def get_semantic_graph(
   paper_id: int,
+  user: CurrentUser,
   limit: int = Query(10, ge=1, le=50),
   session: AsyncSession = Depends(get_db),
 ):
   """Get semantic similarity graph."""
-  await get_paper_or_404(session, paper_id)  # Validate paper exists
+  await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
   return await graph_service.build_semantic_graph(session, paper_id, limit)

@@ -1,14 +1,18 @@
 """Paper CRUD functions."""
 
+from datetime import datetime, timezone
+
 from fastapi import HTTPException
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.api.crud.user_paper_state import get_or_create_state
 from app.api.crud.utils import ensure_loaded
 from app.models.group import Group
 from app.models.paper import Paper, paper_group_association
 from app.models.tag import Tag, paper_tag_association
+from app.services.access import apply_visible_papers_filter
 
 
 async def get_paper_or_404(
@@ -21,6 +25,35 @@ async def get_paper_or_404(
   query = select(Paper).where(Paper.id == paper_id)
   if user_id is not None:
     query = query.where(Paper.uploaded_by_id == user_id)
+
+  if with_relations:
+    query = query.options(
+      selectinload(Paper.annotations),
+      selectinload(Paper.groups),
+      selectinload(Paper.tags),
+    )
+
+  result = await session.execute(query)
+  paper = result.scalar_one_or_none()
+
+  if not paper:
+    raise HTTPException(status_code=404, detail="Paper not found")
+
+  if with_relations:
+    ensure_loaded(paper, "tags", "groups", "annotations")
+
+  return paper
+
+
+async def get_visible_paper_or_404(
+  session: AsyncSession,
+  paper_id: int,
+  *,
+  user_id: int | None = None,
+  with_relations: bool = False,
+) -> Paper:
+  query = select(Paper).where(Paper.id == paper_id)
+  query = apply_visible_papers_filter(query, user_id)
 
   if with_relations:
     query = query.options(
@@ -146,14 +179,13 @@ async def delete_paper(session: AsyncSession, paper_id: int, *, user_id: int | N
 
   paper = await get_paper_or_404(session, paper_id, user_id=user_id)
 
-  # Delete PDF file if exists
   if paper.file_path and isinstance(paper.file_path, str):
     try:
       file_path = Path(paper.file_path)
       if file_path.exists():
         file_path.unlink()
     except Exception:
-      pass  # Continue even if file deletion fails
+      pass
 
   await session.delete(paper)
   await session.commit()
@@ -178,7 +210,6 @@ async def delete_papers_bulk(session: AsyncSession, paper_ids: list[int], *, use
       status_code=404, detail=f"Papers not found: {sorted(missing_ids)}"
     )
 
-  # Delete PDF files
   for paper in papers:
     if paper.file_path and isinstance(paper.file_path, str):
       try:
@@ -188,7 +219,6 @@ async def delete_papers_bulk(session: AsyncSession, paper_ids: list[int], *, use
       except Exception:
         pass
 
-  # Delete papers
   for paper in papers:
     await session.delete(paper)
 
@@ -196,7 +226,9 @@ async def delete_papers_bulk(session: AsyncSession, paper_ids: list[int], *, use
 
 
 async def increment_view_count(session: AsyncSession, paper_id: int, *, user_id: int | None = None) -> Paper:
-  paper = await get_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
+  paper = await get_visible_paper_or_404(
+    session, paper_id, with_relations=True, user_id=user_id
+  )
   paper.viewed_count = (paper.viewed_count or 0) + 1
   await session.commit()
   return paper
@@ -209,8 +241,6 @@ async def update_reading_status(
   *,
   user_id: int | None = None,
 ) -> Paper:
-  from datetime import datetime, timezone
-
   valid_statuses = ["not_started", "in_progress", "read", "archived"]
   if reading_status not in valid_statuses:
     raise HTTPException(
@@ -218,9 +248,12 @@ async def update_reading_status(
       detail=f"Invalid reading status. Must be one of: {', '.join(valid_statuses)}",
     )
 
-  paper = await get_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
-  paper.reading_status = reading_status
-  paper.status_updated_at = datetime.now(timezone.utc)
+  paper = await get_visible_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
+  if user_id is not None:
+    state = await get_or_create_state(session, user_id, paper_id)
+    state.reading_status = reading_status
+    state.status_updated_at = datetime.now(timezone.utc)
+    state.updated_at = datetime.now(timezone.utc)
   await session.commit()
   await session.refresh(paper, ["groups", "tags"])
 
@@ -242,8 +275,11 @@ async def update_priority(
       detail=f"Invalid priority. Must be one of: {', '.join(valid_priorities)}",
     )
 
-  paper = await get_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
-  paper.priority = priority
+  paper = await get_visible_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
+  if user_id is not None:
+    state = await get_or_create_state(session, user_id, paper_id)
+    state.priority = priority
+    state.updated_at = datetime.now(timezone.utc)
   await session.commit()
   await session.refresh(paper, ["groups", "tags"])
 

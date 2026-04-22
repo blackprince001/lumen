@@ -9,8 +9,11 @@ import { FloatingAnnotationForm } from './FloatingAnnotationForm';
 import { Warning2 as AlertCircle } from 'iconsax-reactjs';
 import { Button } from './ui/Button';
 import { type Paper, papersApi } from '@/lib/api/papers';
+import { canAnnotate } from '@/lib/utils/permissions';
 import { type Annotation } from '@/lib/api/annotations';
 import { usePDFDarkMode } from '@/hooks/use-pdf-dark-mode';
+import { fetchApi } from '@/lib/api/client';
+import { toastError } from '@/lib/utils/toast';
 
 // Set worker to a reliable CDN fallback to resolve rendering issues in different environments
 pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs`;
@@ -49,7 +52,7 @@ export function PDFViewer({
     highlightedText?: string;
     selectionData?: any;
   } | null>(null);
-  
+
   const [rotation, setRotation] = useState(0);
   const [highlightMode, setHighlightMode] = useState(false);
 
@@ -61,20 +64,39 @@ export function PDFViewer({
   const lastContainerWidthRef = useRef(0);
   const pdfDocumentRef = useRef<PDFDocumentProxy | null>(null);
 
-  const fileSource = (() => {
-    const source = paper.file_path ? (() => {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-      const base = apiUrl.split('/api/v1')[0].replace(/\/$/, '') || 'http://localhost:8000';
-      const filename = paper.file_path.split(/[/\\]/).pop() || '';
-      return filename ? `${base}/storage/${filename}` : null;
-    })() : (paper.url || null);
+  // Authenticated PDF blob loading
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
+  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
 
-    console.log('[PDFViewer] Loading source:', source, {
-      hasFilePath: !!paper.file_path,
-      hasUrl: !!paper.url
-    });
-    return source;
-  })();
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    if (paper.file_url) {
+      fetchApi<Blob>(paper.file_url, { method: 'GET', responseType: 'blob' })
+        .then((blob) => {
+          if (cancelled) return;
+          objectUrl = URL.createObjectURL(blob);
+          setPdfBlobUrl(objectUrl);
+          setPdfLoadError(null);
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          console.error('[PDFViewer] Failed to fetch PDF:', err);
+          setPdfLoadError('Failed to load PDF');
+          toastError(`PDF Loading Error: ${pdfLoadError?.toString()}`)
+        });
+    } else {
+      setPdfBlobUrl(null);
+    }
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [paper.file_url]);
+
+  const fileSource = pdfBlobUrl || paper.url || null;
 
   // ─── Handlers for toolbar actions ────────────────────────────────────────
   const handleReadingStatusChange = async (status: string) => {
@@ -98,6 +120,7 @@ export function PDFViewer({
 
 
   const handleBookmarkAdd = async () => {
+    if (!canAnnotate(paper)) return;
     try {
       await papersApi.createBookmark(paper.id, pageNumber);
       onAnnotationSuccess(); // trigger refetch
@@ -107,8 +130,13 @@ export function PDFViewer({
   };
 
   const handleDownload = () => {
-    if (fileSource && typeof fileSource === 'string') {
-      window.open(fileSource, '_blank');
+    if (pdfBlobUrl) {
+      const a = document.createElement('a');
+      a.href = pdfBlobUrl;
+      a.download = `${paper.title || 'paper'}.pdf`;
+      a.click();
+    } else if (paper.url) {
+      window.open(paper.url, '_blank');
     }
   };
 
@@ -120,8 +148,7 @@ export function PDFViewer({
       requestAnimationFrame(() => {
         const pageEl = pageRefs.current.get(pageNum);
         const scrollContainer = scrollContainerRef.current;
-        if (pageEl && scrollContainer)
-        {
+        if (pageEl && scrollContainer) {
           isScrollingRef.current = true;
           const containerRect = scrollContainer.getBoundingClientRect();
           const elementRect = pageEl.getBoundingClientRect();
@@ -133,11 +160,9 @@ export function PDFViewer({
 
           scrollContainer.scrollTo({ top: Math.max(0, scrollTop), behavior: 'smooth' });
           setTimeout(() => { isScrollingRef.current = false; }, 1000);
-        } else if (retryCount < 3)
-        {
+        } else if (retryCount < 3) {
           setTimeout(() => attemptScroll(retryCount + 1), 150);
-        } else
-        {
+        } else {
           isScrollingRef.current = false;
         }
       });
@@ -186,8 +211,7 @@ export function PDFViewer({
       let current = 1;
       let minDist = Infinity;
 
-      for (let i = 1; i <= numPages; i++)
-      {
+      for (let i = 1; i <= numPages; i++) {
         const el = pageRefs.current.get(i);
         if (!el) continue;
         const rect = el.getBoundingClientRect();
@@ -195,8 +219,7 @@ export function PDFViewer({
         if (dist < minDist) { minDist = dist; current = i; }
       }
 
-      if (current !== lastPageNumberRef.current)
-      {
+      if (current !== lastPageNumberRef.current) {
         lastPageNumberRef.current = current;
         setPageNumber(current);
         onCurrentPageChange?.(current);
@@ -227,11 +250,9 @@ export function PDFViewer({
       const newSizes = new Map<number, { width: number; height: number }>();
       pageRefs.current.forEach((pageEl, pageNum) => {
         const canvas = pageEl.querySelector('canvas') as HTMLCanvasElement | null;
-        if (canvas)
-        {
+        if (canvas) {
           const rect = canvas.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0)
-          {
+          if (rect.width > 0 && rect.height > 0) {
             newSizes.set(pageNum, { width: rect.width, height: rect.height });
           }
         }
@@ -244,8 +265,7 @@ export function PDFViewer({
 
   // ─── TOC extraction ───────────────────────────────────────────────────────
   const extractTOC = useCallback(async (pdf: PDFDocumentProxy) => {
-    try
-    {
+    try {
       if (typeof (pdf as any).getOutline !== 'function') return;
       await new Promise(r => setTimeout(r, 100));
       const outline = await (pdf as any).getOutline();
@@ -253,68 +273,50 @@ export function PDFViewer({
 
       const processOutline = async (items: any[]): Promise<TOCItem[]> => {
         const processed: TOCItem[] = [];
-        for (const item of items)
-        {
+        for (const item of items) {
           let pageNum = 1;
-          if (item.dest || item.url)
-          {
-            try
-            {
+          if (item.dest || item.url) {
+            try {
               let dest = item.dest || item.url;
               let resolvedDest: any = null;
 
-              if (typeof dest === 'string')
-              {
-                if (typeof (pdf as any).getDestination === 'function')
-                {
+              if (typeof dest === 'string') {
+                if (typeof (pdf as any).getDestination === 'function') {
                   resolvedDest = await (pdf as any).getDestination(dest);
                 }
-              } else if (Array.isArray(dest) && dest.length > 0 && typeof dest[0] === 'string')
-              {
-                if (typeof (pdf as any).getDestination === 'function')
-                {
+              } else if (Array.isArray(dest) && dest.length > 0 && typeof dest[0] === 'string') {
+                if (typeof (pdf as any).getDestination === 'function') {
                   resolvedDest = await (pdf as any).getDestination(dest);
                 }
-              } else if (Array.isArray(dest))
-              {
+              } else if (Array.isArray(dest)) {
                 resolvedDest = dest;
-              } else if (dest && typeof dest === 'object')
-              {
+              } else if (dest && typeof dest === 'object') {
                 resolvedDest = dest;
               }
 
               let pageRef: any = null;
-              if (Array.isArray(resolvedDest) && resolvedDest.length > 0)
-              {
+              if (Array.isArray(resolvedDest) && resolvedDest.length > 0) {
                 pageRef = resolvedDest[0];
-              } else if (resolvedDest && typeof resolvedDest === 'object' && !Array.isArray(resolvedDest))
-              {
+              } else if (resolvedDest && typeof resolvedDest === 'object' && !Array.isArray(resolvedDest)) {
                 pageRef = resolvedDest;
-              } else if (dest && typeof dest === 'object' && !Array.isArray(dest))
-              {
+              } else if (dest && typeof dest === 'object' && !Array.isArray(dest)) {
                 pageRef = dest;
               }
 
-              if (pageRef && typeof (pdf as any).getPageIndex === 'function')
-              {
-                try
-                {
+              if (pageRef && typeof (pdf as any).getPageIndex === 'function') {
+                try {
                   const idx = await (pdf as any).getPageIndex(pageRef);
-                  if (idx !== null && idx !== undefined && !isNaN(idx) && idx >= 0 && idx < pdf.numPages)
-                  {
+                  if (idx !== null && idx !== undefined && !isNaN(idx) && idx >= 0 && idx < pdf.numPages) {
                     pageNum = Math.floor(idx) + 1;
                   }
-                } catch
-                {
-                  if (pageRef && typeof pageRef === 'object' && 'num' in pageRef && typeof pageRef.num === 'number')
-                  {
+                } catch {
+                  if (pageRef && typeof pageRef === 'object' && 'num' in pageRef && typeof pageRef.num === 'number') {
                     const n = pageRef.num;
                     if (n >= 1 && n <= pdf.numPages) pageNum = Math.floor(n);
                     else if (n >= 0 && n < pdf.numPages) pageNum = Math.floor(n) + 1;
                   }
                 }
-              } else if (typeof pageRef === 'number' && pageRef > 0)
-              {
+              } else if (typeof pageRef === 'number' && pageRef > 0) {
                 if (pageRef >= 1 && pageRef <= pdf.numPages) pageNum = Math.floor(pageRef);
                 else if (pageRef < pdf.numPages) pageNum = Math.floor(pageRef) + 1;
               }
@@ -335,8 +337,7 @@ export function PDFViewer({
       };
 
       setTocItems(await processOutline(outline));
-    } catch
-    {
+    } catch {
       setTocItems(null);
     }
   }, []);
@@ -368,8 +369,7 @@ export function PDFViewer({
   // ─── Text selection → annotation form ────────────────────────────────────
   const handleMouseUp = useCallback(() => {
     const selection = window.getSelection();
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0)
-    {
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
       setFloatingFormData(null);
       return;
     }
@@ -381,11 +381,9 @@ export function PDFViewer({
     // Find which page contains the selection
     let selectedPage: number | null = null;
     let pageElement: HTMLElement | null = null;
-    for (let i = 1; i <= (numPages || 0); i++)
-    {
+    for (let i = 1; i <= (numPages || 0); i++) {
       const el = pageRefs.current.get(i);
-      if (el && el.contains(range.commonAncestorContainer))
-      {
+      if (el && el.contains(range.commonAncestorContainer)) {
         selectedPage = i;
         pageElement = el;
         break;
@@ -415,6 +413,8 @@ export function PDFViewer({
         height: Math.abs(endY - startY),
       },
     };
+
+    if (!canAnnotate(paper)) return;
 
     setFloatingFormData({
       coordinates: { page: selectedPage, x: (startX + endX) / 2, y: (startY + endY) / 2 },
@@ -580,8 +580,7 @@ export function PDFViewer({
                           const el = pageRefs.current.get(page);
                           // Note: getPage is async in PDF.js but react-pdf might have it cached.
                           // We'll pass it if we can, else analyzer falls back to OCR.
-                          if (el)
-                          {
+                          if (el) {
                             pdfDocumentRef.current?.getPage(page).then(p => {
                               analyzePageForImages(el, page, p);
                             }).catch(() => {
