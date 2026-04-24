@@ -15,6 +15,8 @@ from app.api.crud import (
   list_groups,
   update_group,
 )
+from app.api.crud.enrichment import enrich_paper_with_user_state
+from app.api.crud.user_paper_state import batch_get_states
 from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.group import Group
 from app.models.sharing import GroupShare
@@ -43,6 +45,26 @@ def _serialize_group_share(share: GroupShare) -> ShareRecipient:
   )
 
 
+def _collect_group_paper_ids(group: Group) -> set[int]:
+  paper_ids = {cast(int, paper.id) for paper in group.papers or [] if paper.id is not None}
+  for child in group.children or []:
+    paper_ids.update(_collect_group_paper_ids(child))
+  return paper_ids
+
+
+def _group_to_schema(group: Group, user_states: dict[int, object]) -> GroupSchema:
+  data = GroupSchema.model_validate(group).model_dump()
+  data["papers"] = [
+    enrich_paper_with_user_state(paper, user_states.get(cast(int, paper.id)))
+    for paper in group.papers or []
+  ]
+  data["children"] = [
+    _group_to_schema(child, user_states)
+    for child in group.children or []
+  ]
+  return GroupSchema(**data)
+
+
 async def _get_owned_group_or_403(
   session: AsyncSession, group_id: int, user: CurrentUser
 ) -> Group:
@@ -57,36 +79,48 @@ async def _get_owned_group_or_403(
 
 @router.get("/groups", response_model=List[GroupSchema])
 async def list_groups_endpoint(user: CurrentUser, session: AsyncSession = Depends(get_db)):
-  groups = await list_groups(session, user_id=scoped_user_id(user))
-  return [GroupSchema.model_validate(g) for g in groups]
+  user_id = scoped_user_id(user)
+  groups = await list_groups(session, user_id=user_id)
+  paper_ids = sorted({paper_id for group in groups for paper_id in _collect_group_paper_ids(group)})
+  user_states = await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  return [_group_to_schema(group, user_states) for group in groups]
 
 
 @router.post("/groups", response_model=GroupSchema, status_code=201)
 async def create_group_endpoint(
   group_in: GroupCreate, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
-  group = await create_group(session, group_in.name, group_in.parent_id, user_id=scoped_user_id(user))
-  return GroupSchema.model_validate(group)
+  user_id = scoped_user_id(user)
+  group = await create_group(session, group_in.name, group_in.parent_id, user_id=user_id)
+  paper_ids = sorted(_collect_group_paper_ids(group))
+  user_states = await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  return _group_to_schema(group, user_states)
 
 
 @router.get("/groups/{group_id}", response_model=GroupSchema)
 async def get_group_endpoint(group_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
-  group = await get_visible_group_or_404(session, group_id, with_relations=True, user_id=scoped_user_id(user))
-  return GroupSchema.model_validate(group)
+  user_id = scoped_user_id(user)
+  group = await get_visible_group_or_404(session, group_id, with_relations=True, user_id=user_id)
+  paper_ids = sorted(_collect_group_paper_ids(group))
+  user_states = await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  return _group_to_schema(group, user_states)
 
 
 @router.patch("/groups/{group_id}", response_model=GroupSchema)
 async def update_group_endpoint(
   group_id: int, group_update: GroupUpdate, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
+  user_id = scoped_user_id(user)
   group = await update_group(
     session,
     group_id,
     name=group_update.name,
     parent_id=group_update.parent_id,
-    user_id=scoped_user_id(user),
+    user_id=user_id,
   )
-  return GroupSchema.model_validate(group)
+  paper_ids = sorted(_collect_group_paper_ids(group))
+  user_states = await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  return _group_to_schema(group, user_states)
 
 
 @router.delete("/groups/{group_id}", status_code=204)
