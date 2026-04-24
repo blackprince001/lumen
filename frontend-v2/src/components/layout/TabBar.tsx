@@ -30,19 +30,15 @@ export function TabBar() {
     const { tabId, wasActive } = pending;
     const stillExists = tabs.some((t) => t.id === tabId);
 
-    if (!stillExists && wasActive && tabs.length > 0)
-    {
+    if (!stillExists && wasActive && tabs.length > 0) {
       const activeTab = tabs.find((t) => t.id === activeTabId);
-      if (activeTab && location.pathname !== activeTab.url)
-      {
+      if (activeTab && location.pathname !== activeTab.url) {
         navigate(activeTab.url);
-      } else if (!activeTab)
-      {
+      } else if (!activeTab) {
         const last = tabs[tabs.length - 1];
         if (last) { setActiveTab(last.id); navigate(last.url); }
       }
-    } else if (!stillExists && wasActive && tabs.length === 0)
-    {
+    } else if (!stillExists && wasActive && tabs.length === 0) {
       if (location.pathname.startsWith('/papers/')) navigate('/');
     }
 
@@ -53,7 +49,7 @@ export function TabBar() {
 
   return (
     <div className="relative bg-[var(--white)] overflow-x-auto border-b border-[var(--border)]">
-      <div className="flex items-end gap-0.5 min-h-[2.25rem] bg-[var(--background)]">
+      <div className="flex items-end gap-0.5 min-h-[2.25rem] bg-[var(--white)]">
         {tabs.map((tab) => {
           const isActive = activeTabId === tab.id;
           return (

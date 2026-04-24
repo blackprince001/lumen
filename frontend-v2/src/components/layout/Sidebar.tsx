@@ -164,9 +164,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   };
 
   return (
-    <aside className="w-full h-full bg-[var(--white)] flex flex-col border-r border-[var(--border)] overflow-hidden">
+    <aside className="w-full h-full rounded-[var(--panel-radius)] border border-[var(--panel-border)] bg-[var(--panel-surface)] shadow-[var(--shadow-panel)] backdrop-blur-sm flex flex-col overflow-hidden">
       {/* Brand / collapse toggle */}
-      <div className={cn('flex items-center h-12 shrink-0', isOpen ? 'px-3 py-8 justify-between' : 'py-8 justify-center')}>
+      <div className={cn('flex items-center h-12 shrink-0 px-3 mt-2', isOpen ? 'justify-between' : 'justify-center')}>
         {isOpen && (
           <Link to="/" className="group flex items-center gap-2.5">
             <Logo size={52} className="shrink-0 group-hover:opacity-80 transition-opacity" />
@@ -185,7 +185,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-0.5">
         {CORE_NAV.map((item) => (
           <NavItem key={item.href} {...item} isOpen={isOpen} isActive={isActive(item.href)} />
         ))}
@@ -223,7 +223,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       </nav>
 
       {/* Pinned bottom */}
-      <div className="border-t border-[var(--border)] py-2 px-2 shrink-0">
+      <div className="border-t border-[var(--panel-border)] py-2.5 px-2.5 shrink-0 bg-[var(--panel-surface-muted)]">
         <NavItem
           href="/discovery-archive"
           icon={Archive}

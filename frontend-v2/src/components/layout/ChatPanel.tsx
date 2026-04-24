@@ -57,7 +57,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
   if (!isOpen) return null;
 
   return (
-    <div className="w-full h-full bg-[var(--white)] border-l border-[var(--border)] flex flex-col overflow-hidden">
+    <div className="w-full h-full rounded-[var(--panel-radius)] border border-[var(--panel-border)] bg-[var(--panel-surface)] shadow-[var(--shadow-panel)] backdrop-blur-sm flex flex-col overflow-hidden">
       {!paperId || !paper ? (
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[var(--muted-foreground)] opacity-50">
           <FileText size={32} className="mb-3" />
@@ -66,7 +66,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* Tab header */}
-          <div className="flex items-center justify-between shrink-0 border-b border-[var(--border)] px-3 py-4.5 bg-[var(--white)] px-1">
+          <div className="flex items-center justify-between shrink-0 border-b border-[var(--panel-border)] px-3 py-2.5 bg-[var(--panel-surface)]">
             <TabsList className="gap-0 border-none bg-transparent px-0 flex-1 overflow-x-auto scrollbar-none items-center">
               <TabsTrigger value="details" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
                 <FileText size={13} />
@@ -120,7 +120,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-hidden relative">
+          <div className="flex-1 overflow-hidden relative bg-[var(--panel-surface)]">
             <TabsContent value="details" className="h-full overflow-y-auto scrollbar-none">
               <PaperDetails paper={paper} onDelete={() => { }} />
             </TabsContent>

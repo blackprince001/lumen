@@ -54,6 +54,14 @@
   --shadow-elevated: 0px 4px 16px rgba(0, 0, 0, 0.08), 0px 1px 4px rgba(0, 0, 0, 0.04);
   --shadow-modal: 0px 8px 32px rgba(0, 0, 0, 0.12), 0px 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-focus: 0 0 0 2px rgba(35, 41, 39, 0.12);
+  --shadow-panel: 0px 18px 48px rgba(15, 24, 21, 0.08), 0px 2px 6px rgba(15, 24, 21, 0.05);
+
+  /* ===== FLOATING PANELS ===== */
+  --panel-surface: rgba(255, 255, 255, 0.96);
+  --panel-surface-muted: #FAFAF9;
+  --panel-border: rgba(22, 29, 26, 0.1);
+  --panel-radius: 1.25rem;
+  --panel-gap: 0.25rem;
 
   /* ===== NOTIFICATION BANNER ===== */
   --banner-bg: #FFF9E6;
@@ -161,6 +169,10 @@
   --shadow-elevated: 0px 4px 16px rgba(0, 0, 0, 0.45), 0px 1px 4px rgba(0, 0, 0, 0.25);
   --shadow-modal: 0px 8px 32px rgba(0, 0, 0, 0.55), 0px 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-focus: 0 0 0 2px rgba(255, 255, 255, 0.12);
+  --shadow-panel: 0px 20px 54px rgba(0, 0, 0, 0.32), 0px 2px 8px rgba(0, 0, 0, 0.18);
+  --panel-surface: rgba(26, 26, 26, 0.94);
+  --panel-surface-muted: #202020;
+  --panel-border: rgba(255, 255, 255, 0.08);
 
   --background: var(--off-white);
   --foreground: var(--charcoal);

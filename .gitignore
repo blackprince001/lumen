@@ -5,3 +5,4 @@ letsencrypt/*
 .claude
 .cursor
 docker-compose.yaml
+*.md

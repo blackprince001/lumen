@@ -107,7 +107,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--card)]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--panel-border)] bg-[var(--panel-surface)]">
         <div>
           <h2 className="text-body font-medium">{groupName}</h2>
           <p className="text-caption text-[var(--muted-foreground)]">
@@ -188,7 +188,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
       </div>
 
       {/* Input */}
-      <div className="border-t border-[var(--border)] p-3 shrink-0">
+      <div className="border-t border-[var(--panel-border)] p-3 shrink-0 bg-[var(--panel-surface)]">
         <textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -196,7 +196,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
           placeholder="Ask about these papers... (Enter to send)"
           disabled={isStreaming}
           rows={2}
-          className="w-full px-3 py-2 text-code bg-[var(--white)] border border-[var(--border)] rounded-lg resize-none focus:outline-none focus:border-[var(--primary)] placeholder:text-[var(--muted-foreground)]"
+          className="w-full px-3 py-2 text-code bg-[var(--panel-surface-muted)] border border-[var(--panel-border)] rounded-xl resize-none focus:outline-none focus:border-[var(--primary)] placeholder:text-[var(--muted-foreground)]"
         />
         <div className="flex justify-end mt-2">
           <Button
@@ -213,4 +213,3 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     </div>
   );
 }
-

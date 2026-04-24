@@ -7,7 +7,7 @@ import { TabBar } from './TabBar';
 
 const SIDEBAR_MIN = 52;
 const SIDEBAR_SNAP_CLOSE = 140;  // below this → snap to collapsed icon-only mode
-const SIDEBAR_DEFAULT = 220;
+const SIDEBAR_DEFAULT = 260;
 const SIDEBAR_MAX = 360;
 
 const CHAT_MIN = 52;          // collapsed sliver width
@@ -43,16 +43,13 @@ function ResizeDivider({ onDrag }: { onDrag: (dx: number) => void }) {
   return (
     <div
       onMouseDown={onMouseDown}
-      className="w-2 shrink-0 cursor-col-resize group relative z-10 flex items-center justify-center"
+      className="hidden md:flex w-1 shrink-0 cursor-col-resize group relative z-10 items-center justify-center py-4"
     >
-      {/* Wide invisible hit area */}
       <div className="absolute inset-y-0 -left-2 -right-2" />
-      {/* Visible line — shows on hover/drag */}
-      <div className="w-px h-full bg-[var(--border)] group-hover:bg-[var(--mid-gray)] group-active:bg-[var(--foreground)] transition-colors duration-150" />
-      {/* Drag handle dots */}
+      <div className="h-full w-px rounded-full bg-transparent transition-colors duration-150" />
       <div className="absolute top-1/2 -translate-y-1/2 flex flex-col gap-[0.25rem] opacity-0 group-hover:opacity-100 transition-opacity">
         {[0,1,2].map(i => (
-          <div key={i} className="w-1 h-1 rounded-full bg-[var(--mid-gray)]" />
+          <div key={i} className="w-1 h-1 rounded-full bg-[var(--mid-gray)] opacity-80" />
         ))}
       </div>
     </div>
@@ -115,10 +112,13 @@ export default function Layout() {
   const sidebarCollapsed = sidebarWidth <= SIDEBAR_MIN + 20;
 
   return (
-    <div className="w-full h-dvh flex overflow-hidden bg-[var(--background)]">
+    <div
+      className="w-full h-dvh flex overflow-hidden bg-[var(--background)] p-1 gap-[var(--panel-gap)]"
+      style={{ backgroundImage: 'linear-gradient(180deg, rgba(60,145,230,0.05) 0%, transparent 26%)' }}
+    >
       {/* === Desktop Sidebar — left column === */}
       <div
-        className="hidden md:flex shrink-0"
+        className="hidden md:flex shrink-0 min-h-0"
         style={{ width: sidebarWidth }}
       >
         <Sidebar
@@ -130,9 +130,7 @@ export default function Layout() {
       </div>
 
       {/* Sidebar resize divider */}
-      <div className="hidden md:flex">
-        <ResizeDivider onDrag={onSidebarDrag} />
-      </div>
+      <ResizeDivider onDrag={onSidebarDrag} />
 
       {/* === Mobile Sidebar Overlay (scrim) === */}
       {mobileMenuOpen && (
@@ -144,7 +142,7 @@ export default function Layout() {
 
       {/* === Mobile Sidebar Drawer === */}
       <div
-        className={`fixed inset-y-0 left-0 z-[70] w-[13.75rem] transform transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-[70] w-[15rem] p-1 transform transition-transform duration-300 ease-out md:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -152,7 +150,7 @@ export default function Layout() {
       </div>
 
       {/* === Center: Navbar + Page === */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden rounded-[var(--panel-radius)] border border-[var(--panel-border)] bg-[var(--panel-surface)] shadow-[var(--shadow-panel)] backdrop-blur-sm">
         <Navbar
           onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
           showChatToggle={isPaperDetailPage && !chatPanelOpen}
@@ -162,7 +160,7 @@ export default function Layout() {
           }}
         />
         {isPaperDetailPage && <TabBar />}
-        <main className={`flex-1 w-full bg-[var(--background)] ${isPaperDetailPage ? 'overflow-hidden' : 'overflow-auto'}`}>
+        <main className={`flex-1 w-full bg-[var(--panel-surface)] ${isPaperDetailPage ? 'overflow-hidden' : 'overflow-auto'}`}>
           <Outlet context={{ 
             chatPanelOpen, 
             setChatPanelOpen,
@@ -178,7 +176,7 @@ export default function Layout() {
           {/* Chat resize divider */}
           <ResizeDivider onDrag={onChatDrag} />
           <div
-            className="shrink-0 hidden md:flex"
+            className="shrink-0 hidden md:flex min-h-0"
             style={{ width: chatWidth }}
           >
             <ChatPanel
