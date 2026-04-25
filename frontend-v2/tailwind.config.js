@@ -8,25 +8,25 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', 'monospace'],
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+        mono: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       fontSize: {
-        // DESIGN.md typography scale
-        'micro': ['0.6875rem', { lineHeight: '1.4em', fontWeight: '500' }],
-        'caption': ['0.8125rem', { lineHeight: '1.4em', fontWeight: '500', letterSpacing: '0.02em' }],
-        'body': ['0.9375rem', { lineHeight: '1.4em', fontWeight: '500' }],
-        'body-lg': ['1.0625rem', { lineHeight: '1.5em', fontWeight: '400' }],
-        'btn-sm': ['0.9375rem', { lineHeight: '1.4em', fontWeight: '500' }],
-        'btn': ['1rem', { lineHeight: '1.75em', fontWeight: '500' }],
-        'btn-lg': ['1.3125rem', { lineHeight: '1.4em', fontWeight: '500' }],
-        'subsection': ['1.3125rem', { lineHeight: '1.4em', fontWeight: '500' }],
-        'page-title': ['1.625rem', { lineHeight: '1.4em', fontWeight: '700', letterSpacing: '-0.01em' }],
-        'section-title': ['2rem', { lineHeight: '1.3em', fontWeight: '700', letterSpacing: '-0.01em' }],
-        'display': ['2.5rem', { lineHeight: '1.3em', fontWeight: '700', letterSpacing: '-0.02em' }],
-        'code': ['0.875rem', { lineHeight: '1.5em', fontWeight: '400' }],
-        'subheading': ['1.1875rem', { lineHeight: '1.4em', fontWeight: '600' }],
-        'stat': ['1.8125rem', { lineHeight: '1.2em', fontWeight: '700' }],
+        // Logically.app typography scale
+        'micro': ['11px', { lineHeight: '15.4px', fontWeight: '500' }],
+        'caption': ['12px', { lineHeight: '16.8px', fontWeight: '400' }],
+        'code': ['13px', { lineHeight: '18.2px', fontWeight: '400' }],
+        'body': ['14px', { lineHeight: '19.6px', fontWeight: '500' }],
+        'btn-sm': ['14px', { lineHeight: '19.6px', fontWeight: '500' }],
+        'btn': ['15px', { lineHeight: '26.25px', fontWeight: '500' }],
+        'body-lg': ['16px', { lineHeight: 'normal', fontWeight: '400' }],
+        'subheading': ['19px', { lineHeight: '26.6px', fontWeight: '600' }],
+        'subsection': ['20px', { lineHeight: '28px', fontWeight: '500' }],
+        'btn-lg': ['21px', { lineHeight: '29.4px', fontWeight: '500' }],
+        'page-title': ['25px', { lineHeight: '35px', fontWeight: '700' }],
+        'stat': ['29px', { lineHeight: '34.8px', fontWeight: '700' }],
+        'section-title': ['31px', { lineHeight: '40.3px', fontWeight: '700' }],
+        'display': ['39px', { lineHeight: '50.7px', fontWeight: '700' }],
       },
       colors: {
         // All theme-aware via CSS variables

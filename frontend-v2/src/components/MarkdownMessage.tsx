@@ -34,7 +34,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             ) : (
-              <code className="bg-[var(--muted)] px-1.5 py-0.5 rounded text-caption font-mono" {...props}>
+              <code className="bg-[var(--muted)] px-1.5 py-0.5 rounded text-caption" {...props}>
                 {children}
               </code>
             );

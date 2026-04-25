@@ -168,17 +168,35 @@ export default function GroupDetail() {
               {papers.length} {papers.length === 1 ? 'paper' : 'papers'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end">
             {papers.length > 0 && (
-              <Button variant="secondary" icon={<MessageSquare size={14} />} onClick={() => setIsChatOpen(true)}>
-                Chat with Group
+              <Button
+                variant="secondary"
+                icon={<MessageSquare size={14} />}
+                onClick={() => setIsChatOpen(true)}
+                className="px-2.5 sm:px-3"
+                aria-label="Chat with group"
+              >
+                <span className="hidden sm:inline">Chat with Group</span>
               </Button>
             )}
-            <Button variant="secondary" icon={<Plus size={14} />} onClick={() => navigate('/ingest')}>
-              Add Paper
+            <Button
+              variant="secondary"
+              icon={<Plus size={14} />}
+              onClick={() => navigate('/ingest')}
+              className="px-2.5 sm:px-3"
+              aria-label="Add paper"
+            >
+              <span className="hidden sm:inline">Add Paper</span>
             </Button>
-            <Button variant="secondary" icon={<Folder size={14} />} onClick={() => setIsSubgroupOpen(true)}>
-              Add Subgroup
+            <Button
+              variant="secondary"
+              icon={<Folder size={14} />}
+              onClick={() => setIsSubgroupOpen(true)}
+              className="px-2.5 sm:px-3"
+              aria-label="Add subgroup"
+            >
+              <span className="hidden sm:inline">Add Subgroup</span>
             </Button>
             <Button variant="ghost" className="!h-9 !w-9 !p-0" onClick={() => setShareOpen(true)} title="Share Group">
               <Share size={16} />

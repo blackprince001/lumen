@@ -34,23 +34,23 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
       <div className="bg-[var(--white)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
         {isLoading || !data ? (
-          <div className="h-32 flex items-center justify-center text-sm text-[var(--muted-foreground)]">Loading…</div>
+          <div className="h-32 flex items-center justify-center text-body text-[var(--muted-foreground)]">Loading…</div>
         ) : (
           <>
             <div className="flex items-center gap-3 mb-4">
               {data.avatar_url ? (
                 <img src={data.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-sm font-semibold">
+                <div className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-body font-semibold">
                   {data.display_name.slice(0, 2).toUpperCase()}
                 </div>
               )}
               <div>
-                <p className="font-medium text-sm text-[var(--foreground)]">{data.display_name}</p>
-                <p className="text-xs text-[var(--muted-foreground)]">{data.email}</p>
+                <p className="font-medium text-body text-[var(--foreground)]">{data.display_name}</p>
+                <p className="text-caption text-[var(--muted-foreground)]">{data.email}</p>
               </div>
             </div>
-            <div className="space-y-2 text-sm">
+            <div className="space-y-2 text-body">
               {[
                 ['Organization', data.organization],
                 ['Department', data.department],
@@ -69,7 +69,7 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
                 </div>
               ))}
             </div>
-            <button onClick={onClose} className="mt-5 w-full h-8 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors">
+            <button onClick={onClose} className="mt-5 w-full h-8 rounded-lg border border-[var(--border)] text-body hover:bg-[var(--muted)] transition-colors">
               Close
             </button>
           </>
@@ -126,8 +126,8 @@ export default function UserManagement() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-[var(--foreground)]">User Management</h1>
-        <p className="text-sm text-[var(--muted-foreground)] mt-0.5">{users.length} users</p>
+        <h1 className="text-subsection font-semibold text-[var(--foreground)]">User Management</h1>
+        <p className="text-body text-[var(--muted-foreground)] mt-0.5">{users.length} users</p>
       </div>
 
       {/* Filters */}
@@ -138,7 +138,7 @@ export default function UserManagement() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search users…"
-            className="w-full h-9 pl-8 pr-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            className="w-full h-9 pl-8 pr-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-body focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
           />
         </div>
         <div className="w-40">
@@ -165,27 +165,27 @@ export default function UserManagement() {
 
       {/* Table */}
       <div className="border border-[var(--border)] rounded-xl overflow-hidden">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead className="bg-[var(--muted)] border-b border-[var(--border)]">
             <tr>
               {(['display_name', 'email', 'organization', 'role'] as const).map((f) => (
                 <th
                   key={f}
                   onClick={() => toggleSort(f)}
-                  className="text-left px-4 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide cursor-pointer hover:text-[var(--foreground)] select-none"
+                  className="text-left px-4 py-2.5 text-caption font-semibold text-[var(--muted-foreground)] uppercase tracking-wide cursor-pointer hover:text-[var(--foreground)] select-none"
                 >
                   <span className="flex items-center gap-1">{f.replace('_', ' ')} <SortIcon field={f} /></span>
                 </th>
               ))}
-              <th className="text-left px-4 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">Status</th>
+              <th className="text-left px-4 py-2.5 text-caption font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">Status</th>
               <th className="px-4 py-2.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-[var(--border)]">
             {isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">Loading…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-body text-[var(--muted-foreground)]">Loading…</td></tr>
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">No users found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-body text-[var(--muted-foreground)]">No users found</td></tr>
             ) : sorted.map((user) => (
               <tr key={user.id} className="hover:bg-[var(--muted)] transition-colors">
                 <td className="px-4 py-3">

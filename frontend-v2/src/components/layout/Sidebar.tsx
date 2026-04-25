@@ -170,7 +170,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {isOpen && (
           <Link to="/" className="group flex items-center gap-2.5">
             <Logo size={52} className="shrink-0 group-hover:opacity-80 transition-opacity" />
-            <span className="text-xl font-bold tracking-tight text-[var(--foreground)] group-hover:opacity-70 transition-opacity">
+            <span className="text-subsection font-bold tracking-tight text-[var(--foreground)] group-hover:opacity-70 transition-opacity">
               Lumen
             </span>
           </Link>

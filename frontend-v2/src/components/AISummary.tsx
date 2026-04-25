@@ -111,11 +111,11 @@ export function AISummary({ paperId }: AISummaryProps) {
                   const match = /language-(\w+)/.exec(className || '');
                   const inline = !match;
                   return inline ? (
-                    <code className="bg-[var(--muted)] px-1 py-0.5 rounded text-caption font-mono" {...props}>
+                    <code className="bg-[var(--muted)] px-1 py-0.5 rounded text-caption" {...props}>
                       {children}
                     </code>
                   ) : (
-                    <code className="block bg-[var(--muted)] p-3 rounded-lg text-caption font-mono overflow-x-auto my-4 border border-[var(--border)]" {...props}>
+                    <code className="block bg-[var(--muted)] p-3 rounded-lg text-caption overflow-x-auto my-4 border border-[var(--border)]" {...props}>
                       {children}
                     </code>
                   );

@@ -65,7 +65,7 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
           value={editedFindings || JSON.stringify(findingsData, null, 2)}
           onChange={(e) => setEditedFindings(e.target.value)}
           rows={15}
-          className="w-full text-caption font-mono bg-[var(--white)]"
+          className="w-full text-caption bg-[var(--white)]"
           autoFocus
         />
         <div className="flex items-center gap-2">
@@ -122,7 +122,7 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
                     components={{
                       p: ({ children }) => <span>{children}</span>,
                       a: ({ href, children }) => <a href={href} className="text-[var(--sky-blue)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
-                      code: ({ children }) => <code className="bg-[var(--muted)] px-1 py-0.5 rounded text-caption font-mono">{children}</code>
+                      code: ({ children }) => <code className="bg-[var(--muted)] px-1 py-0.5 rounded text-caption">{children}</code>
                     }}
                   >
                     {item}

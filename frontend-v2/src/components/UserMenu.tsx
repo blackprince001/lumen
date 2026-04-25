@@ -67,14 +67,14 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
         <div className="absolute bottom-full left-0 mb-1 w-48 bg-[var(--white)] border border-[var(--border)] rounded-xl shadow-lg py-1 z-50">
           {isOpen && (
             <div className="px-3 py-2 border-b border-[var(--border)] mb-1">
-              <p className="text-xs font-medium text-[var(--foreground)] truncate">{user?.display_name}</p>
+              <p className="text-caption font-medium text-[var(--foreground)] truncate">{user?.display_name}</p>
               <p className="text-[11px] text-[var(--muted-foreground)] truncate">{user?.email}</p>
             </div>
           )}
           <Link
             to="/settings"
             onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-2.5 px-3 h-8 text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+            className="flex items-center gap-2.5 px-3 h-8 text-body text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
           >
             <Settings size={13} /> Settings
           </Link>
@@ -82,14 +82,14 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
             <Link
               to="/admin/users"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 h-8 text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+              className="flex items-center gap-2.5 px-3 h-8 text-body text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
             >
               <Shield size={13} /> User Management
             </Link>
           )}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2.5 px-3 h-8 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left"
+            className="flex items-center gap-2.5 px-3 h-8 text-body text-red-600 hover:bg-red-50 transition-colors w-full text-left"
           >
             <LogOut size={13} /> Sign out
           </button>

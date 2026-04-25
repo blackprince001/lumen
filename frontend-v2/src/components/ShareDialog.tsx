@@ -64,31 +64,44 @@ export function ShareDialog({ open, onClose, resourceId, resourceType, resourceT
   const shares = data?.shares ?? [];
 
   return (
-    <Dialog open={open} onClose={onClose} title={`Share "${resourceTitle}"`} size="lg">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={`Share "${resourceTitle}"`}
+      size="xl"
+      className="sm:max-w-3xl"
+    >
       <div className="space-y-4">
         {/* Add recipients */}
-        <div className="flex gap-2">
-          <input
-            type="text"
+        <div className="flex flex-col gap-2">
+          <textarea
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleShare()}
-            placeholder="Enter email addresses (comma-separated)"
-            className="flex-1 px-3 py-2 text-body border border-[var(--border)] rounded-interactive bg-[var(--white)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)]"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                handleShare();
+              }
+            }}
+            placeholder="Enter email addresses, separated by commas, spaces, or new lines"
+            rows={4}
+            className="w-full min-h-[96px] px-3 py-2 text-body border border-[var(--border)] rounded-interactive bg-[var(--white)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)] resize-y leading-relaxed"
           />
-          <div className="w-32 shrink-0">
-            <Select
-              value={permission}
-              onChange={(e) => setPermission(e.target.value as SharePermission)}
-            >
-              <option value="viewer">Viewer</option>
-              <option value="editor">Editor</option>
-            </Select>
+          <div className="flex items-center justify-between gap-2">
+            <div className="w-32 shrink-0">
+              <Select
+                value={permission}
+                onChange={(e) => setPermission(e.target.value as SharePermission)}
+              >
+                <option value="viewer">Viewer</option>
+                <option value="editor">Editor</option>
+              </Select>
+            </div>
+            <Button onClick={handleShare} disabled={shareMutation.isPending || !emailInput.trim()}>
+              <UserAdd size={16} />
+              Share
+            </Button>
           </div>
-          <Button onClick={handleShare} disabled={shareMutation.isPending || !emailInput.trim()}>
-            <UserAdd size={16} />
-            Share
-          </Button>
         </div>
 
         {feedback && (

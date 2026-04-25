@@ -81,12 +81,12 @@ export function AddToLibraryDialog({ paper, onClose }: AddToLibraryDialogProps) 
         className="bg-[var(--white)] border border-[var(--border)] rounded-2xl p-5 w-full max-w-sm shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-sm font-semibold text-[var(--foreground)] mb-1">Add to Library</h2>
-        <p className="text-xs text-[var(--muted-foreground)] mb-4 line-clamp-2">{paper.title}</p>
+        <h2 className="text-body font-semibold text-[var(--foreground)] mb-1">Add to Library</h2>
+        <p className="text-caption text-[var(--muted-foreground)] mb-4 line-clamp-2">{paper.title}</p>
 
         {groups.length > 0 && (
           <>
-            <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">
+            <p className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-2">
               Add to group (optional)
             </p>
             <div className="max-h-48 overflow-y-auto space-y-1 mb-4">
@@ -97,7 +97,7 @@ export function AddToLibraryDialog({ paper, onClose }: AddToLibraryDialogProps) 
                     key={group.id}
                     onClick={() => toggleGroup(group.id)}
                     className={cn(
-                      'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left',
+                      'w-full flex items-center gap-2 px-3 py-2 rounded-lg text-body transition-colors text-left',
                       selected
                         ? 'bg-[var(--foreground)] text-[var(--white)]'
                         : 'hover:bg-[var(--muted)] text-[var(--foreground)]'
@@ -116,14 +116,14 @@ export function AddToLibraryDialog({ paper, onClose }: AddToLibraryDialogProps) 
         <div className="flex gap-2">
           <button
             onClick={onClose}
-            className="flex-1 h-9 rounded-lg border border-[var(--border)] text-sm hover:bg-[var(--muted)] transition-colors"
+            className="flex-1 h-9 rounded-lg border border-[var(--border)] text-body hover:bg-[var(--muted)] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending}
-            className="flex-1 h-9 rounded-lg bg-[var(--foreground)] text-[var(--white)] text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+            className="flex-1 h-9 rounded-lg bg-[var(--foreground)] text-[var(--white)] text-body font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {mutation.isPending && <Loader2 size={14} className="animate-spin" />}
             Add to Library

@@ -125,8 +125,8 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
           code: ({ children, className }) => {
             const isBlock = className?.includes('language-');
             return isBlock
-              ? <code className="block text-caption bg-[var(--muted)] text-[var(--foreground)] p-2 rounded-lg overflow-x-auto mb-2 font-mono">{children}</code>
-              : <code className="text-caption bg-[var(--muted)] px-1.5 py-0.5 rounded font-mono">{children}</code>;
+              ? <code className="block text-caption bg-[var(--muted)] text-[var(--foreground)] p-2 rounded-lg overflow-x-auto mb-2">{children}</code>
+              : <code className="text-caption bg-[var(--muted)] px-1.5 py-0.5 rounded">{children}</code>;
           },
           a: ({ href, children }) => <a href={href} className="text-[var(--sky-blue)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
           strong: ({ children }) => <strong className="font-semibold text-[var(--foreground)]">{children}</strong>,

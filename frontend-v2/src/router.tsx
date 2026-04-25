@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
+import AdminLogin from './pages/AdminLogin';
 import Home from './pages/Home';
 import PapersList from './pages/PapersList';
 import PaperDetail from './pages/PaperDetail';
@@ -23,6 +24,7 @@ import ErrorPage from './pages/ErrorPage';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
+  { path: '/admin/login', element: <AdminLogin /> },
   {
     path: '/',
     element: (

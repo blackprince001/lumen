@@ -28,35 +28,37 @@ export default function Home() {
   return (
     <div className="min-h-full flex flex-col">
       {/* ── Hero ── */}
-      <div className="flex flex-col items-center px-6 pt-20 pb-16">
-        <div className="mb-8 text-center">
-          <h1 className="text-display font-bold tracking-tight text-[var(--foreground)] leading-none mb-2">
+      <div className="flex flex-col items-center px-4 sm:px-6 pt-12 sm:pt-20 pb-10 sm:pb-16">
+        <div className="mb-6 sm:mb-8 text-center">
+          <h1 className="text-section-title sm:text-display font-bold tracking-tight text-[var(--foreground)] leading-none mb-2">
             Lumen
           </h1>
-          <p className="text-btn text-[var(--muted-foreground)] max-w-sm mx-auto leading-relaxed">
+          <p className="text-body sm:text-btn text-[var(--muted-foreground)] max-w-sm mx-auto leading-relaxed">
             Your personal research library
           </p>
         </div>
 
         {/* Hero search */}
         <div className="w-full max-w-2xl">
-          <div className="relative flex items-center bg-[var(--white)] border border-[var(--border)] rounded-2xl transition-all duration-200 h-16">
-            <Search size={16} className="absolute left-4 text-[var(--muted-foreground)] pointer-events-none" />
+          <div className="relative flex items-center bg-[var(--white)] border border-[var(--border)] rounded-2xl transition-all duration-200 h-14 sm:h-16">
+            <Search size={16} className="absolute left-3 sm:left-4 text-[var(--muted-foreground)] pointer-events-none" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Search your library..."
-              className="flex-1 h-14 bg-transparent pl-14 pr-4 text-body-lg text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none"
+              className="flex-1 min-w-0 h-12 sm:h-14 bg-transparent pl-10 sm:pl-14 pr-2 text-body sm:text-body-lg text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none"
               autoFocus
             />
             <button
               onClick={() => handleSearch()}
               disabled={!query.trim()}
-              className="mr-2 h-9 px-4 bg-[var(--foreground)] text-[var(--white)] text-code font-medium rounded-xl flex items-center gap-1.5 disabled:opacity-30 hover:opacity-85 active:opacity-75 transition-opacity"
+              aria-label="Search"
+              className="mr-1.5 sm:mr-2 shrink-0 h-9 w-9 sm:w-auto sm:px-4 bg-[var(--foreground)] text-[var(--white)] text-code font-medium rounded-xl flex items-center justify-center gap-1.5 disabled:opacity-30 hover:opacity-85 active:opacity-75 transition-opacity"
             >
-              Search
+              <Search size={16} className="sm:hidden" />
+              <span className="hidden sm:inline">Search</span>
             </button>
           </div>
 
@@ -64,16 +66,16 @@ export default function Home() {
       </div>
 
       {/* ── Papers grid ── */}
-      <div className="flex-1 px-6 py-10">
+      <div className="flex-1 px-4 sm:px-6 py-6 sm:py-10">
         <div className="max-w-content mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
             <h4 className="text-btn font-semibold text-[var(--foreground)]">
               Recent Papers: {total > 0 && ` · ${total} papers`}
             </h4>
-            <Link to="/ingest">
-              <Button variant="primary" icon={<Plus size={13} />} className="!h-7 !px-3 !text-caption">
-                Add Paper
+            <Link to="/ingest" aria-label="Add paper">
+              <Button variant="primary" icon={<Plus size={14} />} className="px-2.5 sm:px-4">
+                <span className="hidden sm:inline">Add Paper</span>
               </Button>
             </Link>
           </div>

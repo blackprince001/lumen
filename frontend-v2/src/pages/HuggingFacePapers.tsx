@@ -165,23 +165,29 @@ export default function HuggingFacePapers() {
     : format(parsedDate, 'MMMM yyyy');
 
   return (
-    <div className="max-w-[60rem] mx-auto px-6 py-8">
+    <div className="max-w-[60rem] mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div>
+      <div className="flex items-start justify-between gap-3 mb-6 sm:mb-8">
+        <div className="min-w-0">
           <div className="flex items-center gap-2.5 mb-1">
-            <Newspaper size={22} className="text-[var(--muted-foreground)]" />
+            <Newspaper size={22} className="text-[var(--muted-foreground)] shrink-0" />
             <h1 className="tracking-tight">Daily Papers</h1>
           </div>
           <p className="text-body text-[var(--muted-foreground)]">Community-curated research from Hugging Face</p>
         </div>
-        <Button variant="secondary" icon={<ExternalLink size={14} />} className="!h-9 text-code" onClick={() => window.open('https://huggingface.co/papers', '_blank')}>
-          View on HF
+        <Button
+          variant="secondary"
+          icon={<ExternalLink size={14} />}
+          className="!h-9 text-code px-2.5 sm:px-3 shrink-0"
+          onClick={() => window.open('https://huggingface.co/papers', '_blank')}
+          aria-label="View on Hugging Face"
+        >
+          <span className="hidden sm:inline">View on HF</span>
         </Button>
       </div>
 
       {/* View mode + Date Navigation */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-6">
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 sm:p-4 mb-6">
         {/* View mode toggle */}
         <div className="flex items-center gap-2 mb-4">
           {(['daily', 'monthly'] as ViewMode[]).map((mode) => (
@@ -202,24 +208,37 @@ export default function HuggingFacePapers() {
         </div>
 
         {/* Date nav */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-body font-semibold text-[var(--foreground)]">{dateLabel}</span>
             {isTodaySelected && (
               <span className="px-2 py-0.5 bg-[var(--muted)] text-[var(--muted-foreground)] text-caption font-medium rounded border border-[var(--border)]">Today</span>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" className="!h-8 !px-3 !text-caption" icon={<ChevronLeft size={13} />} onClick={viewMode === 'daily' ? goBack : goMonthBack}>
-              {viewMode === 'daily' ? 'Prev' : 'Prev Month'}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant="secondary"
+              className="!h-8 !px-2 sm:!px-3 !text-caption"
+              icon={<ChevronLeft size={13} />}
+              onClick={viewMode === 'daily' ? goBack : goMonthBack}
+              aria-label={viewMode === 'daily' ? 'Previous day' : 'Previous month'}
+            >
+              <span className="hidden sm:inline">{viewMode === 'daily' ? 'Prev' : 'Prev Month'}</span>
             </Button>
             {!isTodaySelected && (
-              <Button variant="secondary" className="!h-8 !px-3 !text-caption" onClick={() => setSelectedDate(getTodayString())}>
+              <Button variant="secondary" className="!h-8 !px-2 sm:!px-3 !text-caption" onClick={() => setSelectedDate(getTodayString())}>
                 {viewMode === 'daily' ? 'Today' : 'This Month'}
               </Button>
             )}
-            <Button variant="secondary" className="!h-8 !px-3 !text-caption" disabled={isTodaySelected} onClick={viewMode === 'daily' ? goForward : goMonthForward}>
-              {viewMode === 'daily' ? 'Next' : 'Next Month'}<ChevronRight size={13} />
+            <Button
+              variant="secondary"
+              className="!h-8 !px-2 sm:!px-3 !text-caption"
+              disabled={isTodaySelected}
+              onClick={viewMode === 'daily' ? goForward : goMonthForward}
+              aria-label={viewMode === 'daily' ? 'Next day' : 'Next month'}
+            >
+              <span className="hidden sm:inline">{viewMode === 'daily' ? 'Next' : 'Next Month'}</span>
+              <ChevronRight size={13} />
             </Button>
           </div>
         </div>

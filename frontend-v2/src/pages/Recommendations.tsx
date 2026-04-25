@@ -22,8 +22,8 @@ export default function Recommendations() {
   const recommendations = data?.recommendations || [];
 
   return (
-    <div className="max-w-[60rem] mx-auto px-6 py-8">
-      <div className="mb-8">
+    <div className="max-w-content mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mb-6 sm:mb-8">
         <h1 className="text-page-title mb-1">Recommended Papers</h1>
         <p className="text-body text-[var(--muted-foreground)]">
           Personalized recommendations based on your library
@@ -31,8 +31,8 @@ export default function Recommendations() {
       </div>
 
       {/* Actions */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-code text-[var(--muted-foreground)]">
+      <div className="flex items-center justify-between mb-6 gap-3">
+        <div className="text-code text-[var(--muted-foreground)] min-w-0 truncate">
           {data?.total !== undefined && data.total > 0 && (
             <span>Found {data.total} recommendations</span>
           )}
@@ -42,31 +42,30 @@ export default function Recommendations() {
           onClick={() => refetch()}
           disabled={isFetching}
           icon={<RefreshCw size={14} className={isFetching ? 'animate-spin' : ''} />}
+          className="px-2.5 sm:px-3 shrink-0"
+          aria-label="Refresh recommendations"
         >
-          Refresh
+          <span className="hidden sm:inline">Refresh</span>
         </Button>
       </div>
 
       {/* Loading State */}
       {isLoading && (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-[var(--border)] overflow-hidden">
               {/* Header skeleton */}
-              <div className="flex items-center justify-between px-4 py-3.5">
+              <div className="flex items-center justify-between px-4 py-3">
                 <Skeleton className="h-5 w-20 rounded" />
                 <Skeleton className="h-4 w-12" />
               </div>
               {/* Inset content skeleton */}
-              <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] px-4 pt-3.5 pb-4 space-y-3">
-                <Skeleton className="h-5 w-full" />
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-3 w-48" />
-                <div className="space-y-1.5 pt-1">
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-2/3" />
-                </div>
+              <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] px-4 pt-3 pb-4 space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-40" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-2/3" />
               </div>
             </div>
           ))}
@@ -113,7 +112,7 @@ export default function Recommendations() {
 
       {/* Results */}
       {!isLoading && !error && recommendations.length > 0 && (
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {recommendations.map((paper) => (
             <DiscoveredPaperCard key={`${paper.source}-${paper.external_id}`} paper={paper} />
           ))}

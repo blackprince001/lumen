@@ -51,13 +51,13 @@ export function DiscoveryStatus({ status, timeline, isSearching }: DiscoveryStat
             {status?.source && (
               <>
                 <span className="text-[var(--border)]">·</span>
-                <span className="text-caption font-mono text-[var(--foreground)] truncate">
+                <span className="text-caption text-[var(--foreground)] truncate">
                   {status.source}
                 </span>
               </>
             )}
           </div>
-          <span className="text-caption font-mono text-[var(--muted-foreground)] tabular-nums shrink-0">
+          <span className="text-caption text-[var(--muted-foreground)] tabular-nums shrink-0">
             {progress}%
           </span>
         </div>

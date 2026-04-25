@@ -207,7 +207,7 @@ export default function PapersList() {
   /* Loading skeleton */
   if (isLoading && !data) {
     return (
-      <div className="max-w-content mx-auto px-6 py-8">
+      <div className="max-w-content mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <Skeleton className="h-8 w-40 mb-2" />
         <Skeleton className="h-4 w-56 mb-8" />
         <Skeleton className="h-9 w-full mb-6" />
@@ -233,7 +233,7 @@ export default function PapersList() {
   }
 
   return (
-    <div className="max-w-content mx-auto px-6 py-8 space-y-6">
+    <div className="max-w-content mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
       {/* ===== Page header ===== */}
       <div className="flex items-center justify-between gap-4">
         <div>
@@ -244,9 +244,9 @@ export default function PapersList() {
               : 'Your library is empty'}
           </p>
         </div>
-        <Link to="/ingest">
-          <Button variant="primary" icon={<Plus size={14} />} className="text-code">
-            Add Paper
+        <Link to="/ingest" aria-label="Add paper">
+          <Button variant="primary" icon={<Plus size={14} />} className="px-2.5 sm:px-5">
+            <span className="hidden sm:inline">Add Paper</span>
           </Button>
         </Link>
       </div>
@@ -487,28 +487,36 @@ export default function PapersList() {
 
       {/* ===== Pagination + page-size ===== */}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between gap-4 pt-2">
-          <p className="text-code text-[var(--muted-foreground)] whitespace-nowrap">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-2">
+          <p className="hidden md:block text-code text-[var(--muted-foreground)] whitespace-nowrap order-1">
             Page <span className="font-semibold text-[var(--foreground)]">{page}</span> of{' '}
             <span className="font-semibold text-[var(--foreground)]">{totalPages}</span>
             {' '}({total} total)
           </p>
 
-          <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+          <div className="flex justify-center order-2 overflow-x-auto">
+            <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
+          </div>
 
-          <div className="flex items-center gap-2 text-code text-[var(--muted-foreground)]">
-            <span>Per page</span>
-            <Select
-              value={pageSize.toString()}
-              onChange={(e) => { setPageSize(parseInt(e.target.value)); setPage(1); }}
-              className="w-20 h-8 text-caption"
-              id="page-size-select"
-            >
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-              <option value="100">100</option>
-            </Select>
+          <div className="flex items-center justify-between md:justify-end gap-2 text-code text-[var(--muted-foreground)] order-3">
+            <span className="md:hidden">
+              Page <span className="font-semibold text-[var(--foreground)]">{page}</span> of{' '}
+              <span className="font-semibold text-[var(--foreground)]">{totalPages}</span>
+            </span>
+            <div className="flex items-center gap-2">
+              <span>Per page</span>
+              <Select
+                value={pageSize.toString()}
+                onChange={(e) => { setPageSize(parseInt(e.target.value)); setPage(1); }}
+                className="w-20 h-8 text-caption"
+                id="page-size-select"
+              >
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </Select>
+            </div>
           </div>
         </div>
       )}

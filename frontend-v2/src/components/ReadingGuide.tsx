@@ -60,7 +60,7 @@ export function ReadingGuide({ paperId }: ReadingGuideProps) {
           value={editedGuide || JSON.stringify(guideData, null, 2)}
           onChange={(e) => setEditedGuide(e.target.value)}
           rows={15}
-          className="w-full text-caption font-mono bg-[var(--white)]"
+          className="w-full text-caption bg-[var(--white)]"
           autoFocus
         />
         <div className="flex items-center gap-2">

@@ -74,7 +74,7 @@ export function DiscoveredPaperCard({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className={cn('p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:bg-black/10')}
+              className={cn('p-1.5 rounded-lg transition-all opacity-60 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-black/10')}
               style={{ color: theme.text }}
               title="Open original"
             >
@@ -82,7 +82,7 @@ export function DiscoveredPaperCard({
             </a>
             <button
               onClick={(e) => { e.stopPropagation(); setShowDialog(true); }}
-              className="p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 hover:bg-black/10"
+              className="p-1.5 rounded-lg transition-all opacity-60 sm:opacity-0 sm:group-hover:opacity-100 hover:bg-black/10"
               style={{ color: theme.text }}
               title="Add to library"
             >
