@@ -67,7 +67,7 @@ export function PDFToolbar({
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--white)] shrink-0 z-20 overflow-x-auto scrollbar-none">
+    <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--white)] shrink-0 z-20">
       {/* TOC toggle */}
       <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
         <Tooltip content={showTOC ? "Hide Table of Contents" : "Show Table of Contents"} side="bottom">
