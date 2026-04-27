@@ -96,6 +96,7 @@ export default function PaperDetail() {
           setChatPanelOpen(true);
           setActiveTab('notes');
         }}
+        targetPage={currentPage}
       />
     </div>
   );

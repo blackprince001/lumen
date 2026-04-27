@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
@@ -6,12 +6,13 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 import { PDFToolbar } from './PDFToolbar';
 import { PDFTOC, type TOCItem } from './PDFTOC';
 import { FloatingAnnotationForm } from './FloatingAnnotationForm';
-import { Warning2 as AlertCircle } from 'iconsax-reactjs';
+import { Warning2 as AlertCircle, Magicpen as Highlighter } from 'iconsax-reactjs';
 import { Button } from './ui/Button';
 import { type Paper, papersApi } from '@/lib/api/papers';
 import { canAnnotate } from '@/lib/utils/permissions';
 import { type Annotation } from '@/lib/api/annotations';
 import { usePDFDarkMode } from '@/hooks/use-pdf-dark-mode';
+import { cn } from '@/lib/utils';
 import { fetchApi } from '@/lib/api/client';
 import { toastError } from '@/lib/utils/toast';
 
@@ -29,6 +30,7 @@ interface PDFViewerProps {
   onAnnotationSuccess: () => void;
   onCurrentPageChange?: (page: number) => void;
   onNoteAction?: () => void;
+  targetPage?: number | null;
 }
 
 export function PDFViewer({
@@ -37,6 +39,7 @@ export function PDFViewer({
   onAnnotationSuccess,
   onCurrentPageChange,
   onNoteAction,
+  targetPage,
 }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -62,41 +65,44 @@ export function PDFViewer({
   const isScrollingRef = useRef(false);
   const lastPageNumberRef = useRef(1);
   const lastContainerWidthRef = useRef(0);
+  const lastTargetPageRef = useRef<number | null>(null);
   const pdfDocumentRef = useRef<PDFDocumentProxy | null>(null);
 
   // Authenticated PDF blob loading
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
-  const [pdfLoadError, setPdfLoadError] = useState<string | null>(null);
+  const [, setPdfLoadError] = useState<string | null>(null);
+  const cancelledRef = useRef(false);
 
   useEffect(() => {
     let objectUrl: string | null = null;
-    let cancelled = false;
+    cancelledRef.current = false;
 
     if (paper.file_url) {
       fetchApi<Blob>(paper.file_url, { method: 'GET', responseType: 'blob' })
         .then((blob) => {
-          if (cancelled) return;
+          if (cancelledRef.current) return;
           objectUrl = URL.createObjectURL(blob);
           setPdfBlobUrl(objectUrl);
           setPdfLoadError(null);
         })
         .catch((err) => {
-          if (cancelled) return;
+          if (cancelledRef.current) return;
           console.error('[PDFViewer] Failed to fetch PDF:', err);
           setPdfLoadError('Failed to load PDF');
-          toastError(`PDF Loading Error: ${pdfLoadError?.toString()}`)
+          toastError(`PDF Loading Error: ${err?.toString()}`)
         });
     } else {
       setPdfBlobUrl(null);
     }
 
     return () => {
-      cancelled = true;
+      cancelledRef.current = true;
+      pdfDocumentRef.current = null;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [paper.file_url]);
 
-  const fileSource = pdfBlobUrl || paper.url || null;
+  const fileSource = pdfBlobUrl || null;
 
   // ─── Handlers for toolbar actions ────────────────────────────────────────
   const handleReadingStatusChange = async (status: string) => {
@@ -221,6 +227,7 @@ export function PDFViewer({
 
       if (current !== lastPageNumberRef.current) {
         lastPageNumberRef.current = current;
+        lastTargetPageRef.current = current;
         setPageNumber(current);
         onCurrentPageChange?.(current);
       }
@@ -368,6 +375,8 @@ export function PDFViewer({
 
   // ─── Text selection → annotation form ────────────────────────────────────
   const handleMouseUp = useCallback(() => {
+    if (!highlightMode) return;
+
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
       setFloatingFormData(null);
@@ -396,6 +405,20 @@ export function PDFViewer({
     const pageRect = referenceEl.getBoundingClientRect();
     const selectionRect = range.getBoundingClientRect();
 
+    // Collect per-line rects for character-accurate highlighting
+    const clientRects = range.getClientRects();
+    const rects: Array<{ left: number; top: number; width: number; height: number }> = [];
+    for (let i = 0; i < clientRects.length; i++) {
+      const r = clientRects[i];
+      if (r.width < 1 || r.height < 1) continue;
+      const left = Math.max(0, Math.min(1, (r.left - pageRect.left) / pageRect.width));
+      const top = Math.max(0, Math.min(1, (r.top - pageRect.top) / pageRect.height));
+      const right = Math.max(0, Math.min(1, (r.right - pageRect.left) / pageRect.width));
+      const bottom = Math.max(0, Math.min(1, (r.bottom - pageRect.top) / pageRect.height));
+      rects.push({ left, top, width: right - left, height: bottom - top });
+    }
+
+    // Compute overall bounding box for backward compat
     const startX = Math.max(0, Math.min(1, (selectionRect.left - pageRect.left) / pageRect.width));
     const startY = Math.max(0, Math.min(1, (selectionRect.top - pageRect.top) / pageRect.height));
     const endX = Math.max(0, Math.min(1, (selectionRect.right - pageRect.left) / pageRect.width));
@@ -404,6 +427,7 @@ export function PDFViewer({
     const selectionData = {
       start: { x: startX, y: startY },
       end: { x: endX, y: endY },
+      rects: rects.length > 0 ? rects : undefined,
       boundingBox: {
         left: Math.min(startX, endX),
         top: Math.min(startY, endY),
@@ -427,7 +451,7 @@ export function PDFViewer({
     });
 
     selection.removeAllRanges();
-  }, [numPages]);
+  }, [numPages, highlightMode, paper]);
 
   // ─── Dark mode ────────────────────────────────────────────────────────────
   const { isDarkMode, pageRegions, darkPageFlags, analyzePageForImages } = usePDFDarkMode();
@@ -444,8 +468,34 @@ export function PDFViewer({
     return null;
   };
 
-  const getHighlightBBox = (ann: Annotation) =>
-    (ann as any).selection_data?.boundingBox ?? null;
+  /** Per-line rects (new) with fallback to single boundingBox (old annotations) */
+  const getHighlightRects = (ann: Annotation): Array<{ left: number; top: number; width: number; height: number }> => {
+    const sd = ann.selection_data as any;
+    if (!sd) return [];
+    if (Array.isArray(sd.rects) && sd.rects.length > 0) return sd.rects;
+    if (sd.boundingBox) return [sd.boundingBox];
+    return [];
+  };
+
+  // ─── Annotation gutter data ───────────────────────────────────────────────
+  const annotatedPages = useMemo(() => {
+    const pages = new Map<number, number>();
+    for (const ann of annotations) {
+      const p = getAnnotationPage(ann);
+      if (p) pages.set(p, (pages.get(p) || 0) + 1);
+    }
+    return pages;
+  }, [annotations]);
+
+  // ─── External scroll-to-page (from sidebar annotation click) ─────────────
+  useEffect(() => {
+    if (targetPage && targetPage !== lastTargetPageRef.current && numPages) {
+      lastTargetPageRef.current = targetPage;
+      setPageNumber(targetPage);
+      onCurrentPageChange?.(targetPage);
+      scrollToPage(targetPage);
+    }
+  }, [targetPage, numPages, scrollToPage, onCurrentPageChange]);
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
@@ -502,7 +552,10 @@ export function PDFViewer({
         ) : (
           <div
             ref={scrollContainerRef}
-            className="flex-1 overflow-y-auto scrollbar-none py-0 flex flex-col items-center gap-0"
+            className={cn(
+              "flex-1 overflow-y-auto scrollbar-none py-0 flex flex-col items-center gap-0 relative",
+              highlightMode && "cursor-crosshair"
+            )}
             onMouseUp={handleMouseUp}
           >
             <Document
@@ -513,7 +566,10 @@ export function PDFViewer({
                 console.error('[PDFViewer] Document load error:', error);
               }}
               loading={
-                <div className="text-code opacity-50 py-12 font-medium">Loading document…</div>
+                <div className="flex flex-col items-center gap-4 py-8 w-full max-w-[612px] mx-auto">
+                  <div className="w-full aspect-[8.5/11] bg-[var(--muted)]/60 rounded-lg animate-pulse" />
+                  <div className="w-full aspect-[8.5/11] bg-[var(--muted)]/40 rounded-lg animate-pulse" />
+                </div>
               }
               error={
                 <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
@@ -555,10 +611,10 @@ export function PDFViewer({
                 const renderedH = renderedSize?.height ?? (pageDims ? pageDims.height * zoom : 0);
 
                 const pageHighlights = annotations.filter(
-                  ann => getAnnotationPage(ann) === page && (ann as any).selection_data?.boundingBox
+                  ann => getAnnotationPage(ann) === page && getHighlightRects(ann).length > 0
                 );
                 const pageMarkers = annotations.filter(
-                  ann => getAnnotationPage(ann) === page && ann.type !== 'note' && !((ann as any).selection_data?.boundingBox)
+                  ann => getAnnotationPage(ann) === page && ann.type !== 'note' && getHighlightRects(ann).length === 0
                 );
 
                 return (
@@ -578,47 +634,37 @@ export function PDFViewer({
                         onLoadSuccess={p => onPageLoadSuccess(page, p)}
                         onRenderSuccess={() => {
                           const el = pageRefs.current.get(page);
-                          // Note: getPage is async in PDF.js but react-pdf might have it cached.
-                          // We'll pass it if we can, else analyzer falls back to OCR.
-                          if (el) {
-                            pdfDocumentRef.current?.getPage(page).then(p => {
-                              analyzePageForImages(el, page, p);
-                            }).catch(() => {
-                              analyzePageForImages(el, page);
-                            });
+                          if (el && !cancelledRef.current) {
+                            analyzePageForImages(el, page);
                           }
                         }}
                       />
 
-                      {/* Highlight overlays */}
+                      {/* Highlight overlays — per-line rects for character accuracy */}
                       {pageDims && pageHighlights.length > 0 && renderedW > 0 && (
                         <div
                           className="absolute pointer-events-none"
                           style={{ top: 0, left: 0, width: renderedW, height: renderedH, zIndex: 1 }}
                         >
-                          {pageHighlights.map(ann => {
-                            const bbox = getHighlightBBox(ann);
-                            if (!bbox) return null;
-                            return (
+                          {pageHighlights.flatMap(ann =>
+                            getHighlightRects(ann).map((rect, idx) => (
                               <div
-                                key={ann.id}
-                                className="absolute group"
+                                key={`${ann.id}-${idx}`}
+                                className="absolute"
                                 style={{
-                                  left: bbox.left * renderedW,
-                                  top: bbox.top * renderedH,
-                                  width: Math.max(2, bbox.width * renderedW),
-                                  height: Math.max(2, bbox.height * renderedH),
-                                  backgroundColor: 'rgba(255,220,0,0.35)',
-                                  border: '1px solid rgba(200,170,0,0.5)',
-                                  borderRadius: 2,
-                                  mixBlendMode: 'multiply',
+                                  left: rect.left * renderedW,
+                                  top: rect.top * renderedH,
+                                  width: Math.max(2, rect.width * renderedW),
+                                  height: Math.max(2, rect.height * renderedH),
+                                  backgroundColor: 'rgba(60,145,230,0.18)',
+                                  borderBottom: '2px solid rgba(60,145,230,0.5)',
                                   pointerEvents: 'auto',
                                   cursor: 'pointer',
                                 }}
                                 title={ann.highlighted_text || ann.content}
                               />
-                            );
-                          })}
+                            ))
+                          )}
                         </div>
                       )}
 
@@ -668,6 +714,16 @@ export function PDFViewer({
                           />
                         </div>
                       ))}
+
+                      {/* Per-page annotation indicator */}
+                      {annotatedPages.has(page) && (
+                        <div className="absolute -right-2 top-2 z-10 flex items-center gap-1 bg-[var(--sky-blue)] text-white rounded-full px-1.5 py-0.5 shadow-subtle pointer-events-auto cursor-default"
+                          title={`${annotatedPages.get(page)} annotation${(annotatedPages.get(page) || 0) > 1 ? 's' : ''} on this page`}
+                        >
+                          <Highlighter size={10} />
+                          <span className="text-[0.625rem] font-bold leading-none">{annotatedPages.get(page)}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

@@ -179,7 +179,7 @@ async def list_papers_endpoint(
   page_size: int = Query(20, ge=1, le=100),
   search: Optional[str] = None,
   sort_by: Optional[str] = Query(
-    "date_added", pattern="^(date_added|viewed|title|authors)$"
+    "date_added", pattern="^(date_added|viewed|title|authors|last_read_at)$"
   ),
   sort_order: Optional[str] = Query("desc", pattern="^(asc|desc)$"),
   group_id: Optional[int] = None,
@@ -257,17 +257,28 @@ async def list_papers_endpoint(
   total = total_result.scalar() or 0
 
   # Apply sorting
-  sort_column = {
-    "date_added": Paper.created_at,
-    "viewed": Paper.viewed_count,
-    "title": Paper.title,
-    "authors": Paper.title,  # Fallback for metadata-based sort
-  }.get(sort_by, Paper.created_at)
-
-  if sort_order == "asc":
-    query = query.order_by(sort_column.asc(), Paper.id.desc())
+  if sort_by == "last_read_at" and uid is not None:
+    query = query.outerjoin(
+      UserPaperState,
+      (UserPaperState.paper_id == Paper.id) & (UserPaperState.user_id == uid),
+    )
+    sort_col = UserPaperState.last_read_at
+    if sort_order == "asc":
+      query = query.order_by(sort_col.asc().nulls_first(), Paper.id.desc())
+    else:
+      query = query.order_by(sort_col.desc().nulls_last(), Paper.id.desc())
   else:
-    query = query.order_by(sort_column.desc().nulls_last(), Paper.id.desc())
+    sort_column = {
+      "date_added": Paper.created_at,
+      "viewed": Paper.viewed_count,
+      "title": Paper.title,
+      "authors": Paper.title,  # Fallback for metadata-based sort
+    }.get(sort_by, Paper.created_at)
+
+    if sort_order == "asc":
+      query = query.order_by(sort_column.asc(), Paper.id.desc())
+    else:
+      query = query.order_by(sort_column.desc().nulls_last(), Paper.id.desc())
 
   # Paginate
   offset = (page - 1) * page_size

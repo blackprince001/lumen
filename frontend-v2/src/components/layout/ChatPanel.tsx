@@ -30,7 +30,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
   // activeTab is now managed by Layout
   const [filterByPage, setFilterByPage] = useState(false);
   const queryClient = useQueryClient();
-  const { tabs, activeTabId } = useTabs();
+  const { tabs, activeTabId, updateTab } = useTabs();
   const currentPage = tabs.find((t) => t.id === activeTabId)?.currentPage ?? 1;
 
   const { data: paper } = useQuery({
@@ -168,7 +168,13 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
                 currentPage={currentPage}
                 filterByPage={filterByPage}
                 onFilterByPageChange={setFilterByPage}
-                onAnnotationClick={() => { }}
+                onAnnotationClick={(ann) => {
+                  const page = (ann.coordinate_data as { page?: number })?.page;
+                  if (page) {
+                    const tab = tabs.find((t) => t.id === activeTabId);
+                    if (tab) updateTab(tab.id, { currentPage: page });
+                  }
+                }}
                 onEditAnnotation={() => { }}
                 onDeleteAnnotation={(annotationId) => deleteAnnotationMutation.mutate(annotationId)}
               />

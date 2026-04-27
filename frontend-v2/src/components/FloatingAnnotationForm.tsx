@@ -43,31 +43,42 @@ export function FloatingAnnotationForm({
     }
   }, [annotation, highlightedText]);
 
-  // Position logic
+  // Position logic — context-menu style: prefer below anchor, flip to stay in viewport
   useEffect(() => {
     if (!formRef.current) return;
     const form = formRef.current;
-    const padding = 20;
+    const gap = 8;
+    const padding = 12;
     const rect = form.getBoundingClientRect();
-    const formWidth = rect.width;
-    const formHeight = rect.height;
+    const fw = rect.width;
+    const fh = rect.height;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-    let x = position.x;
-    let y = position.y;
+    // Anchor: centered horizontally on selection, just below it
+    let x = position.x - fw / 2;
+    let y = position.y + gap;
 
-    // Adjust horizontal
-    if (x + formWidth > window.innerWidth - padding) {
-      x = window.innerWidth - formWidth - padding;
-    }
+    // Horizontal: clamp to viewport
+    if (x + fw > vw - padding) x = vw - fw - padding;
     if (x < padding) x = padding;
 
-    // Adjust vertical
-    if (y + formHeight > window.innerHeight - padding) {
-      y = y - formHeight - 10;
-      if (y < padding) {
-        y = padding;
-        form.style.maxHeight = `${window.innerHeight - padding * 2}px`;
-      }
+    // Vertical: if overflows bottom, flip above the anchor
+    if (y + fh > vh - padding) {
+      // position.y already includes the +10 offset from selection bottom,
+      // so the selection top is roughly position.y - gap - selectionHeight.
+      // Flip above: place form bottom at the anchor point minus gap
+      y = position.y - fh - gap * 3;
+    }
+
+    // If still overflows top, clamp to top
+    if (y < padding) y = padding;
+
+    // If form is taller than viewport, constrain height
+    if (fh > vh - padding * 2) {
+      form.style.maxHeight = `${vh - padding * 2}px`;
+      form.style.overflowY = 'auto';
+      y = padding;
     }
 
     setFormPosition({ x, y });
@@ -139,7 +150,7 @@ export function FloatingAnnotationForm({
   return (
     <div
       ref={formRef}
-      className="fixed z-50 bg-[var(--white)] border border-[var(--border)] rounded-xl shadow-elevated p-4 animate-in fade-in zoom-in-95 duration-200"
+      className="fixed z-[50] bg-[var(--white)] border border-[var(--border)] rounded-xl shadow-elevated p-4 animate-in fade-in zoom-in-95 duration-200"
       style={{
         left: `${formPosition.x}px`,
         top: `${formPosition.y}px`,
@@ -173,7 +184,7 @@ export function FloatingAnnotationForm({
           autoFocus
           className="text-code bg-[var(--white)]"
         />
-        
+
         <div className="flex items-center justify-between gap-2">
           <span className="text-micro text-[var(--muted-foreground)]">
             Pg {coordinateData.page}
@@ -197,7 +208,7 @@ export function FloatingAnnotationForm({
             </Button>
           </div>
         </div>
-        
+
         {mutation.isError && (
           <p className="text-caption text-[var(--destructive)]">
             Error saving annotation.

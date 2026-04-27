@@ -12,7 +12,7 @@ const SIDEBAR_MAX = 360;
 
 const CHAT_MIN = 52;          // collapsed sliver width
 const CHAT_SNAP_CLOSE = 120;  // below this → snap closed
-const CHAT_DEFAULT = 480;
+const CHAT_DEFAULT = 360;
 const CHAT_MAX = 680;
 
 function ResizeDivider({ onDrag }: { onDrag: (dx: number) => void }) {

@@ -61,16 +61,15 @@ export function PDFToolbar({
 
   const handlePageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
-    if (!isNaN(val) && val >= 1 && val <= (numPages || 1))
-    {
+    if (!isNaN(val) && val >= 1 && val <= (numPages || 1)) {
       onPageChange(val);
     }
   };
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--white)] shrink-0 z-20">
+    <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--white)] shrink-0 z-20 overflow-x-auto scrollbar-none">
       {/* TOC toggle */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2">
+      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
         <Tooltip content={showTOC ? "Hide Table of Contents" : "Show Table of Contents"} side="bottom">
           <Button
             variant="ghost"
@@ -86,23 +85,27 @@ export function PDFToolbar({
       </div>
 
       {/* Page Navigation */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2">
-        <Button
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-          disabled={currentPage <= 1}
-          onClick={onFirstPage}
-        >
-          <ChevronsLeft size={16} />
-        </Button>
-        <Button
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-          disabled={currentPage <= 1}
-          onClick={onPreviousPage}
-        >
-          <ChevronLeft size={16} />
-        </Button>
+      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
+        <Tooltip content="First Page" side="bottom">
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
+            disabled={currentPage <= 1}
+            onClick={onFirstPage}
+          >
+            <ChevronsLeft size={16} />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Previous Page" side="bottom">
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
+            disabled={currentPage <= 1}
+            onClick={onPreviousPage}
+          >
+            <ChevronLeft size={16} />
+          </Button>
+        </Tooltip>
 
         <div className="flex items-center gap-1 px-1">
           <input
@@ -118,52 +121,62 @@ export function PDFToolbar({
           </span>
         </div>
 
-        <Button
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-          disabled={currentPage >= (numPages || 1)}
-          onClick={onNextPage}
-        >
-          <ChevronRight size={16} />
-        </Button>
-        <Button
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-          disabled={currentPage >= (numPages || 1)}
-          onClick={onLastPage}
-        >
-          <ChevronsRight size={16} />
-        </Button>
+        <Tooltip content="Next Page" side="bottom">
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
+            disabled={currentPage >= (numPages || 1)}
+            onClick={onNextPage}
+          >
+            <ChevronRight size={16} />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Last Page" side="bottom">
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
+            disabled={currentPage >= (numPages || 1)}
+            onClick={onLastPage}
+          >
+            <ChevronsRight size={16} />
+          </Button>
+        </Tooltip>
       </div>
 
       {/* Zoom Controls */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2">
-        <Button
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-          disabled={zoom <= 0.5}
-          onClick={handleZoomOut}
-        >
-          <ZoomOut size={16} />
-        </Button>
-        <button
-          className="text-code font-medium min-w-[3.125rem] text-center hover:bg-[var(--foreground)]/[0.08] rounded py-1 px-1.5 transition-colors"
-          onClick={handleZoomReset}
-        >
-          {Math.round(zoom * 100)}%
-        </button>
-        <Button
-          variant="ghost"
-          className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-          disabled={zoom >= 3}
-          onClick={handleZoomIn}
-        >
-          <ZoomIn size={16} />
-        </Button>
+      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
+        <Tooltip content="Zoom Out" side="bottom">
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
+            disabled={zoom <= 0.5}
+            onClick={handleZoomOut}
+          >
+            <ZoomOut size={16} />
+          </Button>
+        </Tooltip>
+        <Tooltip content="Reset Zoom" side="bottom">
+          <button
+            className="text-code font-medium min-w-[3.125rem] text-center hover:bg-[var(--foreground)]/[0.08] rounded py-1 px-1.5 transition-colors"
+            onClick={handleZoomReset}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+        </Tooltip>
+        <Tooltip content="Zoom In" side="bottom">
+          <Button
+            variant="ghost"
+            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
+            disabled={zoom >= 3}
+            onClick={handleZoomIn}
+          >
+            <ZoomIn size={16} />
+          </Button>
+        </Tooltip>
       </div>
 
       {/* Rotation */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2">
+      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
         <Tooltip content="Rotate Page" side="bottom">
           <Button
             variant="ghost"
@@ -176,20 +189,22 @@ export function PDFToolbar({
       </div>
 
       {/* Selection Tools */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2">
-        <Tooltip content="Highlight Tool" side="bottom">
+      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
+        <Tooltip content={highlightMode ? "Annotation Mode (ON)" : "Annotation Mode (OFF)"} side="bottom">
           <Button
             variant="ghost"
             className={cn(
-              "h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]",
-              highlightMode && "bg-[var(--yellow)]/20 text-[var(--yellow-foreground)]"
+              "h-8 w-8 p-0",
+              highlightMode
+                ? "bg-[var(--sky-blue)]/15 text-[var(--sky-blue)] ring-1 ring-[var(--sky-blue)]/30 hover:bg-[var(--sky-blue)]/25"
+                : "hover:bg-[var(--foreground)]/[0.08]"
             )}
             onClick={onHighlightModeToggle}
           >
             <Highlighter size={16} />
           </Button>
         </Tooltip>
-        <Tooltip content="Note Taking Tool" side="bottom">
+        <Tooltip content="Open Notes Panel" side="bottom">
           <Button
             variant="ghost"
             className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
@@ -201,7 +216,7 @@ export function PDFToolbar({
       </div>
 
       {/* Misc Actions */}
-      <div className="flex items-center gap-1 ml-auto">
+      <div className="flex items-center gap-1 ml-auto shrink-0">
         {readingStatus && onReadingStatusChange && (
           <div className="w-auto min-w-[3rem]">
             <Tooltip content="Reading Status" side="bottom">
@@ -236,7 +251,7 @@ export function PDFToolbar({
           </div>
         )}
 
-        <Tooltip content="Add Bookmark" side="bottom">
+        <Tooltip content="Bookmark Page" side="bottom">
           <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={onBookmarkAdd}>
             <Bookmark size={16} />
           </Button>

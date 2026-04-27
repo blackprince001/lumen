@@ -1,5 +1,6 @@
 import { format } from 'date-fns';
-import { Magicpen as Highlighter, Message as MessageSquare, Trash as Trash2, Edit as Edit2, ArrowRight2 as ChevronRight } from 'iconsax-reactjs';
+import { useNavigate } from 'react-router-dom';
+import { Magicpen as Highlighter, Message as MessageSquare, Trash as Trash2, Edit as Edit2, ArrowRight2 as ChevronRight, ExportSquare } from 'iconsax-reactjs';
 import { type Annotation } from '@/lib/api/annotations';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
@@ -26,7 +27,7 @@ export function PaperAnnotationsPanel({
   onEditAnnotation,
   onDeleteAnnotation,
 }: PaperAnnotationsPanelProps) {
-  
+  const navigate = useNavigate();
   const annotationItems = annotations.filter(ann => ann.type !== 'note');
   const noteItems = annotations.filter(ann => ann.type === 'note');
 
@@ -125,7 +126,19 @@ export function PaperAnnotationsPanel({
             {annotationItems.length}
           </span>
         </div>
-        <button 
+        <div className="flex items-center gap-2">
+          {annotationItems.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              onClick={() => navigate('/annotations')}
+            >
+              <ExportSquare size={13} />
+              Cite & Export
+            </Button>
+          )}
+          <button 
           onClick={() => onFilterByPageChange(!filterByPage)}
           className={cn(
             "text-caption font-medium px-2 py-1 rounded-lg border transition-all",
@@ -136,6 +149,7 @@ export function PaperAnnotationsPanel({
         >
           {filterByPage ? `Page ${currentPage} only` : 'All pages'}
         </button>
+        </div>
       </div>
 
       {filteredAnnotations.length > 0 ? (

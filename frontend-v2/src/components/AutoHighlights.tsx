@@ -33,7 +33,10 @@ export function AutoHighlights({ paperId }: AutoHighlightsProps) {
           disabled={generateMutation.isPending}
         >
           {generateMutation.isPending ? (
-            <RefreshCw size={14} className="animate-spin" />
+            <>
+              <RefreshCw size={14} className="animate-spin" />
+              Agent running…
+            </>
           ) : (
             "Run AI Agent"
           )}
@@ -41,7 +44,9 @@ export function AutoHighlights({ paperId }: AutoHighlightsProps) {
       </div>
 
       <p className="text-caption text-[var(--muted-foreground)] leading-relaxed">
-        Let AI analyze the paper and automatically highlight core methods, results, and key contributions for you.
+        {generateMutation.isPending
+          ? 'An AI agent is analyzing the paper and identifying key passages to highlight. This may take a moment.'
+          : 'Spawns an AI agent to analyze the paper and automatically highlight core methods, results, and key contributions.'}
       </p>
 
       {generateMutation.isSuccess && generateMutation.data && (

@@ -21,9 +21,10 @@ interface NotesPanelProps {
 }
 
 type NoteScope = 'page' | 'document';
+type ViewScope = 'all' | 'page' | 'document';
 
 export function NotesPanel({ paperId, currentPage, annotations, isLoading }: NotesPanelProps) {
-  const [scope, setScope] = useState<NoteScope>('page');
+  const [scope, setScope] = useState<ViewScope>('all');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editContent, setEditContent] = useState('');
   const [editScope, setEditScope] = useState<NoteScope>('page');
@@ -42,7 +43,7 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
     return false;
   });
   const documentNotes = notes.filter((n) => n.note_scope === 'document');
-  const displayed = scope === 'page' ? pageNotes : documentNotes;
+  const displayed = scope === 'all' ? notes : scope === 'page' ? pageNotes : documentNotes;
 
   const createMutation = useMutation({
     mutationFn: (data: { content: string; noteScope: NoteScope }) =>
@@ -144,6 +145,19 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
       <div className="flex items-center justify-between gap-4 mb-4">
         <div className="flex items-center gap-1 p-1 bg-[var(--muted)]/40 rounded-lg w-fit">
           <button
+            onClick={() => setScope('all')}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-caption font-medium transition-colors',
+              scope === 'all'
+                ? 'bg-[var(--white)] text-[var(--foreground)] shadow-subtle'
+                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+            )}
+          >
+            <StickyNote size={12} />
+            All
+            {notes.length > 0 && <span className="text-micro opacity-60">{notes.length}</span>}
+          </button>
+          <button
             onClick={() => setScope('page')}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-caption font-medium transition-colors',
@@ -153,7 +167,7 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
             )}
           >
             <FileText size={12} />
-            Page {currentPage}
+            Pg {currentPage}
           </button>
           <button
             onClick={() => setScope('document')}
@@ -175,7 +189,7 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
             className="h-8 rounded-lg"
             onClick={() => {
               setIsCreating(true);
-              setNewScope(scope);
+              setNewScope(scope === 'document' ? 'document' : 'page');
             }}
           >
             New Note
@@ -358,7 +372,7 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
         <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-[var(--muted)]/10 rounded-2xl border border-dashed border-[var(--border)]">
           <StickyNote size={32} className="mb-4 text-[var(--muted-foreground)] opacity-30" />
           <p className="text-code text-[var(--muted-foreground)]">
-            {scope === 'page' ? `No notes for page ${currentPage}` : 'No document notes yet'}
+            {scope === 'all' ? 'No notes yet' : scope === 'page' ? `No notes for page ${currentPage}` : 'No document notes yet'}
           </p>
         </div>
       )}
