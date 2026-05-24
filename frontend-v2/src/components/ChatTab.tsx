@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Send, Add as Plus, Trash as Trash2, Edit as Edit2, TickCircle as Check, CloseCircle as X, MagicStar as Sparkles, Copy, Message as MessageSquare, ArrowDown, ArrowUp } from 'iconsax-reactjs';
+import { Send, Add as Plus, Trash as Trash2, Edit as Edit2, TickCircle as Check, CloseCircle as X, MagicStar as Sparkles, Copy, Message as MessageSquare, ArrowDown, ArrowUp, Eye, Microscope, Lamp as Lightbulb } from 'iconsax-reactjs';
 import { useQueryClient } from '@tanstack/react-query';
 import { useChatSessions } from '@/hooks/use-chat-sessions';
 import { chatApi, type ChatMessage, type ChatReferences } from '@/lib/api/chat';
@@ -8,12 +8,37 @@ import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MarkdownMessage } from '@/components/MarkdownMessage';
 import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
-import { MentionAutocomplete } from '@/components/MentionAutocomplete';
+import { ExpandedInput } from '@/components/ExpandedInput';
 import { MessageThread } from '@/components/MessageThread';
 import { defaultPrompts } from '@/lib/constants/defaultPrompts';
 import { cn } from '@/lib/utils';
 import { toastError, toastSuccess } from '@/lib/utils/toast';
 import { format } from 'date-fns';
+import type { PromptGroup } from '@/components/ExpandedInput';
+
+const CHAT_PROMPT_GROUPS: PromptGroup[] = [
+  {
+    label: 'Comprehension',
+    icon: Eye,
+    prompts: defaultPrompts
+      .filter(p => ['summarize', 'eli5', 'initial-screen'].includes(p.id))
+      .map(p => ({ icon: p.icon, text: p.label, prompt: p.content })),
+  },
+  {
+    label: 'Analysis',
+    icon: Microscope,
+    prompts: defaultPrompts
+      .filter(p => ['critique', 'deep-dive'].includes(p.id))
+      .map(p => ({ icon: p.icon, text: p.label, prompt: p.content })),
+  },
+  {
+    label: 'Knowledge',
+    icon: Lightbulb,
+    prompts: defaultPrompts
+      .filter(p => ['future-work', 'landscape', 'synthesis'].includes(p.id))
+      .map(p => ({ icon: p.icon, text: p.label, prompt: p.content })),
+  },
+];
 
 interface ChatTabProps {
   paperId: number;
@@ -43,7 +68,6 @@ export function ChatTab({ paperId }: ChatTabProps) {
   const [pendingUserMessage, setPendingUserMessage] = useState<{ content: string; references: ChatReferences } | null>(null);
   const [editingSessionId, setEditingSessionId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
-  const [showPrompts, setShowPrompts] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<number | null>(null);
@@ -280,11 +304,6 @@ export function ChatTab({ paperId }: ChatTabProps) {
   const cancelRename = () => {
     setEditingSessionId(null);
     setEditName('');
-  };
-
-  const insertPrompt = (content: string) => {
-    setInput(content);
-    setShowPrompts(false);
   };
 
   const copyMessage = (content: string, id: string) => {
@@ -531,41 +550,17 @@ export function ChatTab({ paperId }: ChatTabProps) {
         <div ref={messagesEndRef} />
         </div>
 
-        {/* Prompts panel */}
-        {showPrompts && (
-          <div className="shrink-0 border-t border-[var(--border)] p-3 bg-[var(--card)]">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-caption font-semibold uppercase tracking-widest text-[var(--muted-foreground)]">
-                Quick Prompts
-              </p>
-              <button onClick={() => setShowPrompts(false)} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
-                <X size={14} />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              {defaultPrompts.map((prompt) => (
-                <button
-                  key={prompt.id}
-                  onClick={() => insertPrompt(prompt.content)}
-                  className="text-left p-2 bg-[var(--white)] border border-[var(--border)] rounded-lg hover:border-[var(--primary)] transition-colors"
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <prompt.icon size={12} className="text-[var(--muted-foreground)]" />
-                    <span className="text-caption font-medium">{prompt.label}</span>
-                  </div>
-                  <p className="text-micro text-[var(--muted-foreground)]">{prompt.description}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Input */}
         <div className="border-t border-[var(--border)] p-3 shrink-0">
-          <MentionAutocomplete
-            paperId={paperId}
+          <ExpandedInput
             value={input}
             onChange={setInput}
+            onSubmit={handleSend}
+            placeholder="Ask about this paper... (use @ to mention notes/annotations/papers)"
+            submitLabel="Send"
+            submitIcon={<Send size={14} />}
+            disabled={isStreaming}
+            mentionPaperId={paperId}
             onMentionSelect={(mention) => {
               const refKey = `${mention.type}s` as 'notes' | 'annotations' | 'papers';
               setReferences(prev => ({
@@ -573,34 +568,15 @@ export function ChatTab({ paperId }: ChatTabProps) {
                 [refKey]: [...(prev[refKey] || []), { id: mention.id, type: mention.type }]
               }));
             }}
-            onSend={handleSend}
-            placeholder="Ask about this paper... (use @ to mention notes/annotations/papers)"
-            className="w-full"
+            promptsCollapsible
+            promptGroups={CHAT_PROMPT_GROUPS}
+            onSuggestionClick={(prompt) => {
+              setInput(prompt);
+            }}
           />
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-caption text-[var(--muted-foreground)] px-1">
-              Press Enter to send, Shift+Enter for newline
-            </p>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                className="!h-7 !px-2 text-caption"
-                onClick={() => setShowPrompts(!showPrompts)}
-              >
-                <Sparkles size={12} className="mr-1" />
-                Prompts
-              </Button>
-              <Button
-                variant="primary"
-                className="!h-7 !px-3 text-caption"
-                onClick={handleSend}
-                disabled={!input.trim() || isStreaming}
-              >
-                <Send size={12} className="mr-1" />
-                Send
-              </Button>
-            </div>
-          </div>
+          <p className="text-caption text-[var(--muted-foreground)] px-1 mt-2">
+            Press Enter to send, Shift+Enter for newline
+          </p>
         </div>
       </div>
 

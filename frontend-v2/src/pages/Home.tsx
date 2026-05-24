@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PaperCard } from '@/components/PaperCard';
+import { ExpandedInput } from '@/components/ExpandedInput';
 import { papersApi } from '@/lib/api/papers';
 
 export default function Home() {
@@ -40,28 +41,15 @@ export default function Home() {
 
         {/* Hero search */}
         <div className="w-full max-w-2xl">
-          <div className="relative flex items-center bg-[var(--white)] border border-[var(--border)] rounded-2xl transition-all duration-200 h-14 sm:h-16">
-            <Search size={16} className="absolute left-3 sm:left-4 text-[var(--muted-foreground)] pointer-events-none" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Search your library..."
-              className="flex-1 min-w-0 h-12 sm:h-14 bg-transparent pl-10 sm:pl-14 pr-2 text-body sm:text-body-lg text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none"
-              autoFocus
-            />
-            <button
-              onClick={() => handleSearch()}
-              disabled={!query.trim()}
-              aria-label="Search"
-              className="mr-1.5 sm:mr-2 shrink-0 h-9 w-9 sm:w-auto sm:px-4 bg-[var(--foreground)] text-[var(--white)] text-code font-medium rounded-xl flex items-center justify-center gap-1.5 disabled:opacity-30 hover:opacity-85 active:opacity-75 transition-opacity"
-            >
-              <Search size={16} className="sm:hidden" />
-              <span className="hidden sm:inline">Search</span>
-            </button>
-          </div>
-
+          <ExpandedInput
+            value={query}
+            onChange={setQuery}
+            onSubmit={() => handleSearch()}
+            placeholder="Search your library..."
+            submitLabel="Search"
+            submitIcon={<Search size={14} />}
+            autoFocus
+          />
         </div>
       </div>
 

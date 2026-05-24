@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
-import { MagicStar as Sparkles, Refresh as Loader2, ArrowDown2 as ChevronDown, Save2 as Save, Filter, MenuBoard as List } from 'iconsax-reactjs';
+import { MagicStar as Sparkles, ArrowDown2 as ChevronDown, Save2 as Save, Filter, MenuBoard as List, DocumentText as FileText, Chart as BarChart3, Warning2 as AlertCircle } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -14,10 +14,29 @@ import { CitationExplorer } from '@/components/discovery/CitationExplorer';
 import { useAISearchStream } from '@/hooks/use-ai-search-stream';
 import { AnimatePresence } from 'motion/react';
 import { DiscoveryStatus } from '@/components/discovery/DiscoveryStatus';
+import { ExpandedInput } from '@/components/ExpandedInput';
 import { discoveryApi, type DiscoverySessionCreate, type DiscoveredPaperPreview, type DiscoverySearchFilters } from '@/lib/api/discovery';
 import { toastSuccess, toastError } from '@/lib/utils/toast';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/Skeleton';
+
+const DISCOVERY_PROMPTS = [
+  {
+    icon: FileText,
+    text: 'Latest Breakthroughs',
+    prompt: 'Find the latest breakthroughs and recent advances in',
+  },
+  {
+    icon: BarChart3,
+    text: 'Survey Papers',
+    prompt: 'Find comprehensive survey and review papers covering the state of the art in',
+  },
+  {
+    icon: AlertCircle,
+    text: 'Open Challenges',
+    prompt: 'Identify open challenges, research gaps, and underexplored areas in',
+  },
+];
 
 export default function Discovery() {
   const [query, setQuery] = useState('');
@@ -79,11 +98,14 @@ export default function Discovery() {
     min_citations: minCitations ? parseInt(minCitations) : undefined,
   });
 
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearch = () => {
     if (!query.trim() || selectedSources.length === 0) return;
     setLoadedSession(null);
     search({ query: query.trim(), sources: selectedSources, filters: buildFilters(), limit, include_overview: true, include_clustering: true, include_relevance: true });
+  };
+
+  const handlePromptClick = (prompt: string) => {
+    setQuery(prompt);
   };
 
   const handleSuggestedSearch = (suggestedQuery: string) => {
@@ -150,87 +172,77 @@ export default function Discovery() {
         </p>
       </div>
 
-      {/* Search Form */}
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="relative">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search for papers by topic, title, or keywords..."
-            className="pl-12 pr-32 h-14 text-btn"
-            disabled={isSearching}
-          />
-          <Button
-            type="submit"
-            variant="primary"
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-10"
-            disabled={!query.trim() || selectedSources.length === 0 || isSearching}
-            icon={isSearching ? <Loader2 size={16} className="animate-spin" /> : ""}
-          >
-            Discover
-          </Button>
-        </div>
-      </form>
-
-      {/* Source Selection & Filters */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-4 mb-6">
-
-        <div className="flex items-center justify-between mb-4">
-          <span>Sources:</span> <SourceSelector selectedSources={selectedSources} onChange={setSelectedSources} />
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 text-code text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+      {/* Search input with integrated filters */}
+      <div className="mb-6">
+        <ExpandedInput
+          value={query}
+          onChange={setQuery}
+          onSubmit={handleSearch}
+          placeholder="Search for papers by topic, title, or keywords..."
+          submitLabel="Discover"
+          loading={isSearching}
+          suggestions={DISCOVERY_PROMPTS}
+          onSuggestionClick={handlePromptClick}
         >
-          <Filter size={14} />
-          <span>Advanced Filters</span>
-          <ChevronDown size={14} className={cn('transition-transform', showFilters && 'rotate-180')} />
-        </button>
-
-        {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 pt-4 border-t border-[var(--border)]">
-            {([
-              { label: 'Year From', value: yearFrom, set: setYearFrom },
-              { label: 'Year To', value: yearTo, set: setYearTo },
-            ] as const).map(({ label, value, set }) => (
-              <div key={label}>
-                <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">{label}</label>
-                <Select
-                  value={value}
-                  onChange={(e) => set(e.target.value)}
-                  className="!h-8"
-                >
-                  <option value="">Any</option>
-                  {Array.from({ length: new Date().getFullYear() - 1989 }, (_, i) => new Date().getFullYear() - i).map((y) => (
-                    <option key={y} value={y}>{y}</option>
-                  ))}
-                </Select>
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <span className="text-caption text-[var(--muted-foreground)]">Sources:</span>
+              <SourceSelector selectedSources={selectedSources} onChange={setSelectedSources} />
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-2 text-code text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+            >
+              <Filter size={14} />
+              <span>Advanced Filters</span>
+              <ChevronDown size={14} className={cn('transition-transform', showFilters && 'rotate-180')} />
+            </button>
+            {showFilters && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-[var(--border)]">
+                {([
+                  { label: 'Year From', value: yearFrom, set: setYearFrom },
+                  { label: 'Year To', value: yearTo, set: setYearTo },
+                ] as const).map(({ label, value, set }) => (
+                  <div key={label}>
+                    <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">{label}</label>
+                    <Select
+                      value={value}
+                      onChange={(e) => set(e.target.value)}
+                      className="!h-8"
+                    >
+                      <option value="">Any</option>
+                      {Array.from({ length: new Date().getFullYear() - 1989 }, (_, i) => new Date().getFullYear() - i).map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </Select>
+                  </div>
+                ))}
+                <div>
+                  <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Min Citations</label>
+                  <Input type="number" value={minCitations} onChange={(e) => setMinCitations(e.target.value)} placeholder="0" className="h-8 text-code" />
+                </div>
+                <div>
+                  <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">
+                    Papers / Source
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={limit}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value);
+                      if (!isNaN(n)) setLimit(Math.min(100, Math.max(1, n)));
+                    }}
+                    placeholder="20"
+                    className="h-8 text-code"
+                  />
+                </div>
               </div>
-            ))}
-            <div>
-              <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Min Citations</label>
-              <Input type="number" value={minCitations} onChange={(e) => setMinCitations(e.target.value)} placeholder="0" className="h-8 text-code" />
-            </div>
-            <div>
-              <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">
-                Papers / Source
-              </label>
-              <Input
-                type="number"
-                min={1}
-                max={20}
-                value={limit}
-                onChange={(e) => {
-                  const n = parseInt(e.target.value);
-                  if (!isNaN(n)) setLimit(Math.min(100, Math.max(1, n)));
-                }}
-                placeholder="20"
-                className="h-8 text-code"
-              />
-            </div>
+            )}
           </div>
-        )}
+        </ExpandedInput>
       </div>
 
       {/* Saved Discoveries */}

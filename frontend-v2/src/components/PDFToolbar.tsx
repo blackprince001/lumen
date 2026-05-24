@@ -1,8 +1,10 @@
-import { SearchZoomIn as ZoomIn, SearchZoomOut as ZoomOut, MenuBoard as List, ArrowLeft2 as ChevronLeft, ArrowRight2 as ChevronRight, ArrowLeft3 as ChevronsLeft, ArrowRight3 as ChevronsRight, DocumentDownload as Download, Bookmark, ArrowRotateRight as RotateCw, Magicpen as Highlighter, PenTool as PenLine } from 'iconsax-reactjs';
+import { SearchZoomIn as ZoomIn, SearchZoomOut as ZoomOut, MenuBoard as List, ArrowLeft2 as ChevronLeft, ArrowRight2 as ChevronRight, ArrowLeft3 as ChevronsLeft, ArrowRight3 as ChevronsRight, DocumentDownload as Download, Bookmark, ArrowRotateRight as RotateCw, Magicpen as Highlighter, PenTool as PenLine, More } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/Popover';
 import { cn } from '@/lib/utils';
+import { useOverflow } from '@/hooks/use-overflow';
 
 interface PDFToolbarProps {
   zoom: number;
@@ -30,239 +32,230 @@ interface PDFToolbarProps {
   onDownload?: () => void;
 }
 
-export function PDFToolbar({
-  zoom,
-  onZoomChange,
-  currentPage,
-  numPages,
-  onPageChange,
-  onFirstPage,
-  onLastPage,
-  onPreviousPage,
-  onNextPage,
-  showTOC,
-  onTOCToggle,
-  rotation,
-  onRotationChange,
-  highlightMode,
-  onHighlightModeToggle,
-  onNoteAction,
-  readingStatus,
-  onReadingStatusChange,
-  priority,
-  onPriorityChange,
-  onBookmarkAdd,
-  onDownload
-}: PDFToolbarProps) {
+export function PDFToolbar(props: PDFToolbarProps) {
+  const { containerRef, hiddenSections } = useOverflow();
 
-  const handleZoomIn = () => onZoomChange(Math.min(zoom + 0.25, 3));
-  const handleZoomOut = () => onZoomChange(Math.max(zoom - 0.25, 0.5));
-  const handleZoomReset = () => onZoomChange(1);
+  const handleZoomIn = () => props.onZoomChange(Math.min(props.zoom + 0.25, 3));
+  const handleZoomOut = () => props.onZoomChange(Math.max(props.zoom - 0.25, 0.5));
+  const handleZoomReset = () => props.onZoomChange(1);
 
   const handlePageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
-    if (!isNaN(val) && val >= 1 && val <= (numPages || 1)) {
-      onPageChange(val);
+    if (!isNaN(val) && val >= 1 && val <= (props.numPages || 1)) {
+      props.onPageChange(val);
     }
   };
 
+  const isHidden = (id: string) => hiddenSections.includes(id);
+
+  const SectionTOC = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="toc">
+      <Tooltip content={props.showTOC ? "Hide Table of Contents" : "Show Table of Contents"} side="bottom">
+        <Button
+          variant="ghost"
+          className={cn(
+            "h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]",
+            props.showTOC && "bg-[var(--foreground)]/[0.08] text-[var(--foreground)]"
+          )}
+          onClick={props.onTOCToggle}
+        >
+          <List size={16} />
+        </Button>
+      </Tooltip>
+    </div>
+  );
+
+  const SectionNav = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="nav">
+      <Tooltip content="First Page" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.currentPage <= 1} onClick={props.onFirstPage}>
+          <ChevronsLeft size={16} />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Previous Page" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.currentPage <= 1} onClick={props.onPreviousPage}>
+          <ChevronLeft size={16} />
+        </Button>
+      </Tooltip>
+      <div className="flex items-center gap-1 px-1">
+        <input
+          type="number"
+          value={props.currentPage}
+          onChange={handlePageInput}
+          className="w-12 h-7 bg-[var(--muted)] border border-[var(--border)] rounded text-code text-center focus:outline-none focus:ring-1 focus:ring-[var(--foreground)]"
+          min={1}
+          max={props.numPages || 1}
+        />
+        <span className="text-caption text-[var(--muted-foreground)] whitespace-nowrap">
+          / {props.numPages || '?'}
+        </span>
+      </div>
+      <Tooltip content="Next Page" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.currentPage >= (props.numPages || 1)} onClick={props.onNextPage}>
+          <ChevronRight size={16} />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Last Page" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.currentPage >= (props.numPages || 1)} onClick={props.onLastPage}>
+          <ChevronsRight size={16} />
+        </Button>
+      </Tooltip>
+    </div>
+  );
+
+  const SectionZoom = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="zoom">
+      <Tooltip content="Zoom Out" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.zoom <= 0.5} onClick={handleZoomOut}>
+          <ZoomOut size={16} />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Reset Zoom" side="bottom">
+        <button className="text-code font-medium min-w-[3.125rem] text-center hover:bg-[var(--foreground)]/[0.08] rounded py-1 px-1.5 transition-colors" onClick={handleZoomReset}>
+          {Math.round(props.zoom * 100)}%
+        </button>
+      </Tooltip>
+      <Tooltip content="Zoom In" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.zoom >= 3} onClick={handleZoomIn}>
+          <ZoomIn size={16} />
+        </Button>
+      </Tooltip>
+    </div>
+  );
+
+  const SectionRotate = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="rotate">
+      <Tooltip content="Rotate Page" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={() => props.onRotationChange((props.rotation + 90) % 360)}>
+          <RotateCw size={16} />
+        </Button>
+      </Tooltip>
+    </div>
+  );
+
+  const SectionTools = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="tools">
+      <Tooltip content={props.highlightMode ? "Annotation Mode (ON)" : "Annotation Mode (OFF)"} side="bottom">
+        <Button
+          variant="ghost"
+          className={cn(
+            "h-8 w-8 p-0",
+            props.highlightMode
+              ? "bg-[var(--sky-blue)]/15 text-[var(--sky-blue)] ring-1 ring-[var(--sky-blue)]/30 hover:bg-[var(--sky-blue)]/25"
+              : "hover:bg-[var(--foreground)]/[0.08]"
+          )}
+          onClick={props.onHighlightModeToggle}
+        >
+          <Highlighter size={16} />
+        </Button>
+      </Tooltip>
+      <Tooltip content="Open Notes Panel" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={props.onNoteAction}>
+          <PenLine size={16} />
+        </Button>
+      </Tooltip>
+    </div>
+  );
+
+  const SectionStatus = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="status">
+      {props.readingStatus && props.onReadingStatusChange && (
+        <Tooltip content="Reading Status" side="bottom">
+          <Select
+            value={props.readingStatus}
+            onChange={(e) => props.onReadingStatusChange!(e.target.value as any)}
+            className="h-8 border-none bg-transparent hover:bg-[var(--foreground)]/[0.08] text-caption font-medium px-4 pr-4 transition-all"
+          >
+            <option value="not_started">Unread</option>
+            <option value="in_progress">Reading</option>
+            <option value="read">Finished</option>
+            <option value="archived">Archived</option>
+          </Select>
+        </Tooltip>
+      )}
+    </div>
+  );
+
+  const SectionPriority = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="priority">
+      {props.priority && props.onPriorityChange && (
+        <Tooltip content="Priority" side="bottom">
+          <Select
+            value={props.priority}
+            onChange={(e) => props.onPriorityChange!(e.target.value as any)}
+            className="h-8 border-none bg-transparent hover:bg-[var(--foreground)]/[0.08] text-caption font-medium px-2 pr-4 transition-all"
+          >
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+            <option value="critical">Critical</option>
+          </Select>
+        </Tooltip>
+      )}
+    </div>
+  );
+
+  const SectionBookmark = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="bookmark">
+      <Tooltip content="Bookmark Page" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={props.onBookmarkAdd}>
+          <Bookmark size={16} />
+        </Button>
+      </Tooltip>
+    </div>
+  );
+
+  const SectionDownload = () => (
+    <div className="flex items-center gap-1 shrink-0" data-section="download">
+      <Tooltip content="Download PDF" side="bottom">
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={props.onDownload}>
+          <Download size={16} />
+        </Button>
+      </Tooltip>
+    </div>
+  );
+
+  const allSections = [
+    { id: 'toc', Comp: SectionTOC },
+    { id: 'nav', Comp: SectionNav },
+    { id: 'zoom', Comp: SectionZoom },
+    { id: 'rotate', Comp: SectionRotate },
+    { id: 'tools', Comp: SectionTools },
+    { id: 'status', Comp: SectionStatus },
+    { id: 'priority', Comp: SectionPriority },
+    { id: 'bookmark', Comp: SectionBookmark },
+    { id: 'download', Comp: SectionDownload },
+  ];
+
+  const visible = allSections.filter(s => !isHidden(s.id));
+  const overflowItems = allSections.filter(s => isHidden(s.id));
+
   return (
-    <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--white)] shrink-0 z-20">
-      {/* TOC toggle */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
-        <Tooltip content={showTOC ? "Hide Table of Contents" : "Show Table of Contents"} side="bottom">
-          <Button
-            variant="ghost"
-            className={cn(
-              "h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]",
-              showTOC && "bg-[var(--foreground)]/[0.08] text-[var(--foreground)]"
-            )}
-            onClick={onTOCToggle}
-          >
-            <List size={16} />
-          </Button>
-        </Tooltip>
-      </div>
+    <div ref={containerRef} className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--white)] shrink-0 z-20">
+      {/* Visible sections */}
+      {visible.map(s => <s.Comp key={s.id} />)}
 
-      {/* Page Navigation */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
-        <Tooltip content="First Page" side="bottom">
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-            disabled={currentPage <= 1}
-            onClick={onFirstPage}
-          >
-            <ChevronsLeft size={16} />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Previous Page" side="bottom">
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-            disabled={currentPage <= 1}
-            onClick={onPreviousPage}
-          >
-            <ChevronLeft size={16} />
-          </Button>
-        </Tooltip>
+      {/* Separator before dots when overflow exists */}
+      {overflowItems.length > 0 && (
+        <div className="w-px h-6 bg-[var(--border)] shrink-0" />
+      )}
 
-        <div className="flex items-center gap-1 px-1">
-          <input
-            type="number"
-            value={currentPage}
-            onChange={handlePageInput}
-            className="w-12 h-7 bg-[var(--muted)] border border-[var(--border)] rounded text-code text-center focus:outline-none focus:ring-1 focus:ring-[var(--foreground)]"
-            min={1}
-            max={numPages || 1}
-          />
-          <span className="text-caption text-[var(--muted-foreground)] whitespace-nowrap">
-            / {numPages || '?'}
-          </span>
-        </div>
-
-        <Tooltip content="Next Page" side="bottom">
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-            disabled={currentPage >= (numPages || 1)}
-            onClick={onNextPage}
-          >
-            <ChevronRight size={16} />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Last Page" side="bottom">
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-            disabled={currentPage >= (numPages || 1)}
-            onClick={onLastPage}
-          >
-            <ChevronsRight size={16} />
-          </Button>
-        </Tooltip>
-      </div>
-
-      {/* Zoom Controls */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
-        <Tooltip content="Zoom Out" side="bottom">
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-            disabled={zoom <= 0.5}
-            onClick={handleZoomOut}
-          >
-            <ZoomOut size={16} />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Reset Zoom" side="bottom">
-          <button
-            className="text-code font-medium min-w-[3.125rem] text-center hover:bg-[var(--foreground)]/[0.08] rounded py-1 px-1.5 transition-colors"
-            onClick={handleZoomReset}
-          >
-            {Math.round(zoom * 100)}%
-          </button>
-        </Tooltip>
-        <Tooltip content="Zoom In" side="bottom">
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-            disabled={zoom >= 3}
-            onClick={handleZoomIn}
-          >
-            <ZoomIn size={16} />
-          </Button>
-        </Tooltip>
-      </div>
-
-      {/* Rotation */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
-        <Tooltip content="Rotate Page" side="bottom">
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-            onClick={() => onRotationChange((rotation + 90) % 360)}
-          >
-            <RotateCw size={16} />
-          </Button>
-        </Tooltip>
-      </div>
-
-      {/* Selection Tools */}
-      <div className="flex items-center gap-1 border-r border-[var(--border)] pr-2 shrink-0">
-        <Tooltip content={highlightMode ? "Annotation Mode (ON)" : "Annotation Mode (OFF)"} side="bottom">
-          <Button
-            variant="ghost"
-            className={cn(
-              "h-8 w-8 p-0",
-              highlightMode
-                ? "bg-[var(--sky-blue)]/15 text-[var(--sky-blue)] ring-1 ring-[var(--sky-blue)]/30 hover:bg-[var(--sky-blue)]/25"
-                : "hover:bg-[var(--foreground)]/[0.08]"
-            )}
-            onClick={onHighlightModeToggle}
-          >
-            <Highlighter size={16} />
-          </Button>
-        </Tooltip>
-        <Tooltip content="Open Notes Panel" side="bottom">
-          <Button
-            variant="ghost"
-            className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]"
-            onClick={onNoteAction}
-          >
-            <PenLine size={16} />
-          </Button>
-        </Tooltip>
-      </div>
-
-      {/* Misc Actions */}
-      <div className="flex items-center gap-1 ml-auto shrink-0">
-        {readingStatus && onReadingStatusChange && (
-          <div className="w-auto min-w-[3rem]">
-            <Tooltip content="Reading Status" side="bottom">
-              <Select
-                value={readingStatus}
-                onChange={(e) => onReadingStatusChange(e.target.value as any)}
-                className="h-8 border-none bg-transparent hover:bg-[var(--foreground)]/[0.08] text-caption font-medium px-4 pr-4 transition-all"
-              >
-                <option value="not_started">Unread</option>
-                <option value="in_progress">Reading</option>
-                <option value="read">Finished</option>
-                <option value="archived">Archived</option>
-              </Select>
-            </Tooltip>
-          </div>
+      {/* Overflow menu */}
+      <div data-section="dots" className="shrink-0">
+        {overflowItems.length > 0 && (
+          <Popover>
+            <PopoverTrigger className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[var(--foreground)]/[0.08] transition-colors">
+              <More size={16} />
+            </PopoverTrigger>
+            <PopoverContent side="bottom" align="end" className="min-w-[12rem] p-2 space-y-1" style={{ zIndex: 100 }}>
+              {overflowItems.map(s => (
+                <div key={s.id} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-[var(--muted)] transition-colors">
+                  <s.Comp />
+                </div>
+              ))}
+            </PopoverContent>
+          </Popover>
         )}
-
-        {priority && onPriorityChange && (
-          <div className="w-auto min-w-[2rem] border-l border-[var(--border)] ml-1 pl-1">
-            <Tooltip content="Priority" side="bottom">
-              <Select
-                value={priority}
-                onChange={(e) => onPriorityChange(e.target.value as any)}
-                className="h-8 border-none bg-transparent hover:bg-[var(--foreground)]/[0.08] text-caption font-medium px-2 pr-4 transition-all"
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
-              </Select>
-            </Tooltip>
-          </div>
-        )}
-
-        <Tooltip content="Bookmark Page" side="bottom">
-          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={onBookmarkAdd}>
-            <Bookmark size={16} />
-          </Button>
-        </Tooltip>
-
-        <Tooltip content="Download PDF" side="bottom">
-          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={onDownload}>
-            <Download size={16} />
-          </Button>
-        </Tooltip>
-
       </div>
     </div>
   );

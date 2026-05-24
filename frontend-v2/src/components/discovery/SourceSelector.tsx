@@ -1,5 +1,4 @@
 import { cn } from '@/lib/utils';
-import { TickCircle as Check } from 'iconsax-reactjs';
 
 export type SourceId = 'arxiv' | 'semantic_scholar' | 'google_scholar' | 'acl' | 'openreview';
 
@@ -50,7 +49,6 @@ export function SourceSelector({ selectedSources, onChange, className }: SourceS
                 : 'bg-[var(--muted)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--muted-foreground)] hover:text-[var(--foreground)]'
             )}
           >
-            {isSelected && <Check size={11} />}
             {source.label}
           </button>
         );

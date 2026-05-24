@@ -67,7 +67,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* Tab header */}
           <div className="flex items-center justify-between shrink-0 border-b border-[var(--panel-border)] px-3 py-2.5 bg-[var(--panel-surface)]">
-            <TabsList className="gap-0 border-none bg-transparent px-0 flex-1 overflow-x-auto scrollbar-none items-center">
+            <TabsList className="gap-0 border-none bg-transparent px-0 flex-1 overflow-x-auto overflow-y-hidden scrollbar-none items-center h-12">
               <TabsTrigger value="details" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
                 <FileText size={13} />
                 <span className="hidden xl:inline text-caption">Details</span>

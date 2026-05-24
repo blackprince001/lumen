@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { multiChatApi } from '@/lib/api/multi-chat';
-import { CloseCircle as X, Send, Refresh as Loader2, MagicStar as Sparkles } from 'iconsax-reactjs';
+import { CloseCircle as X, Send, MagicStar as Sparkles, DocumentText as FileText, Lamp as Lightbulb, Global } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MarkdownMessage } from '@/components/MarkdownMessage';
+import { ExpandedInput } from '@/components/ExpandedInput';
 import { cn } from '@/lib/utils';
 
 interface GroupChatPanelProps {
@@ -15,6 +16,25 @@ interface GroupChatPanelProps {
 
 const WORDS_PER_SECOND = 12;
 const WORD_REVEAL_DELAY_MS = 1000 / WORDS_PER_SECOND;
+
+const GROUP_PROMPTS = [
+  {
+    label: 'Analyze',
+    icon: FileText,
+    prompts: [
+      { icon: FileText, text: 'Summarize All', prompt: 'Provide a concise summary of the key findings and contributions across all papers in this group.' },
+      { icon: FileText, text: 'Compare Methods', prompt: 'Compare and contrast the methodologies used across these papers. What are the key differences and similarities in their approaches?' },
+    ],
+  },
+  {
+    label: 'Synthesize',
+    icon: Lightbulb,
+    prompts: [
+      { icon: Global, text: 'Research Landscape', prompt: 'Describe how these papers fit into the broader research landscape. What are the connections and conflicts between their findings?' },
+      { icon: Lightbulb, text: 'Identify Gaps', prompt: 'Based on these papers, what are the most important open questions or underexplored areas that future research should address?' },
+    ],
+  },
+];
 
 export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelProps) {
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
@@ -189,26 +209,17 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
 
       {/* Input */}
       <div className="border-t border-[var(--panel-border)] p-3 shrink-0 bg-[var(--panel-surface)]">
-        <textarea
+        <ExpandedInput
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+          onChange={setMessage}
+          onSubmit={handleSend}
           placeholder="Ask about these papers... (Enter to send)"
+          submitLabel="Send"
+          submitIcon={<Send size={14} />}
           disabled={isStreaming}
-          rows={2}
-          className="w-full px-3 py-2 text-code bg-[var(--panel-surface-muted)] border border-[var(--panel-border)] rounded-xl resize-none focus:outline-none focus:border-[var(--primary)] placeholder:text-[var(--muted-foreground)]"
+          promptsCollapsible
+          promptGroups={GROUP_PROMPTS}
         />
-        <div className="flex justify-end mt-2">
-          <Button
-            variant="primary"
-            onClick={handleSend}
-            disabled={!message.trim() || isStreaming}
-            className="!h-7 !px-3 text-caption"
-          >
-            {isStreaming ? <Loader2 size={12} className="animate-spin mr-1" /> : <Send size={12} className="mr-1" />}
-            Send
-          </Button>
-        </div>
       </div>
     </div>
   );

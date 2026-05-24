@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatApi, type ChatMessage } from '@/lib/api/chat';
 import { MarkdownMessage } from './MarkdownMessage';
-import { Button } from './ui/Button';
+import { ExpandedInput } from './ExpandedInput';
 import { format } from 'date-fns';
 import { Send } from 'iconsax-reactjs';
 import { Skeleton } from './ui/Skeleton';
@@ -64,9 +64,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
     };
   }, [streamingContent, displayContent.length]);
 
-  const handleSend = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-
+  const handleSend = async () => {
     if (message.trim() && !isStreaming) {
       const userMessage = message;
       setPendingUserMessage(userMessage);
@@ -177,25 +175,18 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
 
           {/* Thread input - only show if explicitly requested */}
           {showInput && (
-            <form onSubmit={handleSend} className="mt-2 flex gap-2">
-              <input
-                type="text"
+            <div className="mt-2">
+              <ExpandedInput
+                size="compact"
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={setMessage}
+                onSubmit={handleSend}
                 placeholder="Reply in thread..."
                 disabled={isStreaming}
+                submitIcon={<Send size={11} />}
                 autoFocus
-                className="flex-1 px-3 py-1.5 text-caption rounded-md border border-[var(--border)] bg-[var(--white)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--primary)]"
               />
-              <Button
-                type="submit"
-                variant="primary"
-                className="!h-7 !w-7 !p-0"
-                disabled={!message.trim() || isStreaming}
-              >
-                <Send size={12} />
-              </Button>
-            </form>
+            </div>
           )}
     </div>
   );
