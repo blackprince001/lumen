@@ -202,6 +202,57 @@ export const papersApi = {
     return api.post<PaperUploadResponse>('/ingest/upload', formData);
   },
 
+  uploadFilesWithProgress: (
+    files: File[],
+    groupIds: number[] | undefined,
+    onProgress: (loaded: number, total: number) => void,
+  ): Promise<PaperUploadResponse> => {
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+    const baseUrl = API_BASE_URL.replace(/\/$/, '');
+
+    const formData = new FormData();
+    files.forEach((file) => formData.append('files', file));
+    if (groupIds && groupIds.length > 0) {
+      formData.append('group_ids', JSON.stringify(groupIds));
+    }
+
+    return new Promise<PaperUploadResponse>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${baseUrl}/ingest/upload`);
+      xhr.withCredentials = true;
+
+      Object.entries(getAuthHeaders()).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(e.loaded, e.total);
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText) as PaperUploadResponse);
+          } catch {
+            reject(new Error('Invalid server response'));
+          }
+        } else {
+          let message = `HTTP ${xhr.status}`;
+          try {
+            const data = JSON.parse(xhr.responseText) as { detail?: string };
+            if (data?.detail) message = data.detail;
+          } catch {
+            /* keep default */
+          }
+          reject(new Error(message));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error: Could not reach server'));
+      xhr.onabort = () => reject(new Error('Upload aborted'));
+
+      xhr.send(formData);
+    });
+  },
+
   getRelated: (id: number): Promise<RelatedPapersResponse> =>
     api.get<RelatedPapersResponse>(`/papers/${id}/related`),
 
