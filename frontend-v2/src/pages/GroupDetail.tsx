@@ -16,6 +16,8 @@ import { PaperCard } from '@/components/PaperCard';
 import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
 import { MovePapersDialog } from '@/components/MovePapersDialog';
 import { GroupChatSidebar } from '@/components/GroupChatSidebar';
+import { FolderArt } from '@/components/FolderArt';
+import { getPaperTheme } from '@/lib/paper-themes';
 import { toastSuccess, toastError } from '@/lib/utils/toast';
 
 export default function GroupDetail() {
@@ -183,7 +185,7 @@ export default function GroupDetail() {
             <Button
               variant="secondary"
               icon={<Plus size={14} />}
-              onClick={() => navigate('/ingest')}
+              onClick={() => navigate('/ingest', { state: { preselectedGroupIds: [groupId] } })}
               className="px-2.5 sm:px-3"
               aria-label="Add paper"
             >
@@ -214,20 +216,32 @@ export default function GroupDetail() {
         {childGroups.length > 0 && (
           <div className="mb-8">
             <h2 className="text-subheading font-medium mb-4">Folders</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {childGroups.map((child) => (
-                <Link
-                  key={child.id}
-                  to={`/groups/${child.id}`}
-                  className="flex items-center gap-3 p-4 rounded-lg border border-[var(--border)] hover:bg-[var(--muted)] transition-colors"
-                >
-                  <Folder size={20} className="text-[var(--muted-foreground)] shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-body truncate">{child.name}</h3>
-                    <p className="text-caption text-[var(--muted-foreground)]">{child.papers?.length || 0} papers</p>
-                  </div>
-                </Link>
-              ))}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {childGroups.map((child) => {
+                const count = child.papers?.length ?? 0;
+                return (
+                  <Link
+                    key={child.id}
+                    to={`/groups/${child.id}`}
+                    className="group block transition-transform duration-200 ease-out hover:-translate-y-1"
+                  >
+                    <div className="px-2 pt-2 transition-transform duration-200 ease-out group-hover:scale-[1.02]">
+                      <FolderArt
+                        theme={getPaperTheme(child.id)}
+                        hasItems={count > 0}
+                        peekCount={count >= 3 ? 3 : count}
+                        className="drop-shadow-sm group-hover:drop-shadow-md transition-[filter] duration-200"
+                      />
+                    </div>
+                    <div className="mt-2 text-center">
+                      <p className="text-code font-medium text-[var(--foreground)] truncate">{child.name}</p>
+                      <p className="text-caption text-[var(--muted-foreground)]">
+                        {count} {count === 1 ? 'paper' : 'papers'}
+                      </p>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </div>
         )}
@@ -290,7 +304,7 @@ export default function GroupDetail() {
         ) : childGroups.length === 0 ? (
           <div className="text-center py-12 text-[var(--muted-foreground)]">
             <p className="text-body mb-4">No papers or folders in this group yet</p>
-            <Button icon={<Plus size={14} />} onClick={() => navigate('/ingest')}>
+            <Button icon={<Plus size={14} />} onClick={() => navigate('/ingest', { state: { preselectedGroupIds: [groupId] } })}>
               Add Paper
             </Button>
           </div>

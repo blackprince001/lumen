@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import { groupsApi, type Group } from '@/lib/api/groups';
-import { Add as Plus, DocumentText as FileText, FolderOpen, Edit as Edit2, Trash as Trash2, DocumentDownload, People } from 'iconsax-reactjs';
+import { Add as Plus, FolderOpen, Edit as Edit2, Trash as Trash2, DocumentDownload, People } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
+import { FolderArt } from '@/components/FolderArt';
 import { getPaperTheme, type PaperTheme } from '@/lib/paper-themes';
 import { toastSuccess, toastError } from '@/lib/utils/toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,67 +23,33 @@ interface FolderCardProps {
 }
 
 function FolderCard({ group, theme, isShared, onEdit, onDelete, onExport }: FolderCardProps) {
-  const [hovered, setHovered] = useState(false);
-
-  const bg = hovered ? theme.bg : 'var(--card)';
-  const border = hovered ? theme.border : 'var(--border)';
-  const textColor = hovered ? theme.text : 'var(--foreground)';
-  const mutedColor = hovered ? theme.text : 'var(--muted-foreground)';
-  const accentBg = hovered ? theme.accent : 'var(--muted)';
+  const paperCount = group.papers?.length ?? group.paper_count ?? 0;
+  const peekCount = paperCount >= 3 ? 3 : paperCount;
 
   return (
-    <div
-      className="relative pt-[1.75rem] transition-all duration-200 group"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* Tab */}
-      <div
-        className="absolute top-0 left-0 w-[7.5rem] h-[1.875rem] rounded-t-[0.5625rem]"
-        style={{
-          backgroundColor: bg,
-          border: `1px solid ${border}`,
-          borderBottom: 'none',
-          transition: 'background-color 200ms, border-color 200ms',
-        }}
-      />
-
-      {/* Folder body */}
-      <Link to={`/groups/${group.id}`}>
-        <div
-          className="relative w-full p-6"
-          style={{
-            backgroundColor: bg,
-            border: `1px solid ${border}`,
-            borderRadius: '0 0.875rem 0.875rem 0.875rem',
-            transition: 'background-color 200ms, border-color 200ms',
-          }}
-        >
-          <div className="flex items-start gap-3 mb-5">
-            <div
-              className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 transition-colors duration-200"
-              style={{ backgroundColor: accentBg }}
-            >
-              <FolderOpen size={20} style={{ color: mutedColor, transition: 'color 200ms' }} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p
-                className="text-btn font-semibold leading-snug truncate transition-colors duration-200"
-                style={{ color: textColor }}
-              >
-                {group.name}
-              </p>
-            </div>
-          </div>
-
-          <div
-            className="flex items-center gap-1.5 text-caption font-medium transition-colors duration-200"
-            style={{ color: mutedColor, opacity: 0.75 }}
-          >
-            <FileText size={13} />
-            <span>{group.papers?.length || group.paper_count || 0} papers</span>
+    <div className="group relative">
+      <Link
+        to={`/groups/${group.id}`}
+        className="block transition-transform duration-200 ease-out hover:-translate-y-1"
+      >
+        <div className="px-2 pt-2 pb-1 transition-transform duration-200 ease-out group-hover:scale-[1.02]">
+          <FolderArt
+            theme={theme}
+            hasItems={paperCount > 0}
+            peekCount={peekCount}
+            className="drop-shadow-sm group-hover:drop-shadow-md transition-[filter] duration-200"
+          />
+        </div>
+        <div className="px-2 pt-2">
+          <p className="text-btn font-medium text-[var(--foreground)] leading-snug truncate text-center">
+            {group.name}
+          </p>
+          <div className="mt-1 flex items-center justify-center gap-1.5 text-caption text-[var(--muted-foreground)]">
+            <span>
+              {paperCount} {paperCount === 1 ? 'paper' : 'papers'}
+            </span>
             {isShared && (
-              <span className="inline-flex items-center gap-1 ml-2 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]">
                 <People size={10} />
                 Shared
               </span>
@@ -92,8 +59,8 @@ function FolderCard({ group, theme, isShared, onEdit, onDelete, onExport }: Fold
       </Link>
 
       {/* Action buttons */}
-      <div className="absolute top-10 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-        {(group.paper_count ?? group.papers?.length ?? 0) > 0 && (
+      <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+        {paperCount > 0 && (
           <Button
             variant="ghost"
             className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm"
