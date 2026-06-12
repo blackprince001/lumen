@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { format, subDays, addDays, subMonths, addMonths, isToday, isFuture, parseISO, startOfMonth } from 'date-fns';
 import { motion } from 'motion/react';
-import { ExportSquare as ExternalLink, Like1 as ThumbsUp, Message as MessageSquare, Refresh as RefreshCw, ArrowLeft2 as ChevronLeft, ArrowRight2 as ChevronRight, ArrowDown2 as ChevronDown, ArrowUp2 as ChevronUp, MagicStar as Sparkles, DocumentText as FileText, Notepad2 as Newspaper, Bookmark2 as BookmarkPlus, Calendar } from 'iconsax-reactjs';
+import { ExportSquare as ExternalLink, Like1 as ThumbsUp, Message as MessageSquare, Refresh as RefreshCw, ArrowLeft2 as ChevronLeft, ArrowRight2 as ChevronRight, ArrowDown2 as ChevronDown, ArrowUp2 as ChevronUp, MagicStar as Sparkles, Notepad2 as Newspaper, Bookmark2 as BookmarkPlus, Calendar } from 'iconsax-reactjs';
+import { PaperCoverPlaceholder } from '@/components/ui/PaperCoverPlaceholder';
 import { huggingfaceApi, type HFPaperItem } from '@/lib/api/huggingface';
 import { Button } from '@/components/ui/Button';
 import { getPaperTheme } from '@/lib/paper-themes';
@@ -19,6 +20,7 @@ function getTodayString() {
 function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [thumbFailed, setThumbFailed] = useState(false);
   const theme = useMemo(() => {
     const hash = paper.paper.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
     return getPaperTheme(hash);
@@ -38,26 +40,21 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
       className="rounded-2xl border overflow-hidden paper-card-hover flex flex-col"
       style={{ backgroundColor: theme.bg, borderColor: theme.border, '--card-action': theme.action } as React.CSSProperties}
     >
-      {/* Thumbnail / header strip */}
-      <div className="relative overflow-hidden" style={{ backgroundColor: theme.accent }}>
-        {paper.thumbnail
-          ? <img src={paper.thumbnail} alt={paper.title} className="w-full h-36 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-          : <div className="h-16 flex items-center justify-center"><FileText size={22} className="opacity-20" style={{ color: theme.text }} /></div>
-        }
-        <div className="absolute top-2.5 left-3 flex items-center gap-1.5">
-          <span className="px-2 py-0.5 bg-white/80 rounded text-caption font-semibold flex items-center gap-1" style={{ color: theme.text }}>
+      {/* Header strip: stats + add-to-library */}
+      <div className="flex items-center justify-between gap-1.5 px-4 pt-3 pb-2.5">
+        <div className="flex items-center gap-1.5">
+          <span className="px-2 py-0.5 rounded text-caption font-semibold flex items-center gap-1" style={{ backgroundColor: theme.accent, color: theme.text }}>
             <ThumbsUp size={11} />{paper.paper.upvotes}
           </span>
           {paper.numComments > 0 && (
-            <span className="px-2 py-0.5 bg-white/80 rounded text-caption font-semibold flex items-center gap-1" style={{ color: theme.text }}>
+            <span className="px-2 py-0.5 rounded text-caption font-semibold flex items-center gap-1" style={{ backgroundColor: theme.accent, color: theme.text }}>
               <MessageSquare size={11} />{paper.numComments}
             </span>
           )}
         </div>
-        {/* Add to library */}
         <button
           onClick={(e) => { e.stopPropagation(); setShowDialog(true); }}
-          className="absolute top-2.5 right-3 p-1.5 bg-white/80 rounded transition-all hover:bg-white"
+          className="p-1.5 rounded transition-colors hover:bg-black/10"
           title="Add to library"
           style={{ color: theme.text }}
         >
@@ -65,8 +62,27 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
         </button>
       </div>
 
-      {/* Inset content area */}
-      <div className="rounded-t-xl border-t p-4 flex-1" style={{ backgroundColor: theme.accent, borderColor: theme.border }}>
+      {/* Inset content area: cover left, details right */}
+      <div className="rounded-t-xl border-t p-4 flex-1 flex gap-3.5" style={{ backgroundColor: theme.accent, borderColor: theme.border }}>
+        {/* Cover thumbnail */}
+        <div
+          className="w-20 shrink-0 self-start aspect-[0.7727] rounded-lg overflow-hidden border shadow-xs"
+          style={{ borderColor: theme.border, backgroundColor: theme.bg }}
+        >
+          {paper.thumbnail && !thumbFailed ? (
+            <img
+              src={paper.thumbnail}
+              alt=""
+              className="size-full object-cover"
+              draggable={false}
+              onError={() => setThumbFailed(true)}
+            />
+          ) : (
+            <PaperCoverPlaceholder theme={theme.name} />
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
         <p className="text-caption font-medium mb-2 truncate opacity-60" style={{ color: theme.text }}>
           {paper.organization && <>{paper.organization.fullname} · </>}
           {authorNames}{hasMoreAuthors && ' et al.'}
@@ -122,6 +138,7 @@ function HFPaperCard({ paper, index = 0 }: { paper: HFPaperItem; index?: number 
           <a href={paperUrl} target="_blank" rel="noopener noreferrer" className="text-caption font-semibold opacity-60 hover:opacity-100 transition-opacity" style={{ color: theme.text }}>
             View paper →
           </a>
+        </div>
         </div>
       </div>
     </motion.article>

@@ -33,6 +33,7 @@ import {
 } from '@/lib/finder/manifest';
 import { loadPaperThumbnail } from '@/lib/finder/thumbnails';
 import { PaperInfoPanel } from '@/components/finder/PaperInfoPanel';
+import { PaperCoverPlaceholder } from '@/components/ui/PaperCoverPlaceholder';
 import { Button } from '@/components/ui/Button';
 import { Dialog, DialogFooter } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -522,33 +523,9 @@ export default function GroupsFinder() {
           return paper ? <PaperInfoPanel paper={paper} /> : null;
         }}
         loadPreviewImageUrl={loadPaperThumbnail}
-        renderFilePreview={(file) => {
-          const meta = fileMeta(file);
-          const theme = meta?.theme ?? 'olive';
-          return (
-            <div
-              aria-hidden="true"
-              className="flex size-full flex-col gap-1 rounded-[inherit] border p-1.5"
-              style={{
-                backgroundColor: `var(--theme-${theme}-bg)`,
-                borderColor: `var(--theme-${theme}-border)`,
-              }}
-            >
-              <div
-                className="h-1.5 w-3/4 rounded-full"
-                style={{ backgroundColor: `var(--theme-${theme}-action)` }}
-              />
-              <div
-                className="h-1 w-full rounded-full"
-                style={{ backgroundColor: `var(--theme-${theme}-accent)` }}
-              />
-              <div
-                className="h-1 w-5/6 rounded-full"
-                style={{ backgroundColor: `var(--theme-${theme}-accent)` }}
-              />
-            </div>
-          );
-        }}
+        renderFilePreview={(file) => (
+          <PaperCoverPlaceholder theme={fileMeta(file)?.theme ?? 'olive'} />
+        )}
       />
 
       {menu && (

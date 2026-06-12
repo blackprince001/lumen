@@ -2,6 +2,9 @@ import { Link } from 'react-router-dom';
 import { ExportSquare as ExternalLink, Trash as Trash2, People } from 'iconsax-reactjs';
 import { cn } from '@/lib/utils';
 import { getPaperTheme } from '@/lib/paper-themes';
+import { paperAuthors, paperYear } from '@/lib/paper-display';
+import { usePaperThumbnail } from '@/hooks/use-paper-thumbnail';
+import { PaperCoverPlaceholder } from '@/components/ui/PaperCoverPlaceholder';
 import { ReadingStatusBadge } from '@/components/ReadingStatusBadge';
 import { PriorityBadge } from '@/components/PriorityBadge';
 import { ProcessingStatusBadge } from '@/components/ProcessingStatusBadge';
@@ -26,21 +29,10 @@ export function PaperCard({
 }: PaperCardProps) {
   const theme = getPaperTheme(paper.id);
   const isShared = paper.is_shared === true;
+  const coverUrl = usePaperThumbnail(paper);
 
-  const authorText = (() => {
-    const list = paper.metadata_json?.authors_list;
-    if (Array.isArray(list) && list.length > 0) return list.join(', ');
-    if (paper.metadata_json?.author) return String(paper.metadata_json.author);
-    return null;
-  })();
-
-  const publicationYear = (() => {
-    const pubDate = paper.metadata_json?.publication_date;
-    if (pubDate) return String(pubDate).slice(0, 4);
-    const year = paper.metadata_json?.year;
-    if (year) return String(year);
-    return null;
-  })();
+  const authorText = paperAuthors(paper);
+  const publicationYear = paperYear(paper);
 
   const handleClick = selectionMode && onSelect
     ? () => onSelect(paper.id)
@@ -119,67 +111,87 @@ export function PaperCard({
         </div>
       </div>
 
-      {/* ── Inset content area ── */}
+      {/* ── Inset content area: cover left, details right ── */}
       <div
-        className="rounded-t-xl border-t px-4 pt-3.5 pb-4 flex-1"
+        className="rounded-t-xl border-t px-4 pt-3.5 pb-4 flex-1 flex gap-3.5"
         style={{ backgroundColor: theme.accent, borderColor: theme.border }}
       >
-        {/* Title */}
-        <h4 className="text-body font-semibold leading-snug line-clamp-2 mb-1" style={{ color: theme.text }}>
-          {paper.title}
-        </h4>
+        {/* Cover thumbnail */}
+        <div
+          className="w-20 shrink-0 self-start aspect-[0.7727] rounded-lg overflow-hidden border shadow-xs"
+          style={{ borderColor: theme.border, backgroundColor: theme.bg }}
+        >
+          {coverUrl ? (
+            <img
+              src={coverUrl}
+              alt=""
+              className="size-full object-cover"
+              draggable={false}
+            />
+          ) : (
+            <PaperCoverPlaceholder theme={theme.name} />
+          )}
+        </div>
 
-        {/* Authors */}
-        {authorText && (
-          <p className="text-caption truncate opacity-70 mb-2" style={{ color: theme.text }}>
-            {authorText}
-          </p>
-        )}
+        {/* Details */}
+        <div className="min-w-0 flex-1 flex flex-col">
+          {/* Title */}
+          <h4 className="text-body font-semibold leading-snug line-clamp-2 mb-1" style={{ color: theme.text }}>
+            {paper.title}
+          </h4>
 
-        {/* Abstract / content preview */}
-        {paper.content_text && (
-          <p className="text-caption line-clamp-2 leading-relaxed opacity-80 mb-3" style={{ color: theme.text }}>
-            {paper.content_text.slice(0, 200)}
-          </p>
-        )}
+          {/* Authors */}
+          {authorText && (
+            <p className="text-caption truncate opacity-70 mb-2" style={{ color: theme.text }}>
+              {authorText}
+            </p>
+          )}
 
-        {/* Tags */}
-        {paper.tags && paper.tags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5 mt-auto">
-            {paper.tags.slice(0, 4).map((tag) => (
-              <span
-                key={tag.id}
-                className="px-1.5 py-0.5 rounded text-micro font-semibold"
-                style={{ backgroundColor: theme.bg, color: theme.text }}
+          {/* Abstract / content preview */}
+          {paper.content_text && (
+            <p className="text-caption line-clamp-2 leading-relaxed opacity-80 mb-3" style={{ color: theme.text }}>
+              {paper.content_text.slice(0, 200)}
+            </p>
+          )}
+
+          {/* Tags */}
+          {paper.tags && paper.tags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-auto">
+              {paper.tags.slice(0, 4).map((tag) => (
+                <span
+                  key={tag.id}
+                  className="px-1.5 py-0.5 rounded text-micro font-semibold"
+                  style={{ backgroundColor: theme.bg, color: theme.text }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+              {paper.tags.length > 4 && (
+                <span className="text-micro opacity-50" style={{ color: theme.text }}>
+                  +{paper.tags.length - 4}
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Footer: source link */}
+          {paper.url && (
+            <div className="flex items-center justify-end mt-3 pt-2 border-t" style={{ borderColor: theme.border }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  window.open(paper.url, '_blank', 'noopener,noreferrer');
+                }}
+                className="inline-flex items-center gap-1 text-caption opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
+                style={{ color: theme.text }}
               >
-                {tag.name}
-              </span>
-            ))}
-            {paper.tags.length > 4 && (
-              <span className="text-micro opacity-50" style={{ color: theme.text }}>
-                +{paper.tags.length - 4}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Footer: source link */}
-        {paper.url && (
-          <div className="flex items-center justify-end mt-3 pt-2 border-t" style={{ borderColor: theme.border }}>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.open(paper.url, '_blank', 'noopener,noreferrer');
-              }}
-              className="inline-flex items-center gap-1 text-caption opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-              style={{ color: theme.text }}
-            >
-              Source <ExternalLink size={10} />
-            </button>
-          </div>
-        )}
+                Source <ExternalLink size={10} />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
