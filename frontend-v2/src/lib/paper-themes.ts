@@ -5,7 +5,7 @@
  * based on their ID. Maps to CSS variables defined in index.css.
  */
 
-export const THEME_NAMES = ['olive', 'beige', 'blue', 'yellow', 'pink', 'green', 'purple'] as const;
+export const THEME_NAMES = ['olive', 'beige', 'blue', 'green', 'terracotta', 'sage', 'slate', 'sand'] as const;
 export type ThemeName = typeof THEME_NAMES[number];
 
 export interface PaperTheme {
