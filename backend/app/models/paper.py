@@ -94,3 +94,5 @@ class Paper(Base):
   findings_extracted_at = Column(DateTime(timezone=True), nullable=True)
   reading_guide = Column(JSON, nullable=True)
   guide_generated_at = Column(DateTime(timezone=True), nullable=True)
+  layout_blocks = Column(JSON, nullable=True)
+  layout_extracted_at = Column(DateTime(timezone=True), nullable=True)

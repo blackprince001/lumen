@@ -230,6 +230,42 @@ def extract_citations_task(self, paper_id: int, file_path: str) -> dict[str, Any
     session.close()
 
 
+@celery_app.task(bind=True, base=BaseTask, name="processing.extract_layout")
+def extract_layout_task(self, paper_id: int) -> dict[str, Any]:
+  """Extract PDF layout blocks (text + bounding boxes) with PyMuPDF."""
+  from datetime import datetime, timezone
+
+  from app.services.layout_extractor import extract_layout
+
+  session = get_sync_session()
+  try:
+    paper = session.query(Paper).filter(Paper.id == paper_id).first()
+    if not paper:
+      return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
+    if not paper.file_path:
+      return {"status": "skipped", "reason": "No file", "paper_id": paper_id}
+
+    path = Path(paper.file_path)
+    if not path.is_absolute():
+      path = Path(settings.STORAGE_PATH) / path
+    if not path.exists():
+      return {"status": "error", "error": "File not found", "paper_id": paper_id}
+
+    blocks = extract_layout(path.read_bytes())
+    paper.layout_blocks = blocks
+    paper.layout_extracted_at = datetime.now(timezone.utc)
+    session.commit()
+
+    logger.info("Extracted layout blocks", paper_id=paper_id, count=len(blocks))
+    return {"status": "success", "paper_id": paper_id, "count": len(blocks)}
+  except Exception as e:
+    session.rollback()
+    logger.error("Error extracting layout", paper_id=paper_id, error=str(e))
+    raise
+  finally:
+    session.close()
+
+
 @celery_app.task(bind=True, base=BaseTask, name="processing.process_paper_full")
 def process_paper_full(self, paper_id: int, file_path: str) -> dict[str, Any]:
   """
@@ -260,6 +296,7 @@ def process_paper_full(self, paper_id: int, file_path: str) -> dict[str, Any]:
   # Each task ignores the result from previous (they all use paper_id)
   workflow = celery_chain(
     extract_citations_task.si(paper_id, file_path),  # .si() ignores previous result
+    extract_layout_task.si(paper_id),
     generate_summary_task.si(paper_id),
     extract_findings_task.si(paper_id),
     generate_reading_guide_task.si(paper_id),

@@ -352,6 +352,32 @@ async def get_paper_file(
   )
 
 
+@router.get("/papers/{paper_id}/layout")
+async def get_paper_layout(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
+  """PDF layout blocks (ParsedOcrOutput envelope), extracted on demand.
+
+  On-demand extraction doubles as the backfill path for papers ingested
+  before layout extraction joined the processing chain.
+  """
+  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+
+  if paper.layout_blocks is None:
+    file_path = content_provider.get_local_file_path(paper)
+    if not file_path:
+      raise HTTPException(status_code=404, detail="PDF file not found")
+
+    from app.services.layout_extractor import extract_layout
+
+    blocks = await asyncio.to_thread(extract_layout, file_path.read_bytes())
+    paper.layout_blocks = blocks
+    paper.layout_extracted_at = datetime.now(timezone.utc)
+    await session.commit()
+
+  return {"chunks": [{"blocks": paper.layout_blocks}]}
+
+
 @router.patch("/papers/{paper_id}", response_model=PaperSchema)
 async def update_paper_endpoint(
   paper_id: int, paper_update: PaperUpdate, user: CurrentUser, session: AsyncSession = Depends(get_db)
