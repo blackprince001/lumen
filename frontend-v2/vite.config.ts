@@ -37,6 +37,10 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // The xlsx viewer's parser worker requires ES output under code-splitting.
+  worker: {
+    format: 'es',
+  },
   server: {
     host: '0.0.0.0',
     port: 5173,

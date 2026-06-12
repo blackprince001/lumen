@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -6,8 +7,11 @@ import AdminLogin from './pages/AdminLogin';
 import Home from './pages/Home';
 import PapersList from './pages/PapersList';
 import PaperDetail from './pages/PaperDetail';
-import Groups from './pages/Groups';
-import GroupDetail from './pages/GroupDetail';
+import GroupRedirect from './pages/GroupRedirect';
+
+// Lazy: the Finder pulls in the file-system block, document viewers, and
+// hugeicons — they must not join the main chunk.
+const GroupsFinder = lazy(() => import('./pages/GroupsFinder'));
 import Search from './pages/Search';
 import Dashboard from './pages/Dashboard';
 import Annotations from './pages/Annotations';
@@ -37,8 +41,15 @@ export const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: 'papers', element: <PapersList /> },
       { path: 'papers/:id', element: <PaperDetail /> },
-      { path: 'groups', element: <Groups /> },
-      { path: 'groups/:id', element: <GroupDetail /> },
+      {
+        path: 'groups',
+        element: (
+          <Suspense fallback={null}>
+            <GroupsFinder />
+          </Suspense>
+        ),
+      },
+      { path: 'groups/:id', element: <GroupRedirect /> },
       { path: 'search', element: <Search /> },
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'annotations', element: <Annotations /> },
