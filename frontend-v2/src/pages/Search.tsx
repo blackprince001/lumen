@@ -77,7 +77,7 @@ export default function Search() {
       {/* Search header */}
       <div className="mb-8">
         <h1 className="tracking-tight mb-1">Search</h1>
-        <p className="text-body text-[var(--muted-foreground)]">
+        <p className="text-body text-(--muted-foreground)">
           Find papers by content, metadata, or meaning
         </p>
       </div>
@@ -87,7 +87,7 @@ export default function Search() {
         <div className="flex-1 relative">
           <SearchIcon
             size={16}
-            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] pointer-events-none"
+            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-(--muted-foreground) pointer-events-none"
           />
           <input
             type="text"
@@ -95,7 +95,7 @@ export default function Search() {
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Search across all papers..."
-            className="w-full h-11 pl-10 pr-4 bg-[var(--card)] border border-[var(--border)] rounded-xl text-code text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--ring)] transition-all"
+            className="w-full h-11 pl-10 pr-4 bg-(--card) border border-(--border) rounded-xl text-code text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:border-(--ring) transition-all"
             autoFocus
           />
         </div>
@@ -106,17 +106,17 @@ export default function Search() {
             <Button 
               variant="secondary" 
               icon={<SlidersHorizontal size={14} />} 
-              className={cn("!h-11", hasFilters && "bg-[var(--muted)]")}
+              className={cn("h-11!", hasFilters && "bg-(--muted)")}
             >
               Filters
-              {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-[var(--foreground)] ml-1" />}
+              {hasFilters && <span className="w-1.5 h-1.5 rounded-full bg-(--foreground) ml-1" />}
             </Button>
           </PopoverTrigger>
           <PopoverContent side="bottom" align="end" className="w-72 p-4 space-y-4">
             <div className="flex items-center justify-between">
               <p className="text-code font-semibold">Advanced Filters</p>
               {hasFilters && (
-                <button onClick={clearFilters} className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+                <button onClick={clearFilters} className="text-caption text-(--muted-foreground) hover:text-(--foreground)">
                   Clear all
                 </button>
               )}
@@ -124,7 +124,7 @@ export default function Search() {
 
             <div className="space-y-3">
               <div>
-                <label className="text-caption text-[var(--muted-foreground)] font-medium block mb-1.5">Year Range</label>
+                <label className="text-caption text-(--muted-foreground) font-medium block mb-1.5">Year Range</label>
                 <div className="grid grid-cols-2 gap-2">
                   <Input type="number" placeholder="From" value={yearFrom} onChange={(e) => setYearFrom(e.target.value)} className="h-8 text-code" />
                   <Input type="number" placeholder="To" value={yearTo} onChange={(e) => setYearTo(e.target.value)} className="h-8 text-code" />
@@ -132,7 +132,7 @@ export default function Search() {
               </div>
 
               <div>
-                <label className="text-caption text-[var(--muted-foreground)] font-medium block mb-1.5">Reading Status</label>
+                <label className="text-caption text-(--muted-foreground) font-medium block mb-1.5">Reading Status</label>
                 <Select value={readingStatus} onChange={(e) => setReadingStatus(e.target.value)} className="h-8 text-code">
                   <option value="">All</option>
                   <option value="not_started">Not Started</option>
@@ -143,7 +143,7 @@ export default function Search() {
               </div>
 
               <div>
-                <label className="text-caption text-[var(--muted-foreground)] font-medium block mb-1.5">Priority</label>
+                <label className="text-caption text-(--muted-foreground) font-medium block mb-1.5">Priority</label>
                 <Select value={priority} onChange={(e) => setPriority(e.target.value)} className="h-8 text-code">
                   <option value="">All</option>
                   <option value="low">Low</option>
@@ -164,8 +164,8 @@ export default function Search() {
           className={cn(
             "h-8 px-3 text-caption font-medium rounded-lg flex items-center gap-1.5 transition-colors",
             mode === 'fulltext' 
-              ? "bg-[var(--foreground)] text-[var(--white)] shadow-sm" 
-              : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]"
+              ? "bg-(--foreground) text-(--white) shadow-sm" 
+              : "bg-(--muted) text-(--foreground) hover:bg-(--border)"
           )}
         >
           <SearchIcon size={13} />
@@ -176,8 +176,8 @@ export default function Search() {
           className={cn(
             "h-8 px-3 text-caption font-medium rounded-lg flex items-center gap-1.5 transition-colors",
             mode === 'semantic' 
-              ? "bg-[var(--foreground)] text-[var(--white)] shadow-sm" 
-              : "bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]"
+              ? "bg-(--foreground) text-(--white) shadow-sm" 
+              : "bg-(--muted) text-(--foreground) hover:bg-(--border)"
           )}
         >
           <Sparkles size={13} />
@@ -199,7 +199,7 @@ export default function Search() {
       )}
 
       {isError && (
-        <div className="text-center py-12 text-[var(--muted-foreground)]">
+        <div className="text-center py-12 text-(--muted-foreground)">
           <p className="mb-4">Failed to search</p>
           <Button variant="outlined" onClick={() => queryClient.invalidateQueries({ queryKey: ['search'] })}>
             Retry
@@ -209,12 +209,12 @@ export default function Search() {
 
       {!isLoading && !isError && query.trim() && (
         <div className="space-y-4">
-          <p className="text-code font-medium text-[var(--muted-foreground)] mb-6">
+          <p className="text-code font-medium text-(--muted-foreground) mb-6">
             {results.length} result{results.length !== 1 ? 's' : ''} for &ldquo;{query}&rdquo;
           </p>
 
           {results.length === 0 ? (
-            <div className="text-center py-12 text-[var(--muted-foreground)]">
+            <div className="text-center py-12 text-(--muted-foreground)">
               <p>No results found</p>
             </div>
           ) : (
@@ -224,11 +224,11 @@ export default function Search() {
                 <Link 
                   key={result.paper_id} 
                   to={`/papers/${result.paper_id}`}
-                  className="group block border rounded-2xl p-6 transition-all duration-200 hover:border-[var(--foreground)] relative overflow-hidden"
+                  className="group block border rounded-2xl p-6 transition-all duration-200 hover:border-(--foreground) relative overflow-hidden"
                   style={{ backgroundColor: theme.bg, borderColor: theme.border }}
                 >
                   <div className="flex items-start justify-between gap-4 mb-3">
-                    <h3 className="text-body-lg font-medium leading-snug group-hover:text-[var(--foreground)] transition-colors" style={{ color: theme.text }}>
+                    <h3 className="text-body-lg font-medium leading-snug group-hover:text-(--foreground) transition-colors" style={{ color: theme.text }}>
                       {result.title}
                     </h3>
                     {mode === 'semantic' && result.similarity_score !== undefined && (
@@ -239,7 +239,7 @@ export default function Search() {
                   </div>
                   
                   {result.authors && (
-                    <p className="text-caption text-[var(--muted-foreground)] mb-3">{result.authors}</p>
+                    <p className="text-caption text-(--muted-foreground) mb-3">{result.authors}</p>
                   )}
                   
                   {result.snippet && (
@@ -257,7 +257,7 @@ export default function Search() {
       )}
 
       {!query.trim() && (
-        <div className="text-center py-12 text-[var(--muted-foreground)]">
+        <div className="text-center py-12 text-(--muted-foreground)">
           <SearchIcon size={48} className="mx-auto mb-4 opacity-20" />
           <p>Enter a search query to find papers</p>
         </div>

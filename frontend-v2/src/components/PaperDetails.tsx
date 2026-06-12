@@ -79,15 +79,15 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
     : null;
 
   return (
-    <div className="flex flex-col h-full bg-[var(--white)] overflow-hidden">
-      <div className="px-6 py-4 border-b border-[var(--border)] shrink-0 bg-[var(--white)] z-10">
+    <div className="flex flex-col h-full bg-(--white) overflow-hidden">
+      <div className="px-6 py-4 border-b border-(--border) shrink-0 bg-(--white) z-10">
         <div className="flex items-center justify-between gap-4 mb-4">
-          <h3 className="text-btn font-semibold text-[var(--foreground)]">Information</h3>
+          <h3 className="text-btn font-semibold text-(--foreground)">Information</h3>
           <div className="flex items-center gap-1.5">
             {paper.is_shared && !isOwner(paper) && (
               <Button
                 variant="ghost"
-                className="h-8 text-caption text-[var(--destructive)]"
+                className="h-8 text-caption text-(--destructive)"
                 onClick={async () => {
                   await paperSharingApi.leave(paper.id);
                   queryClient.invalidateQueries({ queryKey: ['papers'] });
@@ -120,7 +120,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
             {onDelete && isOwner(paper) && (
               <Button
                 variant="ghost"
-                className="h-8 w-8 p-0 text-[var(--destructive)] hover:bg-[var(--destructive)]/10"
+                className="h-8 w-8 p-0 text-(--destructive) hover:bg-(--destructive)/10"
                 onClick={onDelete}
                 title="Delete Paper"
               >
@@ -138,7 +138,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
                 type="text"
                 value={editedTitle}
                 onChange={(e) => setEditedTitle(e.target.value)}
-                className="flex-1 px-3 py-1.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg text-code focus:outline-none focus:ring-1 focus:ring-[var(--foreground)] min-h-[2.25rem]"
+                className="flex-1 px-3 py-1.5 bg-(--muted) border border-(--border) rounded-lg text-code focus:outline-none focus:ring-1 focus:ring-(--foreground) min-h-9"
                 onKeyDown={(e) => e.key === 'Enter' && handleSaveTitle()}
                 autoFocus
               />
@@ -153,7 +153,7 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
             </div>
           ) : (
             <div className="flex items-start justify-between gap-2">
-              <h1 className="text-body-lg font-bold leading-snug text-[var(--foreground)] flex-1">{paper.title}</h1>
+              <h1 className="text-body-lg font-bold leading-snug text-(--foreground) flex-1">{paper.title}</h1>
               {isOwner(paper) && (
               <Button
                 variant="ghost"
@@ -181,23 +181,23 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
                 className="overflow-hidden"
               >
                 <p className={cn(
-                  "text-code text-[var(--muted-foreground)] leading-relaxed transition-colors",
+                  "text-code text-(--muted-foreground) leading-relaxed transition-colors",
                   !isAbstractExpanded && "line-clamp-4",
-                  isAbstractExpanded ? "text-[var(--foreground)]" : "group-hover:text-[var(--foreground)]"
+                  isAbstractExpanded ? "text-(--foreground)" : "group-hover:text-(--foreground)"
                 )}>
                   {paper.metadata_json.abstract as string}
                 </p>
               </motion.div>
 
               {!isAbstractExpanded && (
-                <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-[var(--white)] to-transparent pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-8 bg-linear-to-t from-(--white) to-transparent pointer-events-none" />
               )}
 
               <motion.div
                 animate={{ rotate: isAbstractExpanded ? 180 : 0 }}
-                className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-[var(--white)] border border-[var(--border)] rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-(--white) border border-(--border) rounded-full p-0.5 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <div className="text-micro text-[var(--muted-foreground)] px-1">
+                <div className="text-micro text-(--muted-foreground) px-1">
                   {isAbstractExpanded ? 'Show less' : 'Read more'}
                 </div>
               </motion.div>
@@ -228,12 +228,12 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
           {/* Authors */}
           {authors.length > 0 && (
             <div className="space-y-1.5">
-              <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+              <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-(--muted-foreground)">
                 Authors
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {authors.map((author, i) => (
-                  <span key={i} className="text-code px-2 py-0.5 bg-[var(--muted)]/50 rounded text-[var(--foreground)]">
+                  <span key={i} className="text-code px-2 py-0.5 bg-(--muted)/50 rounded text-(--foreground)">
                     {author}
                   </span>
                 ))}
@@ -244,10 +244,10 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
           {/* Published */}
           {publishedDate && (
             <div className="space-y-1.5">
-              <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+              <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-(--muted-foreground)">
                 <Calendar size={12} /> Published
               </h4>
-              <p className="text-code text-[var(--foreground)]">{publishedDate}</p>
+              <p className="text-code text-(--foreground)">{publishedDate}</p>
             </div>
           )}
 
@@ -255,14 +255,14 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {paper.doi && (
               <div className="space-y-1.5">
-                <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-(--muted-foreground)">
                   <Fingerprint size={12} /> DOI
                 </h4>
                 <a
                   href={`https://doi.org/${paper.doi}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-code text-[var(--foreground)] hover:text-[var(--sky-blue)] truncate block"
+                  className="text-code text-(--foreground) hover:text-(--sky-blue) truncate block"
                 >
                   {paper.doi}
                 </a>
@@ -270,14 +270,14 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
             )}
             {paper.url && (
               <div className="space-y-1.5">
-                <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)]">
+                <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-(--muted-foreground)">
                   <LinkIcon size={12} /> URL
                 </h4>
                 <a
                   href={paper.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-code text-[var(--foreground)] hover:text-[var(--sky-blue)] truncate block"
+                  className="text-code text-(--foreground) hover:text-(--sky-blue) truncate block"
                 >
                   Source <ExternalLink size={10} className="inline ml-1" />
                 </a>
@@ -287,8 +287,8 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
         </div>
 
         {/* Citations List */}
-        <div className="pt-2 border-t border-[var(--border)]">
-          <h4 className="text-btn font-semibold text-[var(--foreground)] mb-4">Citations</h4>
+        <div className="pt-2 border-t border-(--border)">
+          <h4 className="text-btn font-semibold text-(--foreground) mb-4">Citations</h4>
           <PaperCitationsList
             citations={citationsData?.citations || []}
             isLoading={citationsLoading}

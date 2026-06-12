@@ -47,7 +47,7 @@ export function Tooltip({ content, side = 'top', delay = 400, children, classNam
             'pointer-events-none absolute z-50 whitespace-nowrap',
             'px-2 py-1 rounded-lg',
             'text-caption font-medium leading-4',
-            'bg-[var(--foreground)] text-[var(--background)]',
+            'bg-(--foreground) text-(--background)',
             'shadow-elevated',
             sideStyles[side],
           )}

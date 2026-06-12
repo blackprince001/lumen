@@ -165,20 +165,20 @@ export default function HuggingFacePapers() {
     : format(parsedDate, 'MMMM yyyy');
 
   return (
-    <div className="max-w-[60rem] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-240 mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
       <div className="flex items-start justify-between gap-3 mb-6 sm:mb-8">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5 mb-1">
-            <Newspaper size={22} className="text-[var(--muted-foreground)] shrink-0" />
+            <Newspaper size={22} className="text-(--muted-foreground) shrink-0" />
             <h1 className="tracking-tight">Daily Papers</h1>
           </div>
-          <p className="text-body text-[var(--muted-foreground)]">Community-curated research from Hugging Face</p>
+          <p className="text-body text-(--muted-foreground)">Community-curated research from Hugging Face</p>
         </div>
         <Button
           variant="secondary"
           icon={<ExternalLink size={14} />}
-          className="!h-9 text-code px-2.5 sm:px-3 shrink-0"
+          className="h-9! text-code px-2.5 sm:px-3 shrink-0"
           onClick={() => window.open('https://huggingface.co/papers', '_blank')}
           aria-label="View on Hugging Face"
         >
@@ -187,7 +187,7 @@ export default function HuggingFacePapers() {
       </div>
 
       {/* View mode + Date Navigation */}
-      <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-3 sm:p-4 mb-6">
+      <div className="bg-(--card) border border-(--border) rounded-xl p-3 sm:p-4 mb-6">
         {/* View mode toggle */}
         <div className="flex items-center gap-2 mb-4">
           {(['daily', 'monthly'] as ViewMode[]).map((mode) => (
@@ -197,8 +197,8 @@ export default function HuggingFacePapers() {
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-caption font-medium border transition-colors',
                 viewMode === mode
-                  ? 'bg-[var(--foreground)] text-[var(--white)] border-[var(--foreground)]'
-                  : 'bg-transparent text-[var(--muted-foreground)] border-[var(--border)] hover:text-[var(--foreground)]'
+                  ? 'bg-(--foreground) text-(--white) border-(--foreground)'
+                  : 'bg-transparent text-(--muted-foreground) border-(--border) hover:text-(--foreground)'
               )}
             >
               <Calendar size={13} />
@@ -210,15 +210,15 @@ export default function HuggingFacePapers() {
         {/* Date nav */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-body font-semibold text-[var(--foreground)]">{dateLabel}</span>
+            <span className="text-body font-semibold text-(--foreground)">{dateLabel}</span>
             {isTodaySelected && (
-              <span className="px-2 py-0.5 bg-[var(--muted)] text-[var(--muted-foreground)] text-caption font-medium rounded border border-[var(--border)]">Today</span>
+              <span className="px-2 py-0.5 bg-(--muted) text-(--muted-foreground) text-caption font-medium rounded border border-(--border)">Today</span>
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button
               variant="secondary"
-              className="!h-8 !px-2 sm:!px-3 !text-caption"
+              className="h-8! px-2! sm:px-3! text-caption!"
               icon={<ChevronLeft size={13} />}
               onClick={viewMode === 'daily' ? goBack : goMonthBack}
               aria-label={viewMode === 'daily' ? 'Previous day' : 'Previous month'}
@@ -226,13 +226,13 @@ export default function HuggingFacePapers() {
               <span className="hidden sm:inline">{viewMode === 'daily' ? 'Prev' : 'Prev Month'}</span>
             </Button>
             {!isTodaySelected && (
-              <Button variant="secondary" className="!h-8 !px-2 sm:!px-3 !text-caption" onClick={() => setSelectedDate(getTodayString())}>
+              <Button variant="secondary" className="h-8! px-2! sm:px-3! text-caption!" onClick={() => setSelectedDate(getTodayString())}>
                 {viewMode === 'daily' ? 'Today' : 'This Month'}
               </Button>
             )}
             <Button
               variant="secondary"
-              className="!h-8 !px-2 sm:!px-3 !text-caption"
+              className="h-8! px-2! sm:px-3! text-caption!"
               disabled={isTodaySelected}
               onClick={viewMode === 'daily' ? goForward : goMonthForward}
               aria-label={viewMode === 'daily' ? 'Next day' : 'Next month'}
@@ -248,11 +248,11 @@ export default function HuggingFacePapers() {
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-[var(--border)] overflow-hidden">
+            <div key={i} className="rounded-2xl border border-(--border) overflow-hidden">
               {/* Header skeleton */}
-              <div className="h-16 bg-[var(--muted)]" />
+              <div className="h-16 bg-(--muted)" />
               {/* Inset content skeleton */}
-              <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] p-4 space-y-3">
+              <div className="rounded-t-xl border-t border-(--border) bg-(--card) p-4 space-y-3">
                 <Skeleton className="h-3 w-40" />
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-3/4" />
@@ -262,7 +262,7 @@ export default function HuggingFacePapers() {
                   <Skeleton className="h-5 w-16 rounded" />
                   <Skeleton className="h-5 w-14 rounded" />
                 </div>
-                <div className="flex items-center justify-between pt-3 border-t border-[var(--border)]">
+                <div className="flex items-center justify-between pt-3 border-t border-(--border)">
                   <Skeleton className="h-3 w-20" />
                   <Skeleton className="h-3 w-24" />
                 </div>
@@ -287,10 +287,10 @@ export default function HuggingFacePapers() {
       {!isLoading && !isError && data && (
         <>
           <div className="flex items-center justify-between mb-6">
-            <p className="text-code text-[var(--muted-foreground)]">
-              <span className="font-semibold text-[var(--foreground)]">{data.total_count}</span> paper{data.total_count !== 1 ? 's' : ''}
+            <p className="text-code text-(--muted-foreground)">
+              <span className="font-semibold text-(--foreground)">{data.total_count}</span> paper{data.total_count !== 1 ? 's' : ''}
             </p>
-            <button onClick={() => refetch()} className="flex items-center gap-1 text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+            <button onClick={() => refetch()} className="flex items-center gap-1 text-caption text-(--muted-foreground) hover:text-(--foreground) transition-colors">
               <RefreshCw size={13} />Refresh
             </button>
           </div>
@@ -301,8 +301,8 @@ export default function HuggingFacePapers() {
             </div>
           ) : (
             <div className="text-center py-16">
-              <p className="text-btn font-medium text-[var(--foreground)] mb-1">No papers for this {viewMode === 'daily' ? 'date' : 'month'}</p>
-              <p className="text-code text-[var(--muted-foreground)]">Try selecting a different {viewMode === 'daily' ? 'date' : 'month'}.</p>
+              <p className="text-btn font-medium text-(--foreground) mb-1">No papers for this {viewMode === 'daily' ? 'date' : 'month'}</p>
+              <p className="text-code text-(--muted-foreground)">Try selecting a different {viewMode === 'daily' ? 'date' : 'month'}.</p>
             </div>
           )}
         </>

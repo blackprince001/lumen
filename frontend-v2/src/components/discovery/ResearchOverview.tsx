@@ -30,14 +30,14 @@ export function ResearchOverview({
 }: ResearchOverviewProps) {
   return (
     <div className={cn(
-      "bg-[var(--card)] border border-[var(--border)] rounded-xl overflow-hidden mb-6",
+      "bg-(--card) border border-(--border) rounded-xl overflow-hidden mb-6",
       className
     )}>
       {/* Header with AI badge */}
-      <div className="px-5 py-3 border-b border-[var(--border)] flex items-center justify-between bg-[rgba(var(--primary-rgb),0.02)]">
+      <div className="px-5 py-3 border-b border-(--border) flex items-center justify-between bg-[rgba(var(--primary-rgb),0.02)]">
         <div className="flex items-center gap-2">
-          <Sparkles size={16} className="text-[var(--primary)]" />
-          <h3 className="text-body font-semibold text-[var(--foreground)]">AI Research Synthesis</h3>
+          <Sparkles size={16} className="text-(--primary)" />
+          <h3 className="text-body font-semibold text-(--foreground)">AI Research Synthesis</h3>
         </div>
       </div>
 
@@ -46,10 +46,10 @@ export function ResearchOverview({
         {queryUnderstanding && (
           <div className="space-y-3">
             <div className="flex items-start gap-2.5">
-              <Lightbulb size={16} className="text-[var(--primary)] shrink-0 mt-0.5" />
+              <Lightbulb size={16} className="text-(--primary) shrink-0 mt-0.5" />
               <div>
-                <p className="text-code font-medium text-[var(--foreground)]">Understanding your search</p>
-                <p className="text-code text-[var(--muted-foreground)] mt-0.5 leading-relaxed">
+                <p className="text-code font-medium text-(--foreground)">Understanding your search</p>
+                <p className="text-code text-(--muted-foreground) mt-0.5 leading-relaxed">
                   {queryUnderstanding.interpreted_query}
                 </p>
               </div>
@@ -59,7 +59,7 @@ export function ResearchOverview({
                 {queryUnderstanding.key_concepts.map((concept, i) => (
                   <span
                     key={i}
-                    className="px-2 py-0.5 bg-[var(--muted)] text-[var(--muted-foreground)] text-caption rounded border border-[var(--border)]"
+                    className="px-2 py-0.5 bg-(--muted) text-(--muted-foreground) text-caption rounded border border-(--border)"
                   >
                     {concept}
                   </span>
@@ -71,7 +71,7 @@ export function ResearchOverview({
 
         {/* The Overview Text */}
         <div className="space-y-2">
-          <p className="text-code text-[var(--foreground)] leading-relaxed whitespace-pre-line">
+          <p className="text-code text-(--foreground) leading-relaxed whitespace-pre-line">
             {overview.overview}
           </p>
         </div>
@@ -82,14 +82,14 @@ export function ResearchOverview({
           {overview.key_themes.length > 0 && (
             <div className="space-y-2.5">
               <div className="flex items-center gap-2">
-                <TrendingUp size={14} className="text-[var(--muted-foreground)]" />
-                <h4 className="text-caption font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Key Themes</h4>
+                <TrendingUp size={14} className="text-(--muted-foreground)" />
+                <h4 className="text-caption font-semibold uppercase tracking-wider text-(--muted-foreground)">Key Themes</h4>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {overview.key_themes.map((theme, i) => (
                   <span
                     key={i}
-                    className="px-2.5 py-1 bg-[rgba(var(--primary-rgb),0.05)] text-[var(--primary)] text-caption font-medium rounded-md border border-[rgba(var(--primary-rgb),0.1)]"
+                    className="px-2.5 py-1 bg-[rgba(var(--primary-rgb),0.05)] text-(--primary) text-caption font-medium rounded-md border border-[rgba(var(--primary-rgb),0.1)]"
                   >
                     {theme}
                   </span>
@@ -102,13 +102,13 @@ export function ResearchOverview({
           {overview.research_gaps.length > 0 && (
             <div className="space-y-2.5">
               <div className="flex items-center gap-2">
-                <HelpCircle size={14} className="text-[var(--coral-red)]" />
-                <h4 className="text-caption font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Research Gaps</h4>
+                <HelpCircle size={14} className="text-(--coral-red)" />
+                <h4 className="text-caption font-semibold uppercase tracking-wider text-(--muted-foreground)">Research Gaps</h4>
               </div>
               <ul className="space-y-1.5">
                 {overview.research_gaps.map((gap, i) => (
-                  <li key={i} className="text-caption text-[var(--muted-foreground)] flex items-start gap-2">
-                    <span className="text-[var(--coral-red)] mt-1">•</span>
+                  <li key={i} className="text-caption text-(--muted-foreground) flex items-start gap-2">
+                    <span className="text-(--coral-red) mt-1">•</span>
                     {gap}
                   </li>
                 ))}
@@ -119,20 +119,20 @@ export function ResearchOverview({
 
         {/* Suggested Follow-ups */}
         {overview.suggested_followups.length > 0 && onSuggestedSearch && (
-          <div className="pt-4 border-t border-[var(--border)]">
+          <div className="pt-4 border-t border-(--border)">
             <div className="flex items-center gap-2 mb-3">
-              <Search size={14} className="text-[var(--muted-foreground)]" />
-              <h4 className="text-caption font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Explore Further</h4>
+              <Search size={14} className="text-(--muted-foreground)" />
+              <h4 className="text-caption font-semibold uppercase tracking-wider text-(--muted-foreground)">Explore Further</h4>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {overview.suggested_followups.map((query, i) => (
                 <button
                   key={i}
                   onClick={() => onSuggestedSearch(query)}
-                  className="flex items-center justify-between px-3 py-2 bg-[var(--muted)] hover:bg-[var(--border)] text-code text-[var(--foreground)] rounded-lg border border-[var(--border)] transition-colors text-left"
+                  className="flex items-center justify-between px-3 py-2 bg-(--muted) hover:bg-(--border) text-code text-(--foreground) rounded-lg border border-(--border) transition-colors text-left"
                 >
                   <span className="truncate">{query}</span>
-                  <ChevronRight size={14} className="text-[var(--muted-foreground)] shrink-0" />
+                  <ChevronRight size={14} className="text-(--muted-foreground) shrink-0" />
                 </button>
               ))}
             </div>

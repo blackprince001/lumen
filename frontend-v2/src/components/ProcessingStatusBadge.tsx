@@ -18,8 +18,8 @@ export function ProcessingStatusBadge({ status, className }: ProcessingStatusBad
     <Badge
       className={cn(
         isProcessing
-          ? 'bg-[rgba(60,145,230,0.12)] text-[var(--sky-blue)]'
-          : 'bg-[rgba(209,46,62,0.12)] text-[var(--destructive)]',
+          ? 'bg-[rgba(60,145,230,0.12)] text-(--sky-blue)'
+          : 'bg-[rgba(209,46,62,0.12)] text-(--destructive)',
         className,
       )}
     >

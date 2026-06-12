@@ -324,13 +324,13 @@ export function ChatTab({ paperId }: ChatTabProps) {
     <>
       <div ref={containerRef} className="flex flex-col h-full relative">
         {/* Session selector */}
-        <div className="shrink-0 border-b border-[var(--border)] p-3 bg-[var(--card)]">
+        <div className="shrink-0 border-b border-(--border) p-3 bg-(--card)">
           <div className="flex items-center gap-2 mb-2">
             <div className="flex-1">
               <Select
                 value={currentSessionId ?? ''}
                 onChange={(e) => e.target.value && switchSession(Number(e.target.value))}
-                className="!h-8"
+                className="h-8!"
               >
                 {sessions.length === 0 && (
                   <option value="">No sessions — send a message to start</option>
@@ -342,7 +342,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
             </div>
             <Button 
               variant="ghost" 
-              className="!h-8 !w-8 !p-0" 
+              className="h-8! w-8! p-0!" 
               onClick={handleCreateSession}
               disabled={isCreatingSession}
             >
@@ -358,13 +358,13 @@ export function ChatTab({ paperId }: ChatTabProps) {
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="flex-1 h-7 px-2 text-caption bg-[var(--white)] border border-[var(--border)] rounded"
+                    className="flex-1 h-7 px-2 text-caption bg-(--white) border border-(--border) rounded"
                     autoFocus
                   />
-                  <button onClick={saveRename} className="text-[var(--success)] hover:opacity-70">
+                  <button onClick={saveRename} className="text-(--success) hover:opacity-70">
                     <Check size={14} />
                   </button>
-                  <button onClick={cancelRename} className="text-[var(--muted-foreground)] hover:opacity-70">
+                  <button onClick={cancelRename} className="text-(--muted-foreground) hover:opacity-70">
                     <X size={14} />
                   </button>
                 </>
@@ -372,14 +372,14 @@ export function ChatTab({ paperId }: ChatTabProps) {
                 <>
                   <button
                     onClick={() => startRename(currentSessionId, currentSession?.name ?? '')}
-                    className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1"
+                    className="text-caption text-(--muted-foreground) hover:text-(--foreground) flex items-center gap-1"
                   >
                     <Edit2 size={12} />
                     Rename
                   </button>
                   <button
                     onClick={handleClearMessages}
-                    className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1"
+                    className="text-caption text-(--muted-foreground) hover:text-(--foreground) flex items-center gap-1"
                   >
                     <Trash2 size={12} />
                     Clear
@@ -387,7 +387,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
                   {sessions.length > 1 && (
                     <button
                       onClick={() => handleDeleteSession(currentSessionId)}
-                      className="text-caption text-[var(--destructive)] hover:opacity-70 flex items-center gap-1"
+                      className="text-caption text-(--destructive) hover:opacity-70 flex items-center gap-1"
                     >
                       <Trash2 size={12} />
                       Delete
@@ -407,7 +407,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
         >
           <div ref={messagesTopRef} />
           {messages.length === 0 && !isStreaming && !pendingUserMessage && (
-            <div className="flex flex-col items-center justify-center h-full text-center text-[var(--muted-foreground)] opacity-50">
+            <div className="flex flex-col items-center justify-center h-full text-center text-(--muted-foreground) opacity-50">
               <Sparkles size={32} className="mb-3" />
               <p className="text-code">Start a conversation about this paper</p>
             </div>
@@ -434,18 +434,18 @@ export function ChatTab({ paperId }: ChatTabProps) {
                   ) : (
                     <>
                       <MarkdownMessage content={msg.content} />
-                      <div className="absolute -bottom-6 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-[var(--card)] border border-[var(--border)] p-1 rounded-md shadow-sm z-10">
+                      <div className="absolute -bottom-6 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-(--card) border border-(--border) p-1 rounded-md shadow-sm z-10">
                         <Button
                           variant="ghost"
-                          className="!h-6 !w-6 !p-0"
+                          className="h-6! w-6! p-0!"
                           onClick={() => copyMessage(msg.content, `${msg.id}-copy`)}
                           title="Copy"
                         >
-                          {copiedId === `${msg.id}-copy` ? <Check size={12} className="text-[var(--success)]" /> : <Copy size={12} />}
+                          {copiedId === `${msg.id}-copy` ? <Check size={12} className="text-(--success)" /> : <Copy size={12} />}
                         </Button>
                         <Button
                           variant="ghost"
-                          className="!h-6 !w-6 !p-0"
+                          className="h-6! w-6! p-0!"
                           onClick={() => setActiveThreadId(activeThreadId === msg.id ? null : msg.id)}
                           title="Reply in thread"
                         >
@@ -454,7 +454,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
                       </div>
                     </>
                   )}
-                  <span className="absolute bottom-1.5 right-2 text-[10px] text-[var(--muted-foreground)] opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
+                  <span className="absolute bottom-1.5 right-2 text-[10px] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
                     {format(new Date(msg.created_at), 'MMM d, h:mm a')}
                   </span>
                 </div>
@@ -494,28 +494,28 @@ export function ChatTab({ paperId }: ChatTabProps) {
                   <div className="space-y-2.5 w-72">
                     {/* Word-like skeleton animation */}
                     <div className="flex flex-wrap gap-1.5">
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-12" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-16" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-8" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-20" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-14" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-10" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-24" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-12" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-16" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-8" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-20" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-14" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-10" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-24" />
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-20" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-8" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-16" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-12" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-18" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-10" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-20" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-8" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-16" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-12" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-18" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-10" />
                     </div>
                     <div className="flex flex-wrap gap-1.5">
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-14" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-20" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-8" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-12" />
-                      <div className="h-3 bg-[var(--muted)] rounded animate-pulse w-16" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-14" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-20" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-8" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-12" />
+                      <div className="h-3 bg-(--muted) rounded animate-pulse w-16" />
                     </div>
                   </div>
                 )}
@@ -529,7 +529,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
             {showScrollUp && (
               <button
                 onClick={scrollToTop}
-                className="w-8 h-8 rounded-full bg-[var(--card)] border border-[var(--border)] shadow-md flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                className="w-8 h-8 rounded-full bg-(--card) border border-(--border) shadow-md flex items-center justify-center text-(--muted-foreground) hover:text-(--foreground) transition-colors"
                 title="Scroll to top"
               >
                 <ArrowUp size={14} />
@@ -538,7 +538,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
             {showScrollDown && (
               <button
                 onClick={scrollToBottom}
-                className="w-8 h-8 rounded-full bg-[var(--card)] border border-[var(--border)] shadow-md flex items-center justify-center text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                className="w-8 h-8 rounded-full bg-(--card) border border-(--border) shadow-md flex items-center justify-center text-(--muted-foreground) hover:text-(--foreground) transition-colors"
                 title="Scroll to bottom"
               >
                 <ArrowDown size={14} />
@@ -551,7 +551,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
         </div>
 
         {/* Input */}
-        <div className="border-t border-[var(--border)] p-3 shrink-0">
+        <div className="border-t border-(--border) p-3 shrink-0">
           <ExpandedInput
             value={input}
             onChange={setInput}
@@ -574,7 +574,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
               setInput(prompt);
             }}
           />
-          <p className="text-caption text-[var(--muted-foreground)] px-1 mt-2">
+          <p className="text-caption text-(--muted-foreground) px-1 mt-2">
             Press Enter to send, Shift+Enter for newline
           </p>
         </div>

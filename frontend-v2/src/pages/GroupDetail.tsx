@@ -123,7 +123,7 @@ export default function GroupDetail() {
     );
 
   if (!groupId) {
-    return <div className="max-w-content mx-auto px-6 py-8"><p className="text-[var(--destructive)]">Invalid group ID</p></div>;
+    return <div className="max-w-content mx-auto px-6 py-8"><p className="text-(--destructive)">Invalid group ID</p></div>;
   }
 
   if (allGroupsLoading) {
@@ -139,7 +139,7 @@ export default function GroupDetail() {
   }
 
   if (!displayGroup) {
-    return <div className="max-w-content mx-auto px-6 py-8"><p className="text-[var(--destructive)]">Group not found</p></div>;
+    return <div className="max-w-content mx-auto px-6 py-8"><p className="text-(--destructive)">Group not found</p></div>;
   }
 
   return (
@@ -147,15 +147,15 @@ export default function GroupDetail() {
       <div className="max-w-content mx-auto px-6 py-8">
         {/* Breadcrumbs */}
         {breadcrumbs.length > 0 && (
-          <div className="flex items-center gap-2 text-code text-[var(--muted-foreground)] mb-4">
-            <Link to="/groups" className="hover:text-[var(--foreground)]">Groups</Link>
+          <div className="flex items-center gap-2 text-code text-(--muted-foreground) mb-4">
+            <Link to="/groups" className="hover:text-(--foreground)">Groups</Link>
             {breadcrumbs.map((crumb, index) => (
               <div key={crumb!.id} className="flex items-center gap-2">
                 <span>/</span>
                 {index === breadcrumbs.length - 1 ? (
-                  <span className="text-[var(--foreground)] font-medium">{crumb!.name}</span>
+                  <span className="text-(--foreground) font-medium">{crumb!.name}</span>
                 ) : (
-                  <Link to={`/groups/${crumb!.id}`} className="hover:text-[var(--foreground)]">{crumb!.name}</Link>
+                  <Link to={`/groups/${crumb!.id}`} className="hover:text-(--foreground)">{crumb!.name}</Link>
                 )}
               </div>
             ))}
@@ -166,7 +166,7 @@ export default function GroupDetail() {
         <div className="flex items-center gap-4 mb-8">
           <div className="flex-1">
             <h1>{displayGroup.name}</h1>
-            <p className="text-btn text-[var(--muted-foreground)] mt-1">
+            <p className="text-btn text-(--muted-foreground) mt-1">
               {papers.length} {papers.length === 1 ? 'paper' : 'papers'}
             </p>
           </div>
@@ -200,13 +200,13 @@ export default function GroupDetail() {
             >
               <span className="hidden sm:inline">Add Subgroup</span>
             </Button>
-            <Button variant="ghost" className="!h-9 !w-9 !p-0" onClick={() => setShareOpen(true)} title="Share Group">
+            <Button variant="ghost" className="h-9! w-9! p-0!" onClick={() => setShareOpen(true)} title="Share Group">
               <Share size={16} />
             </Button>
-            <Button variant="ghost" className="!h-9 !w-9 !p-0" onClick={() => { setEditName(displayGroup.name); setIsEditOpen(true); }}>
+            <Button variant="ghost" className="h-9! w-9! p-0!" onClick={() => { setEditName(displayGroup.name); setIsEditOpen(true); }}>
               <Edit2 size={16} />
             </Button>
-            <Button variant="ghost" className="!h-9 !w-9 !p-0 text-[var(--destructive)]" onClick={handleDelete}>
+            <Button variant="ghost" className="h-9! w-9! p-0! text-(--destructive)" onClick={handleDelete}>
               <Trash2 size={16} />
             </Button>
           </div>
@@ -234,8 +234,8 @@ export default function GroupDetail() {
                       />
                     </div>
                     <div className="mt-2 text-center">
-                      <p className="text-code font-medium text-[var(--foreground)] truncate">{child.name}</p>
-                      <p className="text-caption text-[var(--muted-foreground)]">
+                      <p className="text-code font-medium text-(--foreground) truncate">{child.name}</p>
+                      <p className="text-caption text-(--muted-foreground)">
                         {count} {count === 1 ? 'paper' : 'papers'}
                       </p>
                     </div>
@@ -264,8 +264,8 @@ export default function GroupDetail() {
 
             {/* Selection action bar */}
             {isSelectionMode && (
-              <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-[var(--muted)] border border-[var(--border)]">
-                <span className="text-code text-[var(--muted-foreground)] flex-1">
+              <div className="flex items-center gap-2 mb-4 p-3 rounded-lg bg-(--muted) border border-(--border)">
+                <span className="text-code text-(--muted-foreground) flex-1">
                   {selectedPaperIds.length} selected
                 </span>
                 <Button
@@ -302,7 +302,7 @@ export default function GroupDetail() {
             </div>
           </div>
         ) : childGroups.length === 0 ? (
-          <div className="text-center py-12 text-[var(--muted-foreground)]">
+          <div className="text-center py-12 text-(--muted-foreground)">
             <p className="text-body mb-4">No papers or folders in this group yet</p>
             <Button icon={<Plus size={14} />} onClick={() => navigate('/ingest', { state: { preselectedGroupIds: [groupId] } })}>
               Add Paper

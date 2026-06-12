@@ -89,18 +89,18 @@ export default function Export() {
   if (paperIds.length === 0) return null;
 
   return (
-    <div className="max-w-[43.75rem] mx-auto px-6 py-8">
+    <div className="max-w-175 mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-page-title mb-1">Export Papers</h1>
-        <p className="text-body text-[var(--muted-foreground)]">
+        <p className="text-body text-(--muted-foreground)">
           Export {paperIds.length} paper{paperIds.length !== 1 ? 's' : ''} with your preferred format
         </p>
       </div>
 
       <div className="space-y-6">
         {/* Export Type */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-          <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-3">
+        <div className="bg-(--card) border border-(--border) rounded-xl p-6">
+          <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider mb-3">
             Export Type
           </label>
           <Select value={exportType} onChange={(e) => setExportType(e.target.value as any)} className="h-9">
@@ -112,8 +112,8 @@ export default function Export() {
 
         {/* Format Selection */}
         {exportType === 'papers' && (
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-            <h4 className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-4">
+          <div className="bg-(--card) border border-(--border) rounded-xl p-6">
+            <h4 className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wider mb-4">
               Choose Format
             </h4>
             <div className="grid grid-cols-2 gap-3 mb-4">
@@ -127,26 +127,26 @@ export default function Export() {
                     className={cn(
                       "p-4 rounded-lg border transition-all text-left",
                       selected 
-                        ? 'border-[var(--foreground)] bg-[var(--muted)] border-2' 
-                        : 'border-[var(--border)] hover:border-[var(--muted-foreground)] hover:bg-[var(--muted)]/30'
+                        ? 'border-(--foreground) bg-(--muted) border-2' 
+                        : 'border-(--border) hover:border-(--muted-foreground) hover:bg-(--muted)/30'
                     )}
                   >
                     <div className="flex items-center gap-2 mb-1">
-                      <Icon size={16} className="text-[var(--muted-foreground)]" />
+                      <Icon size={16} className="text-(--muted-foreground)" />
                       <span className="text-code font-bold">{fmt.name}</span>
                     </div>
-                    <p className="text-caption text-[var(--muted-foreground)] leading-snug">{fmt.desc}</p>
+                    <p className="text-caption text-(--muted-foreground) leading-snug">{fmt.desc}</p>
                   </button>
                 );
               })}
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-[var(--muted)] transition-colors">
+            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-lg hover:bg-(--muted) transition-colors">
               <input
                 type="checkbox"
                 checked={includeAnnotations}
                 onChange={(e) => setIncludeAnnotations(e.target.checked)}
-                className="w-4 h-4 rounded border-[var(--border)]"
+                className="w-4 h-4 rounded border-(--border)"
               />
               <span className="text-code font-medium">Include annotations</span>
             </label>
@@ -154,8 +154,8 @@ export default function Export() {
         )}
 
         {(exportType === 'citations' || exportType === 'bibliography') && (
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
-            <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-3">
+          <div className="bg-(--card) border border-(--border) rounded-xl p-6">
+            <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider mb-3">
               Citation Format
             </label>
             <Select value={citationFormat} onChange={(e) => setCitationFormat(e.target.value)} className="h-9">

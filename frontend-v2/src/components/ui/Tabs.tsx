@@ -35,7 +35,7 @@ export function TabsList({ className, children, ...props }: HTMLAttributes<HTMLD
       role="tablist"
       className={cn(
         'inline-flex items-center gap-0.5',
-        'border-b border-[var(--border)]',
+        'border-b border-(--border)',
         className,
       )}
       {...props}
@@ -64,10 +64,10 @@ export function TabsTrigger({ value, disabled, className, children, ...props }: 
       className={cn(
         'px-3 py-2 text-code font-medium leading-5',
         'border-b-2 -mb-px transition-all duration-150',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/20 rounded-t-sm',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-(--ring)/20 rounded-t-sm',
         isActive
-          ? 'border-[var(--foreground)] text-[var(--foreground)]'
-          : 'border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:border-[var(--border)]',
+          ? 'border-(--foreground) text-(--foreground)'
+          : 'border-transparent text-(--muted-foreground) hover:text-(--foreground) hover:border-(--border)',
         disabled && 'opacity-40 cursor-not-allowed',
         className,
       )}

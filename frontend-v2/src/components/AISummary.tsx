@@ -44,7 +44,7 @@ export function AISummary({ paperId }: AISummaryProps) {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex flex-col items-center justify-center text-[var(--muted-foreground)] animate-pulse">
+      <div className="p-6 flex flex-col items-center justify-center text-(--muted-foreground) animate-pulse">
         <Sparkles size={24} className="mb-2 opacity-50" />
         <p className="text-code">Reading paper...</p>
       </div>
@@ -58,7 +58,7 @@ export function AISummary({ paperId }: AISummaryProps) {
           value={editedSummary}
           onChange={(e) => setEditedSummary(e.target.value)}
           rows={12}
-          className="w-full text-code bg-[var(--white)]"
+          className="w-full text-code bg-(--white)"
           placeholder="Enter AI summary..."
           autoFocus
         />
@@ -101,9 +101,9 @@ export function AISummary({ paperId }: AISummaryProps) {
                 h3: ({ children }) => <h3 className="text-body font-bold mt-4 mb-2 first:mt-0">{children}</h3>,
                 ul: ({ children }) => <ul className="list-disc pl-5 mb-4 space-y-1">{children}</ul>,
                 ol: ({ children }) => <ol className="list-decimal pl-5 mb-4 space-y-1">{children}</ol>,
-                li: ({ children }) => <li className="marker:text-[var(--muted-foreground)]">{children}</li>,
+                li: ({ children }) => <li className="marker:text-(--muted-foreground)">{children}</li>,
                 blockquote: ({ children }) => (
-                  <blockquote className="border-l-2 border-[var(--border)] pl-4 italic my-4 text-[var(--muted-foreground)]">
+                  <blockquote className="border-l-2 border-(--border) pl-4 italic my-4 text-(--muted-foreground)">
                     {children}
                   </blockquote>
                 ),
@@ -111,11 +111,11 @@ export function AISummary({ paperId }: AISummaryProps) {
                   const match = /language-(\w+)/.exec(className || '');
                   const inline = !match;
                   return inline ? (
-                    <code className="bg-[var(--muted)] px-1 py-0.5 rounded text-caption" {...props}>
+                    <code className="bg-(--muted) px-1 py-0.5 rounded text-caption" {...props}>
                       {children}
                     </code>
                   ) : (
-                    <code className="block bg-[var(--muted)] p-3 rounded-lg text-caption overflow-x-auto my-4 border border-[var(--border)]" {...props}>
+                    <code className="block bg-(--muted) p-3 rounded-lg text-caption overflow-x-auto my-4 border border-(--border)" {...props}>
                       {children}
                     </code>
                   );
@@ -126,7 +126,7 @@ export function AISummary({ paperId }: AISummaryProps) {
             </ReactMarkdown>
           </div>
           
-          <div className="flex items-center gap-2 pt-4 border-t border-[var(--border)]">
+          <div className="flex items-center gap-2 pt-4 border-t border-(--border)">
             <Button
               variant="ghost"
               className="h-8 text-caption px-3"
@@ -140,7 +140,7 @@ export function AISummary({ paperId }: AISummaryProps) {
             </Button>
             <Button
               variant="outlined"
-              className="h-8 text-caption px-3 ml-auto border-[var(--sky-blue)]/30 hover:bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]"
+              className="h-8 text-caption px-3 ml-auto border-(--sky-blue)/30 hover:bg-(--sky-blue)/10 text-(--sky-blue)"
               onClick={() => generateMutation.mutate()}
               disabled={generateMutation.isPending}
             >
@@ -150,10 +150,10 @@ export function AISummary({ paperId }: AISummaryProps) {
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-[var(--muted)]/20 rounded-2xl border border-dashed border-[var(--border)]">
-          <Sparkles size={32} className="mb-4 text-[var(--muted-foreground)] opacity-40" />
-          <h3 className="text-btn font-semibold text-[var(--foreground)] mb-2">No Summary Available</h3>
-          <p className="text-code text-[var(--muted-foreground)] mb-6 max-w-[15rem]">
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-(--muted)/20 rounded-2xl border border-dashed border-(--border)">
+          <Sparkles size={32} className="mb-4 text-(--muted-foreground) opacity-40" />
+          <h3 className="text-btn font-semibold text-(--foreground) mb-2">No Summary Available</h3>
+          <p className="text-code text-(--muted-foreground) mb-6 max-w-60">
             Generate an AI-powered summary to quickly understand the core message of this paper.
           </p>
           <Button
@@ -177,11 +177,11 @@ export function AISummary({ paperId }: AISummaryProps) {
       )}
 
       {(generateMutation.isError || error) && (
-        <div className="p-4 bg-[var(--destructive)]/5 border border-[var(--destructive)]/20 rounded-xl flex items-start gap-3">
-          <AlertCircle size={16} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+        <div className="p-4 bg-(--destructive)/5 border border-(--destructive)/20 rounded-xl flex items-start gap-3">
+          <AlertCircle size={16} className="text-(--destructive) shrink-0 mt-0.5" />
           <div>
-            <p className="text-caption font-semibold text-[var(--destructive)]">Something went wrong</p>
-            <p className="text-caption text-[var(--destructive)]/80 mt-1 uppercase">
+            <p className="text-caption font-semibold text-(--destructive)">Something went wrong</p>
+            <p className="text-caption text-(--destructive)/80 mt-1 uppercase">
               {generateMutation.error instanceof Error ? generateMutation.error.message : 'Server error'}
             </p>
           </div>

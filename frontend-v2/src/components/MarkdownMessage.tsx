@@ -34,7 +34,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
                 {String(children).replace(/\n$/, '')}
               </SyntaxHighlighter>
             ) : (
-              <code className="bg-[var(--muted)] px-1.5 py-0.5 rounded text-caption" {...props}>
+              <code className="bg-(--muted) px-1.5 py-0.5 rounded text-caption" {...props}>
                 {children}
               </code>
             );
@@ -51,14 +51,14 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
           li({ children }) { return <li>{children}</li>; },
           blockquote({ children }) {
             return (
-              <blockquote className="border-l-2 border-[var(--border)] pl-4 my-3 text-[var(--muted-foreground)] italic">
+              <blockquote className="border-l-2 border-(--border) pl-4 my-3 text-(--muted-foreground) italic">
                 {children}
               </blockquote>
             );
           },
           a({ href, children }) {
             return (
-              <a href={href} target="_blank" rel="noopener noreferrer" className="text-[var(--sky-blue)] underline underline-offset-2 hover:opacity-80 transition-opacity">
+              <a href={href} target="_blank" rel="noopener noreferrer" className="text-(--sky-blue) underline underline-offset-2 hover:opacity-80 transition-opacity">
                 {children}
               </a>
             );
@@ -66,17 +66,17 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
           table({ children }) {
             return (
               <div className="overflow-x-auto my-3">
-                <table className="min-w-full border border-[var(--border)] rounded-lg overflow-hidden text-caption">{children}</table>
+                <table className="min-w-full border border-(--border) rounded-lg overflow-hidden text-caption">{children}</table>
               </div>
             );
           },
           th({ children }) {
-            return <th className="border border-[var(--border)] px-3 py-2 bg-[var(--muted)] font-semibold text-left">{children}</th>;
+            return <th className="border border-(--border) px-3 py-2 bg-(--muted) font-semibold text-left">{children}</th>;
           },
           td({ children }) {
-            return <td className="border border-[var(--border)] px-3 py-2">{children}</td>;
+            return <td className="border border-(--border) px-3 py-2">{children}</td>;
           },
-          hr() { return <hr className="my-4 border-[var(--border)]" />; },
+          hr() { return <hr className="my-4 border-(--border)" />; },
           strong({ children }) { return <strong className="font-semibold">{children}</strong>; },
           em({ children }) { return <em className="italic">{children}</em>; },
         }}

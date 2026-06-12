@@ -1259,12 +1259,12 @@ const WorkbookSheetTabsInner = React.memo(function WorkbookSheetTabsInner({
                 width: previewWidth,
               }}
             >
-              <div className="relative aspect-[11/7] w-full overflow-hidden bg-muted/60">
+              <div className="relative aspect-11/7 w-full overflow-hidden bg-muted/60">
                 <img
                   key={`${workbookIdentity}-${visiblePreviewIndex}-${previewUrl}`}
                   src={previewUrl}
                   alt={`${previewSheet.name} preview`}
-                  className="absolute inset-0 h-full w-full object-cover object-left-top"
+                  className="absolute inset-0 h-full w-full object-cover object-top-left"
                 />
               </div>
             </div>,

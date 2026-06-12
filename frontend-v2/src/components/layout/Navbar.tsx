@@ -94,7 +94,7 @@ export default function Navbar({ onMenuToggle, showChatToggle, onChatToggle }: N
         <div className="flex items-center gap-3 flex-1 min-w-0">
           <Button
             variant="ghost"
-            className="md:hidden shrink-0 !h-8 !w-8 !p-0"
+            className="md:hidden shrink-0 h-8! w-8! p-0!"
             onClick={onMenuToggle}
             aria-label="Toggle menu"
           >
@@ -107,7 +107,7 @@ export default function Navbar({ onMenuToggle, showChatToggle, onChatToggle }: N
           {showChatToggle && (
             <Button
               variant="ghost"
-              className="!h-8 !w-8 !p-0"
+              className="h-8! w-8! p-0!"
               onClick={onChatToggle}
               aria-label="Open chat panel"
             >

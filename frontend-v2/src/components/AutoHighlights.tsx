@@ -20,15 +20,15 @@ export function AutoHighlights({ paperId }: AutoHighlightsProps) {
   });
 
   return (
-    <div className="p-5 bg-[var(--sky-blue)]/5 border border-[var(--sky-blue)]/20 rounded-2xl">
+    <div className="p-5 bg-(--sky-blue)/5 border border-(--sky-blue)/20 rounded-2xl">
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="flex items-center gap-2">
-          <Highlighter size={16} className="text-[var(--sky-blue)]" />
+          <Highlighter size={16} className="text-(--sky-blue)" />
           <h4 className="text-body font-bold">Auto-Highlights</h4>
         </div>
         <Button
           variant="outlined"
-          className="h-8 text-caption px-3 border-[var(--sky-blue)]/30 hover:bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]"
+          className="h-8 text-caption px-3 border-(--sky-blue)/30 hover:bg-(--sky-blue)/10 text-(--sky-blue)"
           onClick={() => generateMutation.mutate()}
           disabled={generateMutation.isPending}
         >
@@ -43,25 +43,25 @@ export function AutoHighlights({ paperId }: AutoHighlightsProps) {
         </Button>
       </div>
 
-      <p className="text-caption text-[var(--muted-foreground)] leading-relaxed">
+      <p className="text-caption text-(--muted-foreground) leading-relaxed">
         {generateMutation.isPending
           ? 'An AI agent is analyzing the paper and identifying key passages to highlight. This may take a moment.'
           : 'Spawns an AI agent to analyze the paper and automatically highlight core methods, results, and key contributions.'}
       </p>
 
       {generateMutation.isSuccess && generateMutation.data && (
-        <div className="mt-4 flex items-center gap-2 text-caption text-[var(--success-green)] font-medium animate-in fade-in slide-in-from-top-1 duration-300">
+        <div className="mt-4 flex items-center gap-2 text-caption text-(--success-green) font-medium animate-in fade-in slide-in-from-top-1 duration-300">
           <CheckCircle2 size={14} />
           <span>Success! {generateMutation.data.count} highlights identified and added.</span>
         </div>
       )}
 
       {generateMutation.isError && (
-        <div className="mt-4 p-3 bg-[var(--destructive)]/5 border border-[var(--destructive)]/20 rounded-xl flex items-start gap-3">
-          <AlertCircle size={14} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+        <div className="mt-4 p-3 bg-(--destructive)/5 border border-(--destructive)/20 rounded-xl flex items-start gap-3">
+          <AlertCircle size={14} className="text-(--destructive) shrink-0 mt-0.5" />
           <div>
-            <p className="text-caption font-bold text-[var(--destructive)] uppercase tracking-tight">AI Agent Failed</p>
-            <p className="text-caption text-[var(--destructive)]/80 mt-0.5">
+            <p className="text-caption font-bold text-(--destructive) uppercase tracking-tight">AI Agent Failed</p>
+            <p className="text-caption text-(--destructive)/80 mt-0.5">
               {generateMutation.error instanceof Error ? generateMutation.error.message : 'Server error'}
             </p>
           </div>

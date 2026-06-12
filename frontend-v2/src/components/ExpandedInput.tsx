@@ -276,8 +276,8 @@ export function ExpandedInput({
             return (
               <div key={group.label} className="w-full">
                 <div className="flex items-center gap-1.5 mb-2 px-1">
-                  <GroupIcon size={13} className="text-[var(--muted-foreground)] shrink-0" />
-                  <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">{group.label}</span>
+                  <GroupIcon size={13} className="text-(--muted-foreground) shrink-0" />
+                  <span className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wider">{group.label}</span>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {group.prompts.map((suggestion) => {
@@ -288,9 +288,9 @@ export function ExpandedInput({
                         type="button"
                         disabled={disabled}
                         onClick={() => handlePromptClick(suggestion.prompt)}
-                        className="group flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--foreground)] transition-colors duration-200 ease-out hover:bg-[var(--muted)]/30 h-auto bg-transparent disabled:opacity-40"
+                        className="group flex items-center gap-2 rounded-full border border-(--border) px-3 py-1.5 text-sm text-(--foreground) transition-colors duration-200 ease-out hover:bg-(--muted)/30 h-auto bg-transparent disabled:opacity-40"
                       >
-                        <IconComponent size={14} className="text-[var(--muted-foreground)] transition-colors group-hover:text-[var(--foreground)] shrink-0" />
+                        <IconComponent size={14} className="text-(--muted-foreground) transition-colors group-hover:text-(--foreground) shrink-0" />
                         <span>{suggestion.text}</span>
                       </button>
                     );
@@ -308,9 +308,9 @@ export function ExpandedInput({
                 type="button"
                 disabled={disabled}
                 onClick={() => handlePromptClick(suggestion.prompt)}
-                className="group flex items-center gap-2 rounded-full border border-[var(--border)] px-3 py-2 text-sm text-[var(--foreground)] transition-colors duration-200 ease-out hover:bg-[var(--muted)]/30 h-auto bg-transparent disabled:opacity-40"
+                className="group flex items-center gap-2 rounded-full border border-(--border) px-3 py-2 text-sm text-(--foreground) transition-colors duration-200 ease-out hover:bg-(--muted)/30 h-auto bg-transparent disabled:opacity-40"
               >
-                <IconComponent size={16} className="text-[var(--muted-foreground)] transition-colors group-hover:text-[var(--foreground)] shrink-0" />
+                <IconComponent size={16} className="text-(--muted-foreground) transition-colors group-hover:text-(--foreground) shrink-0" />
                 <span>{suggestion.text}</span>
               </button>
             );
@@ -323,7 +323,7 @@ export function ExpandedInput({
   return (
     <div className={cn('flex flex-col gap-4 w-full', className)}>
       <div className={cn(
-        'flex flex-col bg-[var(--card)] border border-[var(--border)] shadow-lg',
+        'flex flex-col bg-(--card) border border-(--border) shadow-lg',
         isCompact ? 'rounded-xl' : 'min-h-[120px] rounded-2xl',
       )}>
         {/* Textarea container — no overflow-y so absolute mention dropdown isn't clipped */}
@@ -337,7 +337,7 @@ export function ExpandedInput({
             disabled={disabled}
             autoFocus={autoFocus}
             className={cn(
-              'w-full border-0 outline-none resize-none shadow-none bg-transparent whitespace-pre-wrap break-words placeholder:text-[var(--muted-foreground)] disabled:opacity-50',
+              'w-full border-0 outline-none resize-none shadow-none bg-transparent whitespace-pre-wrap wrap-break-word placeholder:text-(--muted-foreground) disabled:opacity-50',
               isCompact
                 ? 'p-3 min-h-[36px] text-sm rounded-xl'
                 : 'p-5 transition-[padding] duration-200 ease-in-out min-h-[48.4px] max-h-[258px] overflow-y-auto text-[16px]',
@@ -348,7 +348,7 @@ export function ExpandedInput({
           {showMentionDropdown && filteredMentionItems.length > 0 && (
             <div
               ref={mentionDropdownRef}
-              className="absolute z-[100] left-3 right-3 bg-[var(--white)] border border-[var(--border)] rounded-xl shadow-lg max-h-60 overflow-y-auto"
+              className="absolute z-100 left-3 right-3 bg-(--white) border border-(--border) rounded-xl shadow-lg max-h-60 overflow-y-auto"
               style={{ bottom: 'calc(100% + 0.5rem)' }}
             >
               {filteredMentionItems.map((item, index) => (
@@ -360,20 +360,20 @@ export function ExpandedInput({
                   className={cn(
                     'w-full px-3 py-2 text-left flex items-center gap-2 transition-colors',
                     index === selectedMentionIndex
-                      ? 'bg-[var(--muted)] border-l-2 border-[var(--primary)]'
-                      : 'hover:bg-[var(--muted)]/50'
+                      ? 'bg-(--muted) border-l-2 border-(--primary)'
+                      : 'hover:bg-(--muted)/50'
                   )}
                 >
-                  <div className="flex-shrink-0 text-[var(--muted-foreground)]">{getMentionIcon(item.type)}</div>
+                  <div className="shrink-0 text-(--muted-foreground)">{getMentionIcon(item.type)}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-caption font-medium text-[var(--foreground)] truncate">{item.display}</div>
+                    <div className="text-caption font-medium text-(--foreground) truncate">{item.display}</div>
                     {item.content && (
-                      <div className="text-caption text-[var(--muted-foreground)] truncate mt-0.5">
+                      <div className="text-caption text-(--muted-foreground) truncate mt-0.5">
                         {item.content.substring(0, 60)}...
                       </div>
                     )}
                   </div>
-                  {index === selectedMentionIndex && <Check size={12} className="shrink-0 text-[var(--primary)]" />}
+                  {index === selectedMentionIndex && <Check size={12} className="shrink-0 text-(--primary)" />}
                 </button>
               ))}
             </div>
@@ -394,8 +394,8 @@ export function ExpandedInput({
                 className={cn(
                   'h-7 w-7 rounded-full flex items-center justify-center transition-colors duration-150 shrink-0',
                   value.trim() && !disabled
-                    ? 'border border-[var(--primary)] text-[var(--primary)] bg-transparent hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)]'
-                    : 'border border-[var(--border)] text-[var(--muted-foreground)]'
+                    ? 'border border-(--primary) text-(--primary) bg-transparent hover:bg-(--primary) hover:text-(--primary-foreground)'
+                    : 'border border-(--border) text-(--muted-foreground)'
                 )}
               >
                 {submitIcon}
@@ -410,8 +410,8 @@ export function ExpandedInput({
                   'text-code h-9 px-4',
                   'rounded-full',
                   value.trim() && !disabled
-                    ? 'border-2 border-[var(--primary)] text-[var(--primary)] bg-transparent hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)]'
-                    : 'border border-[var(--border)] text-[var(--muted-foreground)]',
+                    ? 'border-2 border-(--primary) text-(--primary) bg-transparent hover:bg-(--primary) hover:text-(--primary-foreground)'
+                    : 'border border-(--border) text-(--muted-foreground)',
                 )}
               >
                 {submitIcon && <span className="shrink-0">{submitIcon}</span>}
@@ -422,11 +422,11 @@ export function ExpandedInput({
             {/* Prompts trigger — pops over from toolbar via Popover */}
             {!isCompact && promptsCollapsible && (suggestions?.length || promptGroups?.length) && (
               <Popover>
-                <PopoverTrigger className="inline-flex items-center gap-1 text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors px-2 py-1 rounded-lg hover:bg-[var(--muted)]">
+                <PopoverTrigger className="inline-flex items-center gap-1 text-caption text-(--muted-foreground) hover:text-(--foreground) transition-colors px-2 py-1 rounded-lg hover:bg-(--muted)">
                   <span>Prompts</span>
                   <ChevronDown size={12} />
                 </PopoverTrigger>
-                <PopoverContent side="top" align="end" className="w-[calc(100vw-2rem)] sm:w-[22rem] p-3 max-h-[18rem] overflow-y-auto break-words">
+                <PopoverContent side="top" align="end" className="w-[calc(100vw-2rem)] sm:w-88 p-3 max-h-72 overflow-y-auto wrap-break-word">
                   <div className="space-y-3">
                     {promptGroups && promptGroups.length > 0 ? (
                       promptGroups.map((group) => {
@@ -434,8 +434,8 @@ export function ExpandedInput({
                         return (
                           <div key={group.label}>
                             <div className="flex items-center gap-1.5 mb-2">
-                              <GroupIcon size={13} className="text-[var(--muted-foreground)] shrink-0" />
-                              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">{group.label}</span>
+                              <GroupIcon size={13} className="text-(--muted-foreground) shrink-0" />
+                              <span className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wider">{group.label}</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {group.prompts.map((suggestion) => {
@@ -446,9 +446,9 @@ export function ExpandedInput({
                                     type="button"
                                     disabled={disabled}
                                     onClick={() => { handlePromptClick(suggestion.prompt); }}
-                                    className="group flex items-center gap-1.5 rounded-full border border-[var(--border)] px-2.5 py-1 text-sm text-[var(--foreground)] transition-colors duration-200 ease-out hover:bg-[var(--muted)]/30 bg-transparent disabled:opacity-40"
+                                    className="group flex items-center gap-1.5 rounded-full border border-(--border) px-2.5 py-1 text-sm text-(--foreground) transition-colors duration-200 ease-out hover:bg-(--muted)/30 bg-transparent disabled:opacity-40"
                                   >
-                                    <IconComponent size={12} className="text-[var(--muted-foreground)] shrink-0" />
+                                    <IconComponent size={12} className="text-(--muted-foreground) shrink-0" />
                                     <span>{suggestion.text}</span>
                                   </button>
                                 );
@@ -467,9 +467,9 @@ export function ExpandedInput({
                               type="button"
                               disabled={disabled}
                               onClick={() => { handlePromptClick(suggestion.prompt); }}
-                              className="group flex items-center gap-1.5 rounded-full border border-[var(--border)] px-2.5 py-1 text-sm text-[var(--foreground)] transition-colors duration-200 ease-out hover:bg-[var(--muted)]/30 bg-transparent disabled:opacity-40"
+                              className="group flex items-center gap-1.5 rounded-full border border-(--border) px-2.5 py-1 text-sm text-(--foreground) transition-colors duration-200 ease-out hover:bg-(--muted)/30 bg-transparent disabled:opacity-40"
                             >
-                              <IconComponent size={12} className="text-[var(--muted-foreground)] shrink-0" />
+                              <IconComponent size={12} className="text-(--muted-foreground) shrink-0" />
                               <span className="whitespace-nowrap">{suggestion.text}</span>
                             </button>
                           );

@@ -106,7 +106,7 @@ export function Select({
   const displayLabel = selected
     ? selected.label
     : placeholder
-    ? <span className="text-[var(--muted-foreground)]">{placeholder}</span>
+    ? <span className="text-(--muted-foreground)">{placeholder}</span>
     : items[0]?.label ?? null;
 
   return (
@@ -125,15 +125,15 @@ export function Select({
         onClick={() => setOpen((o) => !o)}
         className={cn(
           'w-full inline-flex items-center justify-between gap-2',
-          'bg-[var(--card)] text-[var(--foreground)]',
+          'bg-(--card) text-(--foreground)',
           'text-code font-normal leading-5',
           'pl-3 pr-2.5 h-9',
-          'rounded-lg border border-[var(--border)]',
-          'hover:bg-[var(--muted)]',
-          'focus:outline-none focus:border-[var(--ring)] focus:ring-2 focus:ring-[var(--ring)]/10',
+          'rounded-lg border border-(--border)',
+          'hover:bg-(--muted)',
+          'focus:outline-none focus:border-(--ring) focus:ring-2 focus:ring-(--ring)/10',
           'disabled:opacity-40 disabled:cursor-not-allowed',
           'transition-colors duration-150 cursor-pointer',
-          error && 'border-[var(--destructive)]',
+          error && 'border-(--destructive)',
           className,
         )}
       >
@@ -141,7 +141,7 @@ export function Select({
         <ChevronDown
           size={14}
           className={cn(
-            'shrink-0 text-[var(--muted-foreground)] transition-transform duration-150',
+            'shrink-0 text-(--muted-foreground) transition-transform duration-150',
             open && 'rotate-180',
           )}
         />
@@ -154,14 +154,14 @@ export function Select({
           style={triggerWidth ? { minWidth: triggerWidth } : undefined}
           className={cn(
             'absolute z-50 top-full left-0 mt-1.5',
-            'bg-[var(--popover)] border border-[var(--border)] rounded-lg',
+            'bg-(--popover) border border-(--border) rounded-lg',
             'shadow-elevated p-1',
             'max-h-64 overflow-y-auto',
             'animate-in fade-in-0 zoom-in-95 duration-100',
           )}
         >
           {items.length === 0 ? (
-            <div className="px-2.5 py-1.5 text-code text-[var(--muted-foreground)]">No options</div>
+            <div className="px-2.5 py-1.5 text-code text-(--muted-foreground)">No options</div>
           ) : (
             items.map((it) => {
               const active = it.value === current;
@@ -175,14 +175,14 @@ export function Select({
                   onClick={() => choose(it.value)}
                   className={cn(
                     'w-full flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-md text-left',
-                    'text-code text-[var(--foreground)]',
-                    'hover:bg-[var(--muted)] transition-colors duration-100',
+                    'text-code text-(--foreground)',
+                    'hover:bg-(--muted) transition-colors duration-100',
                     'disabled:opacity-40 disabled:cursor-not-allowed',
-                    active && 'bg-[var(--muted)] font-medium',
+                    active && 'bg-(--muted) font-medium',
                   )}
                 >
-                  <span className="truncate">{it.label || <span className="text-[var(--muted-foreground)]">(empty)</span>}</span>
-                  {active && <Check size={12} className="shrink-0 text-[var(--foreground)]" />}
+                  <span className="truncate">{it.label || <span className="text-(--muted-foreground)">(empty)</span>}</span>
+                  {active && <Check size={12} className="shrink-0 text-(--foreground)" />}
                 </button>
               );
             })

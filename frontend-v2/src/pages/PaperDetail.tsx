@@ -48,10 +48,10 @@ export default function PaperDetail() {
 
   if (!paperId) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-[var(--white)]">
-        <AlertCircle size={48} className="text-[var(--destructive)] opacity-20 mb-4" />
+      <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-(--white)">
+        <AlertCircle size={48} className="text-(--destructive) opacity-20 mb-4" />
         <h2 className="text-subheading font-bold mb-2">Paper not found</h2>
-        <p className="text-body text-[var(--muted-foreground)] mb-6">The paper ID provided is invalid or missing.</p>
+        <p className="text-body text-(--muted-foreground) mb-6">The paper ID provided is invalid or missing.</p>
         <Button onClick={() => navigate('/')}>Return Home</Button>
       </div>
     );
@@ -59,19 +59,19 @@ export default function PaperDetail() {
 
   if (paperLoading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center bg-[var(--background)]">
-        <div className="w-12 h-12 rounded-full border-4 border-[var(--border)] border-t-[var(--sky-blue)] animate-spin" />
-        <p className="mt-4 text-code font-medium text-[var(--muted-foreground)]">Fetching paper data...</p>
+      <div className="h-full flex flex-col items-center justify-center bg-(--background)">
+        <div className="w-12 h-12 rounded-full border-4 border-(--border) border-t-(--sky-blue) animate-spin" />
+        <p className="mt-4 text-code font-medium text-(--muted-foreground)">Fetching paper data...</p>
       </div>
     );
   }
 
   if (paperError || !paper) {
     return (
-      <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-[var(--white)]">
-        <FileText size={48} className="text-[var(--destructive)] opacity-20 mb-4" />
+      <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-(--white)">
+        <FileText size={48} className="text-(--destructive) opacity-20 mb-4" />
         <h2 className="text-subheading font-bold mb-2">Error loading paper</h2>
-        <p className="text-body text-[var(--muted-foreground)] mb-6">
+        <p className="text-body text-(--muted-foreground) mb-6">
           {paperError instanceof Error ? paperError.message : 'We could not load the paper data at this time.'}
         </p>
         <Button onClick={() => refetchPaper()}>Try Again</Button>

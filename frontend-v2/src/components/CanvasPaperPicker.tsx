@@ -36,32 +36,32 @@ export function CanvasPaperPicker({ className }: CanvasPaperPickerProps) {
   };
 
   return (
-    <div className={cn('flex flex-col border-r border-[var(--border)] bg-[var(--card)]', className)}>
-      <div className="p-3 border-b border-[var(--border)]">
+    <div className={cn('flex flex-col border-r border-(--border) bg-(--card)', className)}>
+      <div className="p-3 border-b border-(--border)">
         <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-(--muted-foreground)" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search library..."
-            className="w-full pl-8 pr-3 h-8 text-caption bg-[var(--background)] border border-[var(--border)] rounded-lg text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--foreground)] transition-colors"
+            className="w-full pl-8 pr-3 h-8 text-caption bg-(--background) border border-(--border) rounded-lg text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:border-(--foreground) transition-colors"
           />
         </div>
-        <p className="text-caption text-[var(--muted-foreground)] mt-2">
+        <p className="text-caption text-(--muted-foreground) mt-2">
           Drag papers onto the canvas
         </p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="p-3 text-caption text-[var(--muted-foreground)]">Loading…</div>
+          <div className="p-3 text-caption text-(--muted-foreground)">Loading…</div>
         ) : papers.length === 0 ? (
-          <div className="p-3 text-caption text-[var(--muted-foreground)]">
+          <div className="p-3 text-caption text-(--muted-foreground)">
             {query ? `No papers matching "${query}"` : 'No papers in library'}
           </div>
         ) : (
-          <ul className="divide-y divide-[var(--border)]">
+          <ul className="divide-y divide-(--border)">
             {papers.map((paper) => {
               const onCanvas = onCanvasIds.has(paper.id);
               const author = (paper.metadata_json?.author as string | undefined) ??
@@ -76,23 +76,23 @@ export function CanvasPaperPicker({ className }: CanvasPaperPickerProps) {
                     'px-3 py-2 group transition-colors',
                     onCanvas
                       ? 'opacity-50 cursor-not-allowed'
-                      : 'cursor-grab active:cursor-grabbing hover:bg-[var(--muted)]'
+                      : 'cursor-grab active:cursor-grabbing hover:bg-(--muted)'
                   )}
                   title={onCanvas ? 'Already on canvas' : 'Drag to canvas'}
                 >
                   <div className="flex items-start gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-caption font-medium text-[var(--foreground)] line-clamp-2 leading-snug">
+                      <p className="text-caption font-medium text-(--foreground) line-clamp-2 leading-snug">
                         {paper.title}
                       </p>
                       {author && (
-                        <p className="text-caption text-[var(--muted-foreground)] mt-0.5 line-clamp-1">
+                        <p className="text-caption text-(--muted-foreground) mt-0.5 line-clamp-1">
                           {author}
                         </p>
                       )}
                     </div>
                     {onCanvas && (
-                      <TickCircle size={14} className="shrink-0 mt-0.5 text-[var(--muted-foreground)]" />
+                      <TickCircle size={14} className="shrink-0 mt-0.5 text-(--muted-foreground)" />
                     )}
                   </div>
                 </li>

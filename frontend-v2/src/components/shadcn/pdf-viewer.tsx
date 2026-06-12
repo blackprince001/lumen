@@ -417,7 +417,7 @@ function PDFViewerPageNumberControl({
           pattern="[0-9]*"
           size="sm"
           value={draftPage}
-          className="mx-1 w-14 min-w-14 rounded-md [&_[data-slot=input]]:text-center"
+          className="mx-1 w-14 min-w-14 rounded-md **:data-[slot=input]:text-center"
           onBlur={() => setIsEditing(false)}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
             const nextValue = event.target.value
@@ -477,7 +477,7 @@ function PDFSidebarThumbnail({
           pageNumber={pageNumber}
           width={THUMBNAIL_WIDTH}
           rotate={effectiveRotation}
-          className="flex size-full items-center justify-center [&_.react-pdf__Thumbnail__page]:!m-0 [&_.react-pdf__Thumbnail__page]:!h-auto [&_.react-pdf__Thumbnail__page]:!w-full [&_.react-pdf__Thumbnail__page]:overflow-hidden [&_canvas]:!h-auto [&_canvas]:!w-full"
+          className="flex size-full items-center justify-center [&_.react-pdf__Thumbnail__page]:m-0! [&_.react-pdf__Thumbnail__page]:h-auto! [&_.react-pdf__Thumbnail__page]:w-full! [&_.react-pdf__Thumbnail__page]:overflow-hidden [&_canvas]:h-auto! [&_canvas]:w-full!"
         />
       }
       className="w-[92px] rounded-md border-0 shadow-xs ring-0"
@@ -2000,7 +2000,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                             return (
                               <div
                                 key={virtualThumbnail.key}
-                                className="absolute top-0 right-4 left-4 flex justify-center [contain:layout_paint]"
+                                className="absolute top-0 right-4 left-4 flex justify-center contain-[layout_paint]"
                                 style={{
                                   transform: `translateY(${virtualThumbnail.start}px)`,
                                 }}
@@ -2011,7 +2011,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                                   variant="ghost"
                                   size="sm"
                                   className={cn(
-                                    "!h-auto w-full flex-col items-center gap-2 p-2 text-xs shadow-none hover:bg-sidebar-accent",
+                                    "h-auto! w-full flex-col items-center gap-2 p-2 text-xs shadow-none hover:bg-sidebar-accent",
                                     pageNumber === activePage
                                       ? "bg-sidebar-accent text-foreground"
                                       : "text-muted-foreground"
@@ -2091,7 +2091,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                       return (
                         <div
                           key={virtualPage.key}
-                          className="absolute top-0 left-1/2 [contain:layout_paint]"
+                          className="absolute top-0 left-1/2 contain-[layout_paint]"
                           style={{
                             height: pageStyle.height,
                             transform: `translateX(-50%) translateY(${virtualPage.start}px)`,

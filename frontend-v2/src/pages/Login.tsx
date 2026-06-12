@@ -27,15 +27,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4">
-      <div className="w-full max-w-sm bg-[var(--white)] border border-[var(--border)] rounded-2xl p-8 shadow-sm">
+    <div className="min-h-screen flex items-center justify-center bg-(--background) px-4">
+      <div className="w-full max-w-sm bg-(--white) border border-(--border) rounded-2xl p-8 shadow-sm">
         {/* Brand */}
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-4">
             <Logo size={120} />
           </div>
-          <h1 className="text-page-title font-bold tracking-tight text-[var(--foreground)]">Lumen</h1>
-          <p className="mt-1 text-body text-[var(--muted-foreground)]">Your research library</p>
+          <h1 className="text-page-title font-bold tracking-tight text-(--foreground)">Lumen</h1>
+          <p className="mt-1 text-body text-(--muted-foreground)">Your research library</p>
         </div>
 
         {/* Error */}

@@ -39,7 +39,7 @@ export function PaperAnnotationsPanel({
     return (
       <div className="p-8 space-y-4">
         {[1, 2, 3].map(i => (
-          <div key={i} className="h-24 bg-[var(--muted)]/50 rounded-xl animate-pulse" />
+          <div key={i} className="h-24 bg-(--muted)/50 rounded-xl animate-pulse" />
         ))}
       </div>
     );
@@ -57,21 +57,21 @@ export function PaperAnnotationsPanel({
         className={cn(
           "group relative p-4 rounded-2xl border transition-all cursor-pointer",
           isOnCurrentPage 
-            ? "bg-[var(--white)] border-[var(--foreground)]/20 shadow-sm" 
-            : "bg-[var(--muted)]/20 border-transparent hover:bg-[var(--muted)]/40"
+            ? "bg-(--white) border-(--foreground)/20 shadow-sm" 
+            : "bg-(--muted)/20 border-transparent hover:bg-(--muted)/40"
         )}
       >
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="flex items-center gap-1.5 overflow-hidden">
             {isNote ? (
-              <MessageSquare size={13} className="text-[var(--muted-foreground)] shrink-0" />
+              <MessageSquare size={13} className="text-(--muted-foreground) shrink-0" />
             ) : (
-              <Highlighter size={13} className="text-[var(--muted-foreground)] shrink-0" />
+              <Highlighter size={13} className="text-(--muted-foreground) shrink-0" />
             )}
             {page && (
               <span className={cn(
                 "text-micro font-bold px-1.5 py-0.5 rounded uppercase tracking-wider",
-                isOnCurrentPage ? "bg-[var(--foreground)] text-[var(--white)]" : "bg-[var(--border)] text-[var(--muted-foreground)]"
+                isOnCurrentPage ? "bg-(--foreground) text-(--white)" : "bg-(--border) text-(--muted-foreground)"
               )}>
                 Page {page}
               </span>
@@ -87,7 +87,7 @@ export function PaperAnnotationsPanel({
             </Button>
             <Button 
               variant="ghost" 
-              className="h-6 w-6 p-0 text-[var(--destructive)] hover:bg-[var(--destructive)]/10"
+              className="h-6 w-6 p-0 text-(--destructive) hover:bg-(--destructive)/10"
               onClick={(e) => { e.stopPropagation(); onDeleteAnnotation(ann.id); }}
             >
               <Trash2 size={12} />
@@ -96,22 +96,22 @@ export function PaperAnnotationsPanel({
         </div>
 
         {ann.highlighted_text && (
-          <div className="mb-2 p-2 bg-[var(--white)] border border-[var(--border)] rounded-lg">
-            <p className="text-caption text-[var(--muted-foreground)] line-clamp-2">
+          <div className="mb-2 p-2 bg-(--white) border border-(--border) rounded-lg">
+            <p className="text-caption text-(--muted-foreground) line-clamp-2">
               "{ann.highlighted_text}"
             </p>
           </div>
         )}
 
-        <p className="text-code text-[var(--foreground)] leading-relaxed whitespace-pre-wrap">
+        <p className="text-code text-(--foreground) leading-relaxed whitespace-pre-wrap">
           {ann.content}
         </p>
 
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-micro text-[var(--muted-foreground)] opacity-60 font-medium uppercase tabular-nums">
+          <span className="text-micro text-(--muted-foreground) opacity-60 font-medium uppercase tabular-nums">
             {format(new Date(ann.created_at), 'MMM d, yyyy')}
           </span>
-          <ChevronRight size={12} className="text-[var(--muted-foreground)] opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
+          <ChevronRight size={12} className="text-(--muted-foreground) opacity-0 group-hover:opacity-100 transition-all transform group-hover:translate-x-1" />
         </div>
       </div>
     );
@@ -121,8 +121,8 @@ export function PaperAnnotationsPanel({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <h3 className="text-body font-bold text-[var(--foreground)]">Annotations</h3>
-          <span className="text-caption bg-[var(--muted)] px-1.5 py-0.5 rounded-full text-[var(--muted-foreground)] tabular-nums">
+          <h3 className="text-body font-bold text-(--foreground)">Annotations</h3>
+          <span className="text-caption bg-(--muted) px-1.5 py-0.5 rounded-full text-(--muted-foreground) tabular-nums">
             {annotationItems.length}
           </span>
         </div>
@@ -131,7 +131,7 @@ export function PaperAnnotationsPanel({
             <Button
               variant="ghost"
               size="sm"
-              className="h-7 gap-1.5 text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              className="h-7 gap-1.5 text-caption text-(--muted-foreground) hover:text-(--foreground)"
               onClick={() => navigate('/annotations')}
             >
               <ExportSquare size={13} />
@@ -143,8 +143,8 @@ export function PaperAnnotationsPanel({
           className={cn(
             "text-caption font-medium px-2 py-1 rounded-lg border transition-all",
             filterByPage 
-              ? "bg-[var(--foreground)] text-[var(--white)] border-[var(--foreground)]" 
-              : "text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--muted-foreground)]/50"
+              ? "bg-(--foreground) text-(--white) border-(--foreground)" 
+              : "text-(--muted-foreground) border-(--border) hover:border-(--muted-foreground)/50"
           )}
         >
           {filterByPage ? `Page ${currentPage} only` : 'All pages'}
@@ -157,19 +157,19 @@ export function PaperAnnotationsPanel({
           {filteredAnnotations.map(renderAnnotationCard)}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-[var(--muted)]/10 rounded-2xl border border-dashed border-[var(--border)]">
-          <Highlighter size={32} className="mb-4 text-[var(--muted-foreground)] opacity-30" />
-          <p className="text-code text-[var(--muted-foreground)]">
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-(--muted)/10 rounded-2xl border border-dashed border-(--border)">
+          <Highlighter size={32} className="mb-4 text-(--muted-foreground) opacity-30" />
+          <p className="text-code text-(--muted-foreground)">
             {filterByPage ? `No annotations on page ${currentPage}` : 'No annotations yet'}
           </p>
         </div>
       )}
 
       {noteItems.length > 0 && (
-        <div className="pt-8 border-t border-[var(--border)]">
+        <div className="pt-8 border-t border-(--border)">
           <div className="flex items-center gap-2 mb-4">
-             <h3 className="text-body font-bold text-[var(--foreground)]">General Notes</h3>
-             <span className="text-caption bg-[var(--muted)] px-1.5 py-0.5 rounded-full text-[var(--muted-foreground)] tabular-nums">
+             <h3 className="text-body font-bold text-(--foreground)">General Notes</h3>
+             <span className="text-caption bg-(--muted) px-1.5 py-0.5 rounded-full text-(--muted-foreground) tabular-nums">
               {noteItems.length}
             </span>
           </div>

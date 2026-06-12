@@ -45,8 +45,8 @@ export function SourceSelector({ selectedSources, onChange, className }: SourceS
             className={cn(
               'h-7 px-3 rounded-full text-caption font-medium transition-all flex items-center gap-1.5 border',
               isSelected
-                ? 'bg-[var(--foreground)] text-[var(--white)] border-[var(--foreground)]'
-                : 'bg-[var(--muted)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                ? 'bg-(--foreground) text-(--white) border-(--foreground)'
+                : 'bg-(--muted) text-(--muted-foreground) border-(--border) hover:border-(--muted-foreground) hover:text-(--foreground)'
             )}
           >
             {source.label}

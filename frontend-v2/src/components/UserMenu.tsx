@@ -40,13 +40,13 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
         className={cn(
           'flex items-center gap-2.5 rounded-lg transition-colors duration-150 select-none w-full',
           isOpen ? 'h-9 px-2.5' : 'h-8 w-8 justify-center mx-auto',
-          'text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
+          'text-(--muted-foreground) hover:bg-(--muted) hover:text-(--foreground)',
         )}
       >
         {user?.avatar_url ? (
           <img src={user.avatar_url} alt="" className="w-5 h-5 rounded-full shrink-0 object-cover" />
         ) : (
-          <div className="w-5 h-5 rounded-full bg-[var(--muted)] border border-[var(--border)] flex items-center justify-center shrink-0 text-[9px] font-semibold">
+          <div className="w-5 h-5 rounded-full bg-(--muted) border border-(--border) flex items-center justify-center shrink-0 text-[9px] font-semibold">
             {initials}
           </div>
         )}
@@ -64,17 +64,17 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
       </button>
 
       {menuOpen && (
-        <div className="absolute bottom-full left-0 mb-1 w-48 bg-[var(--white)] border border-[var(--border)] rounded-xl shadow-lg py-1 z-50">
+        <div className="absolute bottom-full left-0 mb-1 w-48 bg-(--white) border border-(--border) rounded-xl shadow-lg py-1 z-50">
           {isOpen && (
-            <div className="px-3 py-2 border-b border-[var(--border)] mb-1">
-              <p className="text-caption font-medium text-[var(--foreground)] truncate">{user?.display_name}</p>
-              <p className="text-[11px] text-[var(--muted-foreground)] truncate">{user?.email}</p>
+            <div className="px-3 py-2 border-b border-(--border) mb-1">
+              <p className="text-caption font-medium text-(--foreground) truncate">{user?.display_name}</p>
+              <p className="text-[11px] text-(--muted-foreground) truncate">{user?.email}</p>
             </div>
           )}
           <Link
             to="/settings"
             onClick={() => setMenuOpen(false)}
-            className="flex items-center gap-2.5 px-3 h-8 text-body text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+            className="flex items-center gap-2.5 px-3 h-8 text-body text-(--foreground) hover:bg-(--muted) transition-colors"
           >
             <Settings size={13} /> Settings
           </Link>
@@ -82,7 +82,7 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
             <Link
               to="/admin/users"
               onClick={() => setMenuOpen(false)}
-              className="flex items-center gap-2.5 px-3 h-8 text-body text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+              className="flex items-center gap-2.5 px-3 h-8 text-body text-(--foreground) hover:bg-(--muted) transition-colors"
             >
               <Shield size={13} /> User Management
             </Link>

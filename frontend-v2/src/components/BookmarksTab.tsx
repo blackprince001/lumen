@@ -76,7 +76,7 @@ export function BookmarksTab({ paperId, onJumpToPage }: BookmarksTabProps) {
 
   if (bookmarks.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center text-[var(--muted-foreground)] opacity-50 p-6">
+      <div className="flex flex-col items-center justify-center h-full text-center text-(--muted-foreground) opacity-50 p-6">
         <BookmarkIcon size={32} className="mb-3" />
         <p className="text-code">No bookmarks yet</p>
         <p className="text-caption mt-1">Click the bookmark button in the PDF toolbar to save pages</p>
@@ -90,7 +90,7 @@ export function BookmarksTab({ paperId, onJumpToPage }: BookmarksTabProps) {
         {bookmarks.map(bookmark => (
           <div
             key={bookmark.id}
-            className="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 hover:border-[var(--primary)] transition-colors"
+            className="bg-(--card) border border-(--border) rounded-lg p-3 hover:border-(--primary) transition-colors"
           >
             <div className="flex items-start justify-between gap-2">
               <button
@@ -98,12 +98,12 @@ export function BookmarksTab({ paperId, onJumpToPage }: BookmarksTabProps) {
                 className="flex-1 text-left group"
               >
                 <div className="flex items-center gap-2 mb-1">
-                  <BookmarkIcon size={14} className="text-[var(--muted-foreground)] group-hover:text-[var(--primary)]" />
-                  <span className="text-code font-medium text-[var(--foreground)] group-hover:text-[var(--primary)]">
+                  <BookmarkIcon size={14} className="text-(--muted-foreground) group-hover:text-(--primary)" />
+                  <span className="text-code font-medium text-(--foreground) group-hover:text-(--primary)">
                     Page {bookmark.page_number}
                   </span>
                 </div>
-                <p className="text-caption text-[var(--muted-foreground)]">
+                <p className="text-caption text-(--muted-foreground)">
                   {format(new Date(bookmark.created_at), 'MMM d, yyyy • h:mm a')}
                 </p>
               </button>
@@ -111,7 +111,7 @@ export function BookmarksTab({ paperId, onJumpToPage }: BookmarksTabProps) {
               <div className="flex items-center gap-1">
                 <Button
                   variant="ghost"
-                  className="!h-7 !w-7 !p-0"
+                  className="h-7! w-7! p-0!"
                   onClick={() => startEdit(bookmark)}
                   title="Add note"
                 >
@@ -119,7 +119,7 @@ export function BookmarksTab({ paperId, onJumpToPage }: BookmarksTabProps) {
                 </Button>
                 <Button
                   variant="ghost"
-                  className="!h-7 !w-7 !p-0 text-[var(--destructive)]"
+                  className="h-7! w-7! p-0! text-(--destructive)"
                   onClick={() => handleDelete(bookmark.id)}
                   title="Delete"
                 >
@@ -135,22 +135,22 @@ export function BookmarksTab({ paperId, onJumpToPage }: BookmarksTabProps) {
                   value={editNote}
                   onChange={(e) => setEditNote(e.target.value)}
                   placeholder="Add a note to this bookmark..."
-                  className="w-full px-2 py-1.5 text-caption bg-[var(--white)] border border-[var(--border)] rounded-md focus:outline-none focus:border-[var(--primary)] resize-none"
+                  className="w-full px-2 py-1.5 text-caption bg-(--white) border border-(--border) rounded-md focus:outline-none focus:border-(--primary) resize-none"
                   rows={3}
                   autoFocus
                 />
                 <div className="flex items-center gap-2">
-                  <Button variant="primary" className="!h-7 !px-3 text-caption" onClick={saveEdit}>
+                  <Button variant="primary" className="h-7! px-3! text-caption" onClick={saveEdit}>
                     Save
                   </Button>
-                  <Button variant="ghost" className="!h-7 !px-3 text-caption" onClick={cancelEdit}>
+                  <Button variant="ghost" className="h-7! px-3! text-caption" onClick={cancelEdit}>
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : bookmark.note ? (
-              <div className="mt-2 p-2 bg-[var(--muted)]/30 rounded-md">
-                <p className="text-caption text-[var(--foreground)] whitespace-pre-wrap">{bookmark.note}</p>
+              <div className="mt-2 p-2 bg-(--muted)/30 rounded-md">
+                <p className="text-caption text-(--foreground) whitespace-pre-wrap">{bookmark.note}</p>
               </div>
             ) : null}
           </div>

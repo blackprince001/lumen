@@ -164,10 +164,10 @@ export default function Discovery() {
   } : undefined;
 
   return (
-    <div className="max-w-[60rem] mx-auto px-6 py-8">
+    <div className="max-w-240 mx-auto px-6 py-8">
       <div className="mb-8 text-center">
         <h1 className="text-page-title mb-1">Research Discovery</h1>
-        <p className="text-body text-[var(--muted-foreground)] max-w-2xl mx-auto">
+        <p className="text-body text-(--muted-foreground) max-w-2xl mx-auto">
           Search across arXiv, Semantic Scholar, and Google Scholar to discover relevant papers with AI-powered insights and intelligent clustering
         </p>
       </div>
@@ -186,30 +186,30 @@ export default function Discovery() {
         >
           <div className="space-y-2 pt-1">
             <div className="flex items-center justify-between">
-              <span className="text-caption text-[var(--muted-foreground)]">Sources:</span>
+              <span className="text-caption text-(--muted-foreground)">Sources:</span>
               <SourceSelector selectedSources={selectedSources} onChange={setSelectedSources} />
             </div>
             <button
               type="button"
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 text-code text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+              className="flex items-center gap-2 text-code text-(--muted-foreground) hover:text-(--foreground) transition-colors"
             >
               <Filter size={14} />
               <span>Advanced Filters</span>
               <ChevronDown size={14} className={cn('transition-transform', showFilters && 'rotate-180')} />
             </button>
             {showFilters && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-[var(--border)]">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-3 border-t border-(--border)">
                 {([
                   { label: 'Year From', value: yearFrom, set: setYearFrom },
                   { label: 'Year To', value: yearTo, set: setYearTo },
                 ] as const).map(({ label, value, set }) => (
                   <div key={label}>
-                    <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">{label}</label>
+                    <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider mb-1">{label}</label>
                     <Select
                       value={value}
                       onChange={(e) => set(e.target.value)}
-                      className="!h-8"
+                      className="h-8!"
                     >
                       <option value="">Any</option>
                       {Array.from({ length: new Date().getFullYear() - 1989 }, (_, i) => new Date().getFullYear() - i).map((y) => (
@@ -219,11 +219,11 @@ export default function Discovery() {
                   </div>
                 ))}
                 <div>
-                  <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">Min Citations</label>
+                  <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider mb-1">Min Citations</label>
                   <Input type="number" value={minCitations} onChange={(e) => setMinCitations(e.target.value)} placeholder="0" className="h-8 text-code" />
                 </div>
                 <div>
-                  <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-1">
+                  <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider mb-1">
                     Papers / Source
                   </label>
                   <Input
@@ -257,14 +257,14 @@ export default function Discovery() {
       {isSearching && !hasResults && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-[var(--border)] overflow-hidden">
+            <div key={i} className="rounded-2xl border border-(--border) overflow-hidden">
               {/* Header skeleton */}
               <div className="flex items-center justify-between px-4 py-3.5">
                 <Skeleton className="h-5 w-20 rounded" />
                 <Skeleton className="h-4 w-12" />
               </div>
               {/* Inset content skeleton */}
-              <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] px-4 pt-3.5 pb-4 space-y-3">
+              <div className="rounded-t-xl border-t border-(--border) bg-(--card) px-4 pt-3.5 pb-4 space-y-3">
                 <Skeleton className="h-5 w-full" />
                 <Skeleton className="h-5 w-3/4" />
                 <Skeleton className="h-3 w-48" />
@@ -302,10 +302,10 @@ export default function Discovery() {
             <div className="flex items-center gap-3">
               <h3 className="text-body font-bold">
                 {displayPapers.length} Papers Found
-                {loadedSession && <span className="text-caption font-normal text-[var(--muted-foreground)] ml-2">(loaded from saved)</span>}
+                {loadedSession && <span className="text-caption font-normal text-(--muted-foreground) ml-2">(loaded from saved)</span>}
               </h3>
               {displayClustering && (
-                <div className="flex items-center gap-1 border border-[var(--border)] rounded-lg overflow-hidden">
+                <div className="flex items-center gap-1 border border-(--border) rounded-lg overflow-hidden">
                   {(['list', 'clustered'] as const).map((tab) => (
                     <button
                       key={tab}
@@ -313,8 +313,8 @@ export default function Discovery() {
                       className={cn(
                         'px-3 py-1 text-caption font-medium transition-colors flex items-center gap-1',
                         activeTab === tab
-                          ? 'bg-[var(--foreground)] text-[var(--white)]'
-                          : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'
+                          ? 'bg-(--foreground) text-(--white)'
+                          : 'text-(--muted-foreground) hover:text-(--foreground)'
                       )}
                     >
                       {tab === 'list' ? <><List size={11} /> All</> : <><Sparkles size={11} /> By Topic</>}
@@ -355,8 +355,8 @@ export default function Discovery() {
       {/* Empty State */}
       {!hasSearched && (
         <div className="text-center py-16">
-          <Sparkles size={48} className="text-[var(--muted-foreground)] mx-auto mb-4 opacity-50" />
-          <p className="text-body text-[var(--muted-foreground)] max-w-md mx-auto">
+          <Sparkles size={48} className="text-(--muted-foreground) mx-auto mb-4 opacity-50" />
+          <p className="text-body text-(--muted-foreground) max-w-md mx-auto">
             Enter a search query above to discover research papers with AI-powered insights
           </p>
         </div>

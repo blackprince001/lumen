@@ -150,7 +150,7 @@ export function FloatingAnnotationForm({
   return (
     <div
       ref={formRef}
-      className="fixed z-[50] bg-[var(--white)] border border-[var(--border)] rounded-xl shadow-elevated p-4 animate-in fade-in zoom-in-95 duration-200"
+      className="fixed z-50 bg-(--white) border border-(--border) rounded-xl shadow-elevated p-4 animate-in fade-in zoom-in-95 duration-200"
       style={{
         left: `${formPosition.x}px`,
         top: `${formPosition.y}px`,
@@ -159,7 +159,7 @@ export function FloatingAnnotationForm({
       onClick={(e) => e.stopPropagation()}
     >
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-code font-semibold text-[var(--foreground)]">
+        <h3 className="text-code font-semibold text-(--foreground)">
           {isEditMode ? 'Edit' : highlightedText ? 'Highlight Note' : 'Add Note'}
         </h3>
         <Button variant="ghost" className="h-6 w-6 p-0" onClick={onCancel}>
@@ -168,8 +168,8 @@ export function FloatingAnnotationForm({
       </div>
 
       {highlightedText && (
-        <div className="mb-3 p-2 bg-[var(--muted)]/30 border-l-2 border-[var(--foreground)]/20 rounded-r-md">
-          <p className="text-caption text-[var(--muted-foreground)] italic line-clamp-2">
+        <div className="mb-3 p-2 bg-(--muted)/30 border-l-2 border-(--foreground)/20 rounded-r-md">
+          <p className="text-caption text-(--muted-foreground) italic line-clamp-2">
             "{highlightedText}"
           </p>
         </div>
@@ -182,11 +182,11 @@ export function FloatingAnnotationForm({
           placeholder="Add your thoughts..."
           rows={4}
           autoFocus
-          className="text-code bg-[var(--white)]"
+          className="text-code bg-(--white)"
         />
 
         <div className="flex items-center justify-between gap-2">
-          <span className="text-micro text-[var(--muted-foreground)]">
+          <span className="text-micro text-(--muted-foreground)">
             Pg {coordinateData.page}
           </span>
           <div className="flex gap-2">
@@ -210,7 +210,7 @@ export function FloatingAnnotationForm({
         </div>
 
         {mutation.isError && (
-          <p className="text-caption text-[var(--destructive)]">
+          <p className="text-caption text-(--destructive)">
             Error saving annotation.
           </p>
         )}

@@ -217,14 +217,14 @@ export function MentionAutocomplete({
         onChange={handleTextChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
-        className={`w-full bg-[var(--card)] border border-[var(--border)] rounded-xl px-4 py-3 text-code text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--ring)] resize-none overflow-y-auto min-h-[5rem] max-h-[12.5rem] ${className}`}
+        className={`w-full bg-(--card) border border-(--border) rounded-xl px-4 py-3 text-code text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:border-(--ring) resize-none overflow-y-auto min-h-20 max-h-50 ${className}`}
         rows={3}
       />
 
       {showDropdown && filteredItems.length > 0 && (
         <div
           ref={dropdownRef}
-          className="absolute z-[100] w-full bg-[var(--white)] border border-[var(--border)] rounded-xl shadow-lg max-h-60 overflow-y-auto"
+          className="absolute z-100 w-full bg-(--white) border border-(--border) rounded-xl shadow-lg max-h-60 overflow-y-auto"
           style={{ bottom: 'calc(100% + 0.5rem)' }}
         >
           {filteredItems.map((item, index) => (
@@ -235,15 +235,15 @@ export function MentionAutocomplete({
               onClick={() => handleMentionSelect(item)}
               className={`w-full px-3 py-2 text-left flex items-center gap-2 transition-colors ${
                 index === selectedIndex
-                  ? 'bg-[var(--muted)] border-l-2 border-[var(--primary)]'
-                  : 'hover:bg-[var(--muted)]/50'
+                  ? 'bg-(--muted) border-l-2 border-(--primary)'
+                  : 'hover:bg-(--muted)/50'
               }`}
             >
-              <div className="flex-shrink-0 text-[var(--muted-foreground)]">{getIcon(item.type)}</div>
+              <div className="shrink-0 text-(--muted-foreground)">{getIcon(item.type)}</div>
               <div className="flex-1 min-w-0">
-                <div className="text-caption font-medium text-[var(--foreground)] truncate">{item.display}</div>
+                <div className="text-caption font-medium text-(--foreground) truncate">{item.display}</div>
                 {item.content && (
-                  <div className="text-caption text-[var(--muted-foreground)] truncate mt-0.5">
+                  <div className="text-caption text-(--muted-foreground) truncate mt-0.5">
                     {item.content.substring(0, 60)}...
                   </div>
                 )}

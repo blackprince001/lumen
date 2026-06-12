@@ -65,18 +65,18 @@ export function SortFilterBar({ filters, onFiltersChange, onReset }: SortFilterB
     <div className="flex items-center gap-2 flex-wrap">
       {/* Sort - styled as button-like select */}
       <div className="flex items-center gap-1.5">
-        <span className="text-caption text-[var(--muted-foreground)] font-medium">Sort:</span>
+        <span className="text-caption text-(--muted-foreground) font-medium">Sort:</span>
         <Select
           value={filters.sort_by ?? 'date_added'}
           onChange={(e) => onFiltersChange({ ...filters, sort_by: e.target.value as PaperListFilters['sort_by'] })}
-          className="w-auto min-w-[7.5rem] h-8 text-code bg-[var(--card)]"
+          className="w-auto min-w-30 h-8 text-code bg-(--card)"
         >
           {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </Select>
         <Select
           value={filters.sort_order ?? 'desc'}
           onChange={(e) => onFiltersChange({ ...filters, sort_order: e.target.value as 'asc' | 'desc' })}
-          className="w-auto min-w-[5.625rem] h-8 text-code bg-[var(--card)]"
+          className="w-auto min-w-22.5 h-8 text-code bg-(--card)"
         >
           <option value="desc">Newest</option>
           <option value="asc">Oldest</option>
@@ -85,23 +85,23 @@ export function SortFilterBar({ filters, onFiltersChange, onReset }: SortFilterB
 
       {/* Filter popover */}
       <Popover>
-        <PopoverTrigger className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[var(--border)] text-caption font-medium transition-colors ${hasActive ? 'bg-[var(--muted)] text-[var(--foreground)]' : 'bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--muted)]'}`}>
+        <PopoverTrigger className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-(--border) text-caption font-medium transition-colors ${hasActive ? 'bg-(--muted) text-(--foreground)' : 'bg-(--card) text-(--muted-foreground) hover:bg-(--muted)'}`}>
           <Filter size={12} />
           Filters
-          {hasActive && <span className="w-1.5 h-1.5 rounded-full bg-[var(--foreground)]" />}
+          {hasActive && <span className="w-1.5 h-1.5 rounded-full bg-(--foreground)" />}
         </PopoverTrigger>
         <PopoverContent side="bottom" align="start" className="w-72 p-4 space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-code font-semibold">Filters</p>
             {hasActive && (
-              <button onClick={reset} className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              <button onClick={reset} className="text-caption text-(--muted-foreground) hover:text-(--foreground)">
                 Clear all
               </button>
             )}
           </div>
 
           <label className="block space-y-1">
-            <span className="text-caption text-[var(--muted-foreground)]">Group</span>
+            <span className="text-caption text-(--muted-foreground)">Group</span>
             <Select
               value={local.group_id?.toString() ?? ''}
               onChange={(e) => setLocal({ ...local, group_id: e.target.value ? parseInt(e.target.value) : undefined })}
@@ -113,7 +113,7 @@ export function SortFilterBar({ filters, onFiltersChange, onReset }: SortFilterB
           </label>
 
           <label className="block space-y-1">
-            <span className="text-caption text-[var(--muted-foreground)]">Tag</span>
+            <span className="text-caption text-(--muted-foreground)">Tag</span>
             <Select
               value={local.tag_id?.toString() ?? ''}
               onChange={(e) => setLocal({ ...local, tag_id: e.target.value ? parseInt(e.target.value) : undefined })}
@@ -125,7 +125,7 @@ export function SortFilterBar({ filters, onFiltersChange, onReset }: SortFilterB
           </label>
 
           <label className="block space-y-1">
-            <span className="text-caption text-[var(--muted-foreground)]">File status</span>
+            <span className="text-caption text-(--muted-foreground)">File status</span>
             <Select
               value={local.has_file === undefined ? '' : local.has_file ? 'yes' : 'no'}
               onChange={(e) => setLocal({ ...local, has_file: e.target.value === '' ? undefined : e.target.value === 'yes' })}
@@ -138,14 +138,14 @@ export function SortFilterBar({ filters, onFiltersChange, onReset }: SortFilterB
           </label>
 
           <div className="space-y-1">
-            <span className="text-caption text-[var(--muted-foreground)]">Date range</span>
+            <span className="text-caption text-(--muted-foreground)">Date range</span>
             <div className="grid grid-cols-2 gap-2">
               <Input type="date" value={local.date_from ?? ''} onChange={(e) => setLocal({ ...local, date_from: e.target.value || undefined })} className="h-8 text-caption" />
               <Input type="date" value={local.date_to ?? ''} onChange={(e) => setLocal({ ...local, date_to: e.target.value || undefined })} className="h-8 text-caption" />
             </div>
           </div>
 
-          <div className="flex gap-2 pt-1 border-t border-[var(--border)]">
+          <div className="flex gap-2 pt-1 border-t border-(--border)">
             <Button variant="ghost" size="sm" onClick={reset} className="flex-1">Reset</Button>
             <Button variant="primary" size="sm" onClick={apply} className="flex-1">Apply</Button>
           </div>
@@ -183,7 +183,7 @@ export function SortFilterBar({ filters, onFiltersChange, onReset }: SortFilterB
               onRemove={() => onFiltersChange({ ...filters, date_from: undefined, date_to: undefined })}
             />
           )}
-          <button onClick={reset} className="inline-flex items-center gap-1 text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors">
+          <button onClick={reset} className="inline-flex items-center gap-1 text-caption text-(--muted-foreground) hover:text-(--foreground) transition-colors">
             <X size={11} /> Clear
           </button>
         </div>

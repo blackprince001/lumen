@@ -23,29 +23,29 @@ function PaperNodeComponent({ data, selected }: NodeProps) {
   return (
     <div
       className={cn(
-        'w-[220px] rounded-xl border bg-[var(--card)] shadow-sm transition-all',
+        'w-sidebar rounded-xl border bg-(--card) shadow-sm transition-all',
         selected
-          ? 'border-[var(--foreground)] ring-1 ring-[var(--foreground)]'
-          : 'border-[var(--border)] hover:border-[var(--muted-foreground)]'
+          ? 'border-(--foreground) ring-1 ring-(--foreground)'
+          : 'border-(--border) hover:border-(--muted-foreground)'
       )}
     >
-      <Handle type="target" position={Position.Top} className="!bg-[var(--muted-foreground)] !border-0 !w-2 !h-2" />
+      <Handle type="target" position={Position.Top} className="bg-(--muted-foreground)! border-0! w-2! h-2!" />
 
       <div className="p-3">
-        <p className="text-code font-semibold text-[var(--foreground)] line-clamp-2 leading-snug">
+        <p className="text-code font-semibold text-(--foreground) line-clamp-2 leading-snug">
           {paper.title}
         </p>
         {(author || year) && (
-          <p className="text-caption text-[var(--muted-foreground)] mt-1 line-clamp-1">
+          <p className="text-caption text-(--muted-foreground) mt-1 line-clamp-1">
             {[author, year].filter(Boolean).join(' · ')}
           </p>
         )}
 
-        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-[var(--border)]">
+        <div className="flex items-center gap-1 mt-2 pt-2 border-t border-(--border)">
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); navigate(`/papers/${paper.id}`); }}
-            className="flex items-center gap-1 text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+            className="flex items-center gap-1 text-caption text-(--muted-foreground) hover:text-(--foreground) transition-colors"
           >
             <ExternalLink size={11} />
             Open
@@ -53,7 +53,7 @@ function PaperNodeComponent({ data, selected }: NodeProps) {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onRemove(paper.id); }}
-            className="ml-auto flex items-center justify-center w-5 h-5 rounded hover:bg-[var(--muted)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+            className="ml-auto flex items-center justify-center w-5 h-5 rounded hover:bg-(--muted) text-(--muted-foreground) hover:text-(--foreground) transition-colors"
             aria-label="Remove from canvas"
           >
             <Plus size={12} className="rotate-45" />
@@ -61,7 +61,7 @@ function PaperNodeComponent({ data, selected }: NodeProps) {
         </div>
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="!bg-[var(--muted-foreground)] !border-0 !w-2 !h-2" />
+      <Handle type="source" position={Position.Bottom} className="bg-(--muted-foreground)! border-0! w-2! h-2!" />
     </div>
   );
 }

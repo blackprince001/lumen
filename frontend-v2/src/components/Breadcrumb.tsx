@@ -19,7 +19,7 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
   return (
     <nav
       aria-label="Breadcrumb"
-      className={cn('flex items-center gap-1 sm:gap-1.5 text-micro sm:text-caption text-[var(--muted-foreground)] select-none min-w-0', className)}
+      className={cn('flex items-center gap-1 sm:gap-1.5 text-micro sm:text-caption text-(--muted-foreground) select-none min-w-0', className)}
     >
       {items.map((item, index) => {
         const isLast = index === items.length - 1;
@@ -30,18 +30,18 @@ export function Breadcrumb({ items, className }: BreadcrumbProps) {
           >
             {index > 0 && <ChevronRight size={10} className="sm:size-3 opacity-40 shrink-0" />}
             {isLast ? (
-              <span className="text-[var(--foreground)] font-medium truncate text-micro sm:text-caption" title={item.label}>
+              <span className="text-(--foreground) font-medium truncate text-micro sm:text-caption" title={item.label}>
                 {item.label}
               </span>
             ) : item.href ? (
               <Link
                 to={item.href}
-                className="hover:text-[var(--foreground)] transition-colors duration-150 truncate max-w-[6rem] sm:max-w-none"
+                className="hover:text-(--foreground) transition-colors duration-150 truncate max-w-24 sm:max-w-none"
               >
                 {item.label}
               </Link>
             ) : (
-              <span className="truncate max-w-[4rem] sm:max-w-none">{item.label}</span>
+              <span className="truncate max-w-16 sm:max-w-none">{item.label}</span>
             )}
           </span>
         );

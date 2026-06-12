@@ -50,7 +50,7 @@ export function PaperCard({
     <div
       className={cn(
         'group relative h-full rounded-2xl border overflow-hidden paper-card-hover flex flex-col',
-        selected && 'ring-2 ring-[var(--foreground)]',
+        selected && 'ring-2 ring-(--foreground)',
         selectionMode && 'cursor-pointer',
       )}
       style={{ backgroundColor: theme.bg, borderColor: selected ? undefined : theme.border, '--card-action': theme.action } as React.CSSProperties}
@@ -64,11 +64,11 @@ export function PaperCard({
             <div className={cn(
               'w-4 h-4 rounded border-2 flex items-center justify-center transition-colors shrink-0',
               selected
-                ? 'bg-[var(--foreground)] border-[var(--foreground)]'
-                : 'bg-transparent border-[var(--mid-gray)]',
+                ? 'bg-(--foreground) border-(--foreground)'
+                : 'bg-transparent border-(--mid-gray)',
             )}>
               {selected && (
-                <svg className="w-2.5 h-2.5 text-[var(--background)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                <svg className="w-2.5 h-2.5 text-(--background)" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
               )}
@@ -87,7 +87,7 @@ export function PaperCard({
 
           {/* Shared indicator */}
           {isShared && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-(--sky-blue)/10 text-(--sky-blue)">
               <People size={10} />
               Shared
             </span>

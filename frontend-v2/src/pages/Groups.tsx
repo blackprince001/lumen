@@ -41,15 +41,15 @@ function FolderCard({ group, theme, isShared, onEdit, onDelete, onExport }: Fold
           />
         </div>
         <div className="px-2 pt-2">
-          <p className="text-btn font-medium text-[var(--foreground)] leading-snug truncate text-center">
+          <p className="text-btn font-medium text-(--foreground) leading-snug truncate text-center">
             {group.name}
           </p>
-          <div className="mt-1 flex items-center justify-center gap-1.5 text-caption text-[var(--muted-foreground)]">
+          <div className="mt-1 flex items-center justify-center gap-1.5 text-caption text-(--muted-foreground)">
             <span>
               {paperCount} {paperCount === 1 ? 'paper' : 'papers'}
             </span>
             {isShared && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]">
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-(--sky-blue)/10 text-(--sky-blue)">
                 <People size={10} />
                 Shared
               </span>
@@ -63,7 +63,7 @@ function FolderCard({ group, theme, isShared, onEdit, onDelete, onExport }: Fold
         {paperCount > 0 && (
           <Button
             variant="ghost"
-            className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm"
+            className="h-7! w-7! p-0! bg-(--white) shadow-sm"
             onClick={(e) => {
               e.preventDefault();
               onExport(group);
@@ -76,7 +76,7 @@ function FolderCard({ group, theme, isShared, onEdit, onDelete, onExport }: Fold
           <>
             <Button
               variant="ghost"
-              className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm"
+              className="h-7! w-7! p-0! bg-(--white) shadow-sm"
               onClick={(e) => {
                 e.preventDefault();
                 onEdit(group);
@@ -86,7 +86,7 @@ function FolderCard({ group, theme, isShared, onEdit, onDelete, onExport }: Fold
             </Button>
             <Button
               variant="ghost"
-              className="!h-7 !w-7 !p-0 bg-[var(--white)] shadow-sm text-[var(--destructive)]"
+              className="h-7! w-7! p-0! bg-(--white) shadow-sm text-(--destructive)"
               onClick={(e) => {
                 e.preventDefault();
                 onDelete(group.id);
@@ -212,7 +212,7 @@ export default function Groups() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1>Groups</h1>
-            <p className="text-btn text-[var(--muted-foreground)] mt-1">
+            <p className="text-btn text-(--muted-foreground) mt-1">
               Organize your papers into collections
             </p>
           </div>
@@ -222,7 +222,7 @@ export default function Groups() {
         </div>
 
         {groups.length === 0 ? (
-          <div className="text-center py-12 text-[var(--muted-foreground)]">
+          <div className="text-center py-12 text-(--muted-foreground)">
             <FolderOpen size={48} className="mx-auto mb-4 opacity-20" />
             <p className="text-body mb-4">No groups yet</p>
             <Button icon={<Plus size={14} />} onClick={() => setIsCreateOpen(true)}>
@@ -247,7 +247,7 @@ export default function Groups() {
             {sharedGroups.length > 0 && (
               <>
                 <div className="mt-10 mb-4">
-                  <h2 className="text-body font-semibold text-[var(--foreground)] flex items-center gap-2">
+                  <h2 className="text-body font-semibold text-(--foreground) flex items-center gap-2">
                     <People size={16} />
                     Shared with me
                   </h2>

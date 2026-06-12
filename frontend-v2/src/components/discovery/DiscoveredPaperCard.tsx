@@ -32,7 +32,7 @@ export function DiscoveredPaperCard({
       <div
         className={cn(
           'group relative h-full rounded-2xl border overflow-hidden paper-card-hover flex flex-col',
-          isSelected && 'ring-2 ring-[var(--foreground)]',
+          isSelected && 'ring-2 ring-(--foreground)',
           showCheckbox && 'cursor-pointer',
         )}
         style={{ backgroundColor: theme.bg, borderColor: isSelected ? undefined : theme.border, '--card-action': theme.action } as React.CSSProperties}
@@ -45,11 +45,11 @@ export function DiscoveredPaperCard({
               <div className={cn(
                 'w-4 h-4 rounded border-2 flex items-center justify-center transition-colors shrink-0',
                 isSelected
-                  ? 'bg-[var(--foreground)] border-[var(--foreground)]'
-                  : 'bg-transparent border-[var(--mid-gray)]',
+                  ? 'bg-(--foreground) border-(--foreground)'
+                  : 'bg-transparent border-(--mid-gray)',
               )}>
                 {isSelected && (
-                  <svg className="w-2.5 h-2.5 text-[var(--background)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <svg className="w-2.5 h-2.5 text-(--background)" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 )}

@@ -9,14 +9,14 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 
 const variantStyles: Record<CardVariant, string> = {
   feature: cn(
-    'bg-[var(--card)] rounded-xl border border-[var(--border)] shadow-none',
+    'bg-(--card) rounded-xl border border-(--border) shadow-none',
     'hover:shadow-[0_2px_8px_rgba(0,0,0,0.08)] transition-shadow duration-200',
   ),
   tour: cn(
-    'bg-[var(--white)] rounded-xl border border-[var(--border)] shadow-none',
+    'bg-(--white) rounded-xl border border-(--border) shadow-none',
   ),
   flat: cn(
-    'bg-[var(--white)] rounded-xl shadow-none',
+    'bg-(--white) rounded-xl shadow-none',
   ),
 };
 
@@ -46,7 +46,7 @@ export function CardContent({ className, children, ...props }: HTMLAttributes<HT
 
 export function CardTitle({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={cn('text-btn font-bold text-[var(--foreground)]', className)} {...props}>
+    <h3 className={cn('text-btn font-bold text-(--foreground)', className)} {...props}>
       {children}
     </h3>
   );
@@ -54,7 +54,7 @@ export function CardTitle({ className, children, ...props }: HTMLAttributes<HTML
 
 export function CardDescription({ className, children, ...props }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn('text-code font-normal text-[var(--muted-foreground)] leading-relaxed mt-1', className)} {...props}>
+    <p className={cn('text-code font-normal text-(--muted-foreground) leading-relaxed mt-1', className)} {...props}>
       {children}
     </p>
   );

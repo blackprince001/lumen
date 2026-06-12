@@ -10,14 +10,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     <textarea
       ref={ref}
       className={cn(
-        'w-full bg-[var(--card)] text-[var(--foreground)]',
+        'w-full bg-(--card) text-(--foreground)',
         'text-code font-normal leading-[1.225rem]',
         'px-3 py-2 rounded-lg',
-        'border border-[var(--border)]',
-        'placeholder:text-[var(--muted-foreground)]',
-        'focus:outline-none focus:border-[var(--ring)] focus:ring-2 focus:ring-[var(--ring)]/10',
+        'border border-(--border)',
+        'placeholder:text-(--muted-foreground)',
+        'focus:outline-none focus:border-(--ring) focus:ring-2 focus:ring-(--ring)/10',
         'resize-none transition-all duration-150',
-        error && 'border-[var(--destructive)] focus:border-[var(--destructive)]',
+        error && 'border-(--destructive) focus:border-(--destructive)',
         className,
       )}
       {...props}

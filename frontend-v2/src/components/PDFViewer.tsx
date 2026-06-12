@@ -509,7 +509,7 @@ export function PDFViewer({
     >
       {/* TOC drawer */}
       {showTOC && (
-        <div className="w-72 shrink-0 border-r border-[var(--border)] flex flex-col overflow-hidden">
+        <div className="w-72 shrink-0 border-r border-(--border) flex flex-col overflow-hidden">
           <PDFTOC
             items={tocItems}
             onItemClick={handleTOCItemClick}
@@ -550,7 +550,7 @@ export function PDFViewer({
         />
 
         {!fileSource ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center text-[var(--muted-foreground)] opacity-50">
+          <div className="flex-1 flex flex-col items-center justify-center text-center text-(--muted-foreground) opacity-50">
             <p className="text-body font-medium">No file attached to this paper</p>
           </div>
         ) : (
@@ -571,17 +571,17 @@ export function PDFViewer({
               }}
               loading={
                 <div className="flex flex-col items-center gap-4 py-8 w-full max-w-[612px] mx-auto">
-                  <div className="w-full aspect-[8.5/11] bg-[var(--muted)]/60 rounded-lg animate-pulse" />
-                  <div className="w-full aspect-[8.5/11] bg-[var(--muted)]/40 rounded-lg animate-pulse" />
+                  <div className="w-full aspect-8.5/11 bg-(--muted)/60 rounded-lg animate-pulse" />
+                  <div className="w-full aspect-8.5/11 bg-(--muted)/40 rounded-lg animate-pulse" />
                 </div>
               }
               error={
                 <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
-                  <div className="p-3 rounded-full bg-[var(--destructive)]/10 text-[var(--destructive)] mb-4">
+                  <div className="p-3 rounded-full bg-(--destructive)/10 text-(--destructive) mb-4">
                     <AlertCircle size={24} />
                   </div>
-                  <h3 className="text-body font-semibold text-[var(--foreground)] mb-1">Failed to load PDF</h3>
-                  <p className="text-caption text-[var(--muted-foreground)] max-w-[17.5rem] mb-6">
+                  <h3 className="text-body font-semibold text-(--foreground) mb-1">Failed to load PDF</h3>
+                  <p className="text-caption text-(--muted-foreground) max-w-70 mb-6">
                     Check that the file is accessible or try downloading it directly.
                   </p>
                   <div className="flex gap-3">
@@ -598,7 +598,7 @@ export function PDFViewer({
                         download
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center rounded-md text-caption font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border)] disabled:pointer-events-none disabled:opacity-50 bg-[var(--foreground)] text-[var(--white)] hover:bg-[var(--foreground)]/90 h-8 px-3"
+                        className="inline-flex items-center justify-center rounded-md text-caption font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-(--border) disabled:pointer-events-none disabled:opacity-50 bg-(--foreground) text-(--white) hover:bg-(--foreground)/90 h-8 px-3"
                       >
                         Download PDF
                       </a>
@@ -689,7 +689,7 @@ export function PDFViewer({
                                 }}
                                 title={ann.content}
                               >
-                                <div className="w-3.5 h-3.5 bg-[var(--sky-blue)] border-2 border-[var(--white)] rounded-full shadow-subtle cursor-pointer hover:scale-125 transition-transform" />
+                                <div className="w-3.5 h-3.5 bg-(--sky-blue) border-2 border-(--white) rounded-full shadow-subtle cursor-pointer hover:scale-125 transition-transform" />
                               </div>
                             );
                           })}
@@ -721,7 +721,7 @@ export function PDFViewer({
 
                       {/* Per-page annotation indicator */}
                       {annotatedPages.has(page) && (
-                        <div className="absolute -right-2 top-2 z-10 flex items-center gap-1 bg-[var(--sky-blue)] text-white rounded-full px-1.5 py-0.5 shadow-subtle pointer-events-auto cursor-default"
+                        <div className="absolute -right-2 top-2 z-10 flex items-center gap-1 bg-(--sky-blue) text-white rounded-full px-1.5 py-0.5 shadow-subtle pointer-events-auto cursor-default"
                           title={`${annotatedPages.get(page)} annotation${(annotatedPages.get(page) || 0) > 1 ? 's' : ''} on this page`}
                         >
                           <Highlighter size={10} />

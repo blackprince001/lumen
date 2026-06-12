@@ -18,7 +18,7 @@ export const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HT
   ({ className, ...props }, ref) => (
     <thead
       ref={ref}
-      className={cn('[&_tr]:border-b [&_tr]:border-[var(--border)]', className)}
+      className={cn('[&_tr]:border-b [&_tr]:border-(--border)', className)}
       {...props}
     />
   ),
@@ -41,8 +41,8 @@ export const TableRow = forwardRef<HTMLTableRowElement, HTMLAttributes<HTMLTable
     <tr
       ref={ref}
       className={cn(
-        'border-b border-[var(--border)] transition-colors',
-        'hover:bg-[var(--muted)] data-[selected=true]:bg-[var(--muted)]',
+        'border-b border-(--border) transition-colors',
+        'hover:bg-(--muted) data-[selected=true]:bg-(--muted)',
         className,
       )}
       {...props}
@@ -57,7 +57,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLT
       ref={ref}
       className={cn(
         'h-10 px-4 py-2 text-left align-middle',
-        'text-caption font-medium text-[var(--muted-foreground)]',
+        'text-caption font-medium text-(--muted-foreground)',
         'whitespace-nowrap',
         className,
       )}

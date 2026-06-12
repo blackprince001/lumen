@@ -2373,7 +2373,7 @@ function FileSystemFileTypeCommand({
     <Command
       // -m-1 spans the menu viewport's built-in padding so the search
       // field's bottom border runs edge to edge.
-      className="-m-1 w-[calc(100%+--spacing(2))] bg-transparent"
+      className="-m-1 w-[calc(100%+(--spacing(2)))] bg-transparent"
       // cmdk owns the keyboard while focus is in the list; only Escape
       // (close the menu) and Tab continue outward.
       onKeyDown={(event) => {
@@ -2934,7 +2934,7 @@ function FileSystemDateRangeDialog({
         if (!open) onClose()
       }}
     >
-      <DialogContent className="w-[30rem] max-w-[calc(100vw-2rem)]">
+      <DialogContent className="w-120 max-w-[calc(100vw-2rem)]">
         <DialogHeader>
           <DialogTitle>Custom date range</DialogTitle>
         </DialogHeader>
@@ -3448,7 +3448,7 @@ function FileSystemIconsView({
                 onKeyDown={(event) => {
                   if (event.key === "Enter") onOpen(entry)
                 }}
-                className="group flex h-[6.375rem] flex-col items-center gap-1.5 outline-none"
+                className="group flex h-25.5 flex-col items-center gap-1.5 outline-none"
               >
                 <span
                   className={cn(
@@ -3466,7 +3466,7 @@ function FileSystemIconsView({
                         // Landscape thumbnails get extra width so they fill
                         // the tile instead of rendering as a short sliver.
                         (entry.previewAspectRatio ?? 0.78) > 1.2
-                          ? "w-[4.75rem]"
+                          ? "w-19"
                           : "w-12"
                       )}
                       previewAspectRatio={0.78}
@@ -3476,7 +3476,7 @@ function FileSystemIconsView({
                 </span>
                 <span
                   className={cn(
-                    "max-w-full rounded-sm px-1.5 py-px text-center text-xs leading-tight break-words",
+                    "max-w-full rounded-sm px-1.5 py-px text-center text-xs leading-tight wrap-break-word",
                     isSelected
                       ? "bg-primary text-primary-foreground"
                       : "text-foreground"
@@ -4360,7 +4360,7 @@ function FileSystemColumnsView(props: FileSystemViewProps) {
                 />
               </div>
               <div className="text-center">
-                <div className="text-sm font-semibold break-words">
+                <div className="text-sm font-semibold wrap-break-word">
                   {selectedFile.name}
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -4964,7 +4964,7 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
                 <FileSystemFolderGlyph className="h-8 w-auto shrink-0" />
               )}
               <div className="min-w-0 flex-1">
-                <div className="text-sm font-semibold break-words">
+                <div className="text-sm font-semibold wrap-break-word">
                   {activeEntry.name}
                 </div>
                 <div className="text-xs text-muted-foreground">

@@ -66,14 +66,14 @@ function ThemeCard({
       className={cn(
         'flex flex-col items-center p-3 rounded-xl border-2 transition-all w-full',
         active
-          ? 'border-[var(--foreground)] bg-[var(--muted)]'
-          : 'border-[var(--border)] hover:border-[var(--muted-foreground)]',
+          ? 'border-(--foreground) bg-(--muted)'
+          : 'border-(--border) hover:border-(--muted-foreground)',
       )}
     >
       <Preview />
       <div className="flex items-center gap-1.5">
-        <Icon size={14} className={active ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]'} />
-        <span className={cn('text-code font-medium', active ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]')}>
+        <Icon size={14} className={active ? 'text-(--foreground)' : 'text-(--muted-foreground)'} />
+        <span className={cn('text-code font-medium', active ? 'text-(--foreground)' : 'text-(--muted-foreground)')}>
           {label}
         </span>
       </div>
@@ -124,23 +124,23 @@ function ProfileSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-subheading font-semibold text-[var(--foreground)] mb-1">Profile</h2>
-        <p className="text-code text-[var(--muted-foreground)]">Manage your personal information</p>
+        <h2 className="text-subheading font-semibold text-(--foreground) mb-1">Profile</h2>
+        <p className="text-code text-(--muted-foreground)">Manage your personal information</p>
       </div>
 
       {/* Avatar */}
       <div className="flex items-center gap-5">
-        <div className="w-20 h-20 rounded-full bg-[var(--muted)] flex items-center justify-center border-2 border-[var(--border)] overflow-hidden">
+        <div className="w-20 h-20 rounded-full bg-(--muted) flex items-center justify-center border-2 border-(--border) overflow-hidden">
           {user?.avatar_url ? (
             <img src={user.avatar_url} alt={user.display_name} className="w-full h-full object-cover" />
           ) : (
-            <span className="text-subheading font-semibold text-[var(--muted-foreground)]">{initials}</span>
+            <span className="text-subheading font-semibold text-(--muted-foreground)">{initials}</span>
           )}
         </div>
         <div>
-          <p className="text-body font-medium text-[var(--foreground)]">{user?.display_name || '—'}</p>
-          <p className="text-caption text-[var(--muted-foreground)]">{user?.email || '—'}</p>
-          <p className="text-caption text-[var(--muted-foreground)] mt-0.5 uppercase tracking-wide">
+          <p className="text-body font-medium text-(--foreground)">{user?.display_name || '—'}</p>
+          <p className="text-caption text-(--muted-foreground)">{user?.email || '—'}</p>
+          <p className="text-caption text-(--muted-foreground) mt-0.5 uppercase tracking-wide">
             {user?.role === 'admin' ? 'Administrator' : 'Member'}
           </p>
         </div>
@@ -149,43 +149,43 @@ function ProfileSection() {
       {/* Fields */}
       <div className="space-y-4">
         <div>
-          <label className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-1.5 block">
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
             Display name
           </label>
           <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
         </div>
         <div>
-          <label className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-1.5 block">
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
             Email
           </label>
           <Input value={user?.email ?? ''} type="email" disabled />
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-1.5 block">
+            <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
               Organization
             </label>
             <Input value={organization} onChange={(e) => setOrganization(e.target.value)} />
           </div>
           <div>
-            <label className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-1.5 block">
+            <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
               Department
             </label>
             <Input value={department} onChange={(e) => setDepartment(e.target.value)} />
           </div>
         </div>
         <div>
-          <label className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-1.5 block">
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
             Research field
           </label>
           <Input value={researchField} onChange={(e) => setResearchField(e.target.value)} />
         </div>
         <div>
-          <label className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-1.5 block">
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
             Bio
           </label>
           <textarea
-            className="w-full bg-[var(--card)] text-[var(--foreground)] text-code px-3 py-2 h-20 rounded-lg border border-[var(--border)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--ring)] resize-none"
+            className="w-full bg-(--card) text-(--foreground) text-code px-3 py-2 h-20 rounded-lg border border-(--border) placeholder:text-(--muted-foreground) focus:outline-none focus:border-(--ring) resize-none"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             placeholder="Tell us about your research interests"
@@ -197,7 +197,7 @@ function ProfileSection() {
         <p
           className={cn(
             'text-caption',
-            status.kind === 'ok' ? 'text-[var(--success-green)]' : 'text-[var(--destructive)]',
+            status.kind === 'ok' ? 'text-(--success-green)' : 'text-(--destructive)',
           )}
         >
           {status.text}
@@ -231,12 +231,12 @@ function AppearanceSection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-subheading font-semibold text-[var(--foreground)] mb-1">Appearance</h2>
-        <p className="text-code text-[var(--muted-foreground)]">Customise how Lumen looks</p>
+        <h2 className="text-subheading font-semibold text-(--foreground) mb-1">Appearance</h2>
+        <p className="text-code text-(--muted-foreground)">Customise how Lumen looks</p>
       </div>
 
       <div>
-        <p className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wide mb-3">Theme</p>
+        <p className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-3">Theme</p>
         <div className="grid grid-cols-3 gap-3">
           {(['light', 'dark', 'system'] as ThemeMode[]).map((m) => (
             <ThemeCard key={m} mode={m} current={themeMode} onSelect={handleTheme} />
@@ -264,23 +264,23 @@ function SecuritySection() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-subheading font-semibold text-[var(--foreground)] mb-1">Security</h2>
-        <p className="text-code text-[var(--muted-foreground)]">Manage your account security</p>
+        <h2 className="text-subheading font-semibold text-(--foreground) mb-1">Security</h2>
+        <p className="text-code text-(--muted-foreground)">Manage your account security</p>
       </div>
 
-      <div className="border border-[var(--destructive)]/30 rounded-xl p-4">
-        <p className="text-caption font-semibold uppercase tracking-widest text-[var(--destructive)] mb-4">
+      <div className="border border-(--destructive)/30 rounded-xl p-4">
+        <p className="text-caption font-semibold uppercase tracking-widest text-(--destructive) mb-4">
           Danger zone
         </p>
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-body font-medium text-[var(--foreground)]">Sign out</p>
-            <p className="text-caption text-[var(--muted-foreground)]">End this session</p>
+            <p className="text-body font-medium text-(--foreground)">Sign out</p>
+            <p className="text-caption text-(--muted-foreground)">End this session</p>
           </div>
           <Button
             variant="ghost"
             icon={<LogOut size={14} />}
-            className="!text-[var(--destructive)]"
+            className="text-(--destructive)!"
             onClick={handleSignOut}
             disabled={signingOut}
           >
@@ -289,10 +289,10 @@ function SecuritySection() {
         </div>
         <div className="flex items-center justify-between opacity-60">
           <div>
-            <p className="text-body font-medium text-[var(--foreground)]">Delete account</p>
-            <p className="text-caption text-[var(--muted-foreground)]">Contact an administrator</p>
+            <p className="text-body font-medium text-(--foreground)">Delete account</p>
+            <p className="text-caption text-(--muted-foreground)">Contact an administrator</p>
           </div>
-          <Button variant="ghost" icon={<Trash2 size={14} />} className="!text-[var(--destructive)]" disabled>
+          <Button variant="ghost" icon={<Trash2 size={14} />} className="text-(--destructive)!" disabled>
             Delete
           </Button>
         </div>
@@ -317,7 +317,7 @@ export default function Settings() {
     <div className="max-w-content mx-auto px-6 py-8">
       <div className="mb-7">
         <h1>Settings</h1>
-        <p className="text-body text-[var(--muted-foreground)] mt-1">
+        <p className="text-body text-(--muted-foreground) mt-1">
           Manage your account and appearance
         </p>
       </div>
@@ -332,8 +332,8 @@ export default function Settings() {
               className={cn(
                 'w-full flex items-center gap-2.5 h-9 px-3 rounded-lg text-code font-medium transition-colors text-left',
                 active === id
-                  ? 'bg-[var(--muted)] text-[var(--foreground)]'
-                  : 'text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
+                  ? 'bg-(--muted) text-(--foreground)'
+                  : 'text-(--muted-foreground) hover:bg-(--muted) hover:text-(--foreground)',
               )}
             >
               <Icon size={15} className="shrink-0" />

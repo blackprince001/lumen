@@ -49,17 +49,17 @@ function GroupTreeItem({ group, level = 0 }: { group: GroupTreeNode; level?: num
       <div
         className={cn(
           'flex items-center gap-2 h-7 rounded-lg text-code font-normal',
-          'hover:bg-[var(--muted)] transition-colors duration-150 cursor-pointer',
+          'hover:bg-(--muted) transition-colors duration-150 cursor-pointer',
           isActive
-            ? 'bg-[var(--muted)] text-[var(--foreground)]'
-            : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+            ? 'bg-(--muted) text-(--foreground)'
+            : 'text-(--muted-foreground) hover:text-(--foreground)',
         )}
         style={{ paddingLeft: `${(8 + level * 12) / 16}rem`, paddingRight: '0.5rem' }}
       >
         {hasChildren ? (
           <button
             onClick={() => setExpanded(!expanded)}
-            className="p-0.5 shrink-0 hover:bg-[var(--border)] rounded"
+            className="p-0.5 shrink-0 hover:bg-(--border) rounded"
           >
             <motion.div animate={{ rotate: expanded ? 0 : -90 }} transition={{ duration: 0.15 }}>
               <ChevronDown size={13} />
@@ -125,8 +125,8 @@ function NavItem({
         'flex items-center gap-2.5 rounded-lg transition-colors duration-150 select-none',
         isOpen ? 'h-8 px-2.5' : 'h-8 w-8 justify-center mx-auto',
         isActive
-          ? 'bg-[var(--muted)] text-[var(--foreground)] font-medium'
-          : 'text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
+          ? 'bg-(--muted) text-(--foreground) font-medium'
+          : 'text-(--muted-foreground) hover:bg-(--muted) hover:text-(--foreground)',
       )}
     >
       <Icon size={15} className="shrink-0" />
@@ -136,9 +136,9 @@ function NavItem({
 }
 
 function SectionLabel({ label, isOpen }: { label: string; isOpen: boolean }) {
-  if (!isOpen) return <div className="my-2 mx-auto w-5 border-t border-[var(--border)]" />;
+  if (!isOpen) return <div className="my-2 mx-auto w-5 border-t border-(--border)" />;
   return (
-    <p className="text-micro py-2 font-semibold uppercase tracking-widest text-[var(--muted-foreground)] px-2.5 mt-5 mb-1.5">
+    <p className="text-micro py-2 font-semibold uppercase tracking-widest text-(--muted-foreground) px-2.5 mt-5 mb-1.5">
       {label}
     </p>
   );
@@ -164,20 +164,20 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   };
 
   return (
-    <aside className="w-full h-full rounded-[var(--panel-radius)] border border-[var(--panel-border)] bg-[var(--panel-surface)] shadow-[var(--shadow-panel)] backdrop-blur-sm flex flex-col overflow-hidden">
+    <aside className="w-full h-full rounded-(--panel-radius) border border-(--panel-border) bg-(--panel-surface) shadow-(--shadow-panel) backdrop-blur-sm flex flex-col overflow-hidden">
       {/* Brand / collapse toggle */}
       <div className={cn('flex items-center h-12 shrink-0 px-3 mt-2', isOpen ? 'justify-between' : 'justify-center')}>
         {isOpen && (
           <Link to="/" className="group flex items-center gap-2.5">
             <Logo size={52} className="shrink-0 group-hover:opacity-80 transition-opacity" />
-            <span className="text-subsection font-bold tracking-tight text-[var(--foreground)] group-hover:opacity-70 transition-opacity">
+            <span className="text-subsection font-bold tracking-tight text-(--foreground) group-hover:opacity-70 transition-opacity">
               Lumen
             </span>
           </Link>
         )}
         <button
           onClick={onToggle}
-          className="p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-lg transition-colors"
+          className="p-1.5 text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) rounded-lg transition-colors"
           aria-label={isOpen ? 'Collapse sidebar' : 'Expand sidebar'}
         >
           {isOpen ? <PanelLeftClose size={16} /> : <PanelLeftOpen size={16} />}
@@ -215,7 +215,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   <GroupTreeItem key={group.id} group={group} />
                 ))
               ) : (
-                <p className="px-2.5 text-caption text-[var(--muted-foreground)] opacity-60">No folders yet</p>
+                <p className="px-2.5 text-caption text-(--muted-foreground) opacity-60">No folders yet</p>
               )}
             </div>
           </>
@@ -223,7 +223,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       </nav>
 
       {/* Pinned bottom */}
-      <div className="border-t border-[var(--panel-border)] py-2.5 px-2.5 shrink-0 bg-[var(--panel-surface-muted)]">
+      <div className="border-t border-(--panel-border) py-2.5 px-2.5 shrink-0 bg-(--panel-surface-muted)">
         <NavItem
           href="/discovery-archive"
           icon={Archive}

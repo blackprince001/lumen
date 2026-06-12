@@ -224,17 +224,17 @@ export default function Annotations() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1>Annotations</h1>
-            <p className="text-btn text-[var(--muted-foreground)] mt-1">
+            <p className="text-btn text-(--muted-foreground) mt-1">
               Manage highlights, notes and references across your library
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-caption text-[var(--muted-foreground)]">Citation</span>
+            <span className="text-caption text-(--muted-foreground)">Citation</span>
             <div className="w-24">
               <Select
                 value={citationFormat}
                 onChange={(e) => setCitationFormat(e.target.value as CitationFormat)}
-                className="!h-8"
+                className="h-8!"
               >
                 <option value="apa">APA</option>
                 <option value="mla">MLA</option>
@@ -252,8 +252,8 @@ export default function Annotations() {
               className={cn(
                 'h-8 px-3 text-code font-medium rounded-lg transition-colors',
                 filter === 'all'
-                  ? 'bg-[var(--primary)] [color:var(--primary-foreground)]'
-                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]',
+                  ? 'bg-(--primary) [color:var(--primary-foreground)]'
+                  : 'bg-(--muted) text-(--foreground) hover:bg-(--border)',
               )}
             >
               All
@@ -263,8 +263,8 @@ export default function Annotations() {
               className={cn(
                 'h-8 px-3 text-code font-medium rounded-lg transition-colors flex items-center gap-1.5',
                 filter === 'highlight'
-                  ? 'bg-[var(--primary)] [color:var(--primary-foreground)]'
-                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]',
+                  ? 'bg-(--primary) [color:var(--primary-foreground)]'
+                  : 'bg-(--muted) text-(--foreground) hover:bg-(--border)',
               )}
             >
               <Highlighter size={14} />
@@ -275,8 +275,8 @@ export default function Annotations() {
               className={cn(
                 'h-8 px-3 text-code font-medium rounded-lg transition-colors flex items-center gap-1.5',
                 filter === 'note'
-                  ? 'bg-[var(--primary)] [color:var(--primary-foreground)]'
-                  : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--border)]',
+                  ? 'bg-(--primary) [color:var(--primary-foreground)]'
+                  : 'bg-(--muted) text-(--foreground) hover:bg-(--border)',
               )}
             >
               <MessageSquare size={14} />
@@ -301,25 +301,25 @@ export default function Annotations() {
         </div>
 
         <div className="flex items-center justify-between mb-3">
-          <p className="text-caption text-[var(--muted-foreground)]">
+          <p className="text-caption text-(--muted-foreground)">
             {groups.length} paper{groups.length !== 1 ? 's' : ''} · {totalAnnotations} annotation{totalAnnotations !== 1 ? 's' : ''}
           </p>
         </div>
 
         {/* Grouped annotations table */}
         {groups.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-[var(--border)] rounded-xl">
-            <FileText size={48} className="mx-auto mb-3 text-[var(--muted-foreground)] opacity-40" />
-            <p className="text-body text-[var(--muted-foreground)]">No annotations found</p>
+          <div className="text-center py-16 border border-dashed border-(--border) rounded-xl">
+            <FileText size={48} className="mx-auto mb-3 text-(--muted-foreground) opacity-40" />
+            <p className="text-body text-(--muted-foreground)">No annotations found</p>
           </div>
         ) : (
-          <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--card)]">
+          <div className="border border-(--border) rounded-xl overflow-hidden bg-(--card)">
             {/* Header */}
-            <div className="grid grid-cols-[1fr_120px_160px_140px] items-center gap-3 px-4 py-2.5 border-b border-[var(--border)] bg-[var(--muted)]">
-              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Paper</span>
-              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Annotations</span>
-              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Last updated</span>
-              <span className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider text-right">Actions</span>
+            <div className="grid grid-cols-[1fr_120px_160px_140px] items-center gap-3 px-4 py-2.5 border-b border-(--border) bg-(--muted)">
+              <span className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wider">Paper</span>
+              <span className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wider">Annotations</span>
+              <span className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wider">Last updated</span>
+              <span className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wider text-right">Actions</span>
             </div>
 
             {groups.map((group, idx) => {
@@ -333,10 +333,10 @@ export default function Annotations() {
               return (
                 <div
                   key={group.paper.id}
-                  className={cn(idx > 0 && 'border-t border-[var(--border)]')}
+                  className={cn(idx > 0 && 'border-t border-(--border)')}
                 >
                   {/* Collapsible header row */}
-                  <div className="grid grid-cols-[1fr_120px_160px_140px] items-center gap-3 px-4 py-3 hover:bg-[var(--muted)] transition-colors">
+                  <div className="grid grid-cols-[1fr_120px_160px_140px] items-center gap-3 px-4 py-3 hover:bg-(--muted) transition-colors">
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.paper.id)}
@@ -346,16 +346,16 @@ export default function Annotations() {
                       <ChevronRight
                         size={14}
                         className={cn(
-                          'shrink-0 text-[var(--muted-foreground)] transition-transform duration-150',
+                          'shrink-0 text-(--muted-foreground) transition-transform duration-150',
                           isOpen && 'rotate-90',
                         )}
                       />
                       <div className="min-w-0">
-                        <p className="text-code font-medium text-[var(--foreground)] truncate">
+                        <p className="text-code font-medium text-(--foreground) truncate">
                           {group.paper.title}
                         </p>
                         {authors && (
-                          <p className="text-caption text-[var(--muted-foreground)] truncate">
+                          <p className="text-caption text-(--muted-foreground) truncate">
                             {authors}{group.paper.authors && group.paper.authors.split(',').length > 2 ? ' et al.' : ''}
                             {(() => {
                               const year = (group.paper.metadata_json as Record<string, unknown> | undefined)?.year;
@@ -368,14 +368,14 @@ export default function Annotations() {
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.paper.id)}
-                      className="text-code text-[var(--muted-foreground)] text-left focus:outline-none"
+                      className="text-code text-(--muted-foreground) text-left focus:outline-none"
                     >
                       {group.annotations.length}
                     </button>
                     <button
                       type="button"
                       onClick={() => toggleGroup(group.paper.id)}
-                      className="text-caption text-[var(--muted-foreground)] text-left focus:outline-none"
+                      className="text-caption text-(--muted-foreground) text-left focus:outline-none"
                     >
                       {latest ? format(new Date(latest), 'MMM d, yyyy') : '—'}
                     </button>
@@ -407,7 +407,7 @@ export default function Annotations() {
 
                   {/* Annotations list */}
                   {isOpen && (
-                    <div className="border-t border-[var(--border)] bg-[var(--background)] px-4 py-3 space-y-2">
+                    <div className="border-t border-(--border) bg-(--background) px-4 py-3 space-y-2">
                       {group.annotations.map((annotation) => {
                         const Icon = annotation.type === 'note' ? MessageSquare : Highlighter;
                         const page = annotation.coordinate_data?.page as number | undefined;
@@ -416,15 +416,15 @@ export default function Annotations() {
                         return (
                           <div
                             key={annotation.id}
-                            className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-3"
+                            className="rounded-lg border border-(--border) bg-(--card) p-3"
                           >
                             <div className="flex items-start gap-3">
-                              <div className="w-7 h-7 rounded-md bg-[var(--muted)] flex items-center justify-center shrink-0 mt-0.5">
-                                <Icon size={14} className="text-[var(--muted-foreground)]" />
+                              <div className="w-7 h-7 rounded-md bg-(--muted) flex items-center justify-center shrink-0 mt-0.5">
+                                <Icon size={14} className="text-(--muted-foreground)" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between gap-2 mb-1.5">
-                                  <div className="flex items-center gap-2 text-caption text-[var(--muted-foreground)]">
+                                  <div className="flex items-center gap-2 text-caption text-(--muted-foreground)">
                                     {page !== undefined && <span>Page {page}</span>}
                                     {page !== undefined && <span>·</span>}
                                     <span>{format(new Date(annotation.created_at), 'MMM d, yyyy')}</span>
@@ -434,7 +434,7 @@ export default function Annotations() {
                                       <>
                                         <Button
                                           variant="ghost"
-                                          className="!h-7 !w-7 !p-0"
+                                          className="h-7! w-7! p-0!"
                                           onClick={() => startEdit(annotation)}
                                           aria-label="Edit annotation"
                                         >
@@ -442,7 +442,7 @@ export default function Annotations() {
                                         </Button>
                                         <Button
                                           variant="ghost"
-                                          className="!h-7 !w-7 !p-0 text-[var(--destructive)]"
+                                          className="h-7! w-7! p-0! text-(--destructive)"
                                           onClick={() => handleDelete(annotation.id)}
                                           aria-label="Delete annotation"
                                         >
@@ -455,10 +455,10 @@ export default function Annotations() {
 
                                 {annotation.highlighted_text && (
                                   <div
-                                    className="mb-2 px-2.5 py-1.5 bg-[var(--muted)] rounded border-l-2 border-[var(--foreground)]/40 cursor-pointer"
+                                    className="mb-2 px-2.5 py-1.5 bg-(--muted) rounded border-l-2 border-(--foreground)/40 cursor-pointer"
                                     onClick={() => openPaper(annotation.paperId, page)}
                                   >
-                                    <p className="text-code text-[var(--foreground)] line-clamp-3">
+                                    <p className="text-code text-(--foreground) line-clamp-3">
                                       {annotation.highlighted_text}
                                     </p>
                                   </div>
@@ -475,7 +475,7 @@ export default function Annotations() {
                                     <div className="flex items-center gap-2">
                                       <Button
                                         variant="primary"
-                                        className="!h-7 !px-3 text-caption"
+                                        className="h-7! px-3! text-caption"
                                         onClick={saveEdit}
                                       >
                                         <Check size={12} className="mr-1" />
@@ -483,7 +483,7 @@ export default function Annotations() {
                                       </Button>
                                       <Button
                                         variant="ghost"
-                                        className="!h-7 !px-3 text-caption"
+                                        className="h-7! px-3! text-caption"
                                         onClick={cancelEdit}
                                       >
                                         <X size={12} className="mr-1" />
@@ -492,7 +492,7 @@ export default function Annotations() {
                                     </div>
                                   </div>
                                 ) : annotation.content ? (
-                                  <p className="text-code text-[var(--muted-foreground)] whitespace-pre-wrap">
+                                  <p className="text-code text-(--muted-foreground) whitespace-pre-wrap">
                                     {annotation.content}
                                   </p>
                                 ) : null}

@@ -106,7 +106,7 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
     if (/^<[a-z][\s\S]*>/i.test(content.trim())) {
       return (
         <div
-          className="prose prose-sm max-w-none text-code text-[var(--foreground)] leading-relaxed"
+          className="prose prose-sm max-w-none text-code text-(--foreground) leading-relaxed"
           dangerouslySetInnerHTML={{ __html: content }}
         />
       );
@@ -116,22 +116,22 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
         components={{
-          p: ({ children }) => <p className="text-code text-[var(--foreground)] mb-2 leading-relaxed">{children}</p>,
-          h1: ({ children }) => <h1 className="text-body font-bold text-[var(--foreground)] mt-3 mb-2">{children}</h1>,
-          h2: ({ children }) => <h2 className="text-code font-bold text-[var(--foreground)] mt-2 mb-1">{children}</h2>,
-          h3: ({ children }) => <h3 className="text-code font-semibold text-[var(--foreground)] mt-2 mb-1">{children}</h3>,
-          ul: ({ children }) => <ul className="text-code text-[var(--foreground)] mb-2 ml-4 list-disc">{children}</ul>,
-          ol: ({ children }) => <ol className="text-code text-[var(--foreground)] mb-2 ml-4 list-decimal">{children}</ol>,
-          li: ({ children }) => <li className="text-code text-[var(--foreground)] mb-0.5">{children}</li>,
+          p: ({ children }) => <p className="text-code text-(--foreground) mb-2 leading-relaxed">{children}</p>,
+          h1: ({ children }) => <h1 className="text-body font-bold text-(--foreground) mt-3 mb-2">{children}</h1>,
+          h2: ({ children }) => <h2 className="text-code font-bold text-(--foreground) mt-2 mb-1">{children}</h2>,
+          h3: ({ children }) => <h3 className="text-code font-semibold text-(--foreground) mt-2 mb-1">{children}</h3>,
+          ul: ({ children }) => <ul className="text-code text-(--foreground) mb-2 ml-4 list-disc">{children}</ul>,
+          ol: ({ children }) => <ol className="text-code text-(--foreground) mb-2 ml-4 list-decimal">{children}</ol>,
+          li: ({ children }) => <li className="text-code text-(--foreground) mb-0.5">{children}</li>,
           code: ({ children, className }) => {
             const isBlock = className?.includes('language-');
             return isBlock
-              ? <code className="block text-caption bg-[var(--muted)] text-[var(--foreground)] p-2 rounded-lg overflow-x-auto mb-2">{children}</code>
-              : <code className="text-caption bg-[var(--muted)] px-1.5 py-0.5 rounded">{children}</code>;
+              ? <code className="block text-caption bg-(--muted) text-(--foreground) p-2 rounded-lg overflow-x-auto mb-2">{children}</code>
+              : <code className="text-caption bg-(--muted) px-1.5 py-0.5 rounded">{children}</code>;
           },
-          a: ({ href, children }) => <a href={href} className="text-[var(--sky-blue)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
-          strong: ({ children }) => <strong className="font-semibold text-[var(--foreground)]">{children}</strong>,
-          blockquote: ({ children }) => <blockquote className="border-l-4 border-[var(--border)] pl-3 text-[var(--muted-foreground)] mb-2 text-code">{children}</blockquote>,
+          a: ({ href, children }) => <a href={href} className="text-(--sky-blue) hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+          strong: ({ children }) => <strong className="font-semibold text-(--foreground)">{children}</strong>,
+          blockquote: ({ children }) => <blockquote className="border-l-4 border-(--border) pl-3 text-(--muted-foreground) mb-2 text-code">{children}</blockquote>,
         }}
       >
         {content}
@@ -143,14 +143,14 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
     <div className="flex flex-col h-full">
       {/* Scope toggle & New Note button */}
       <div className="flex items-center justify-between gap-4 mb-4">
-        <div className="flex items-center gap-1 p-1 bg-[var(--muted)]/40 rounded-lg w-fit">
+        <div className="flex items-center gap-1 p-1 bg-(--muted)/40 rounded-lg w-fit">
           <button
             onClick={() => setScope('all')}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-caption font-medium transition-colors',
               scope === 'all'
-                ? 'bg-[var(--white)] text-[var(--foreground)] shadow-subtle'
-                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+                ? 'bg-(--white) text-(--foreground) shadow-subtle'
+                : 'text-(--muted-foreground) hover:text-(--foreground)',
             )}
           >
             <StickyNote size={12} />
@@ -162,8 +162,8 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-caption font-medium transition-colors',
               scope === 'page'
-                ? 'bg-[var(--white)] text-[var(--foreground)] shadow-subtle'
-                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+                ? 'bg-(--white) text-(--foreground) shadow-subtle'
+                : 'text-(--muted-foreground) hover:text-(--foreground)',
             )}
           >
             <FileText size={12} />
@@ -174,8 +174,8 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-caption font-medium transition-colors',
               scope === 'document'
-                ? 'bg-[var(--white)] text-[var(--foreground)] shadow-subtle'
-                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+                ? 'bg-(--white) text-(--foreground) shadow-subtle'
+                : 'text-(--muted-foreground) hover:text-(--foreground)',
             )}
           >
             <BookOpen size={12} />
@@ -199,12 +199,12 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
 
       {/* New Note Form */}
       {isCreating && (
-        <div className="mb-6 rounded-xl border border-[var(--foreground)]/10 bg-[var(--muted)]/10 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="mb-6 rounded-xl border border-(--foreground)/10 bg-(--muted)/10 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-caption font-semibold text-[var(--foreground)]">Create New Note</h3>
+            <h3 className="text-caption font-semibold text-(--foreground)">Create New Note</h3>
             <div className="flex items-center gap-2">
-              <span className="text-caption text-[var(--muted-foreground)]">Scope:</span>
-              <div className="flex items-center gap-1 p-0.5 bg-[var(--muted)]/40 rounded-lg">
+              <span className="text-caption text-(--muted-foreground)">Scope:</span>
+              <div className="flex items-center gap-1 p-0.5 bg-(--muted)/40 rounded-lg">
                 {(['page', 'document'] as NoteScope[]).map((s) => (
                   <button
                     key={s}
@@ -213,8 +213,8 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
                     className={cn(
                       'flex items-center gap-1 px-2 py-1 rounded text-caption font-medium transition-colors capitalize',
                       newScope === s
-                        ? 'bg-[var(--foreground)] text-[var(--background)]'
-                        : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+                        ? 'bg-(--foreground) text-(--background)'
+                        : 'text-(--muted-foreground) hover:text-(--foreground)',
                     )}
                   >
                     {s === 'page' ? <FileText size={11} /> : <BookOpen size={11} />}
@@ -229,13 +229,13 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
             value={newContent}
             onChange={(e) => setNewContent(e.target.value)}
             rows={4}
-            className="w-full text-code bg-[var(--card)] focus-visible:ring-1"
+            className="w-full text-code bg-(--card) focus-visible:ring-1"
             placeholder={newScope === 'page' ? `Write note for page ${currentPage}...` : 'Write document-wide note...'}
             autoFocus
             disabled={createMutation.isPending}
           />
 
-          <div className="flex items-center justify-end gap-2 pt-3 mt-3 border-t border-[var(--border)]">
+          <div className="flex items-center justify-end gap-2 pt-3 mt-3 border-t border-(--border)">
             <Button 
               variant="ghost" 
               size="sm" 
@@ -259,7 +259,7 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2].map((i) => (
-            <div key={i} className="h-24 bg-[var(--muted)]/40 rounded-xl animate-pulse" />
+            <div key={i} className="h-24 bg-(--muted)/40 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : displayed.length > 0 ? (
@@ -274,16 +274,16 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
                 className={cn(
                   'rounded-xl border p-4 transition-colors',
                   isEditing
-                    ? 'border-[var(--foreground)]/20 bg-[var(--muted)]/20'
-                    : 'border-[var(--border)] bg-[var(--card)] hover:border-[var(--muted-foreground)]/30',
+                    ? 'border-(--foreground)/20 bg-(--muted)/20'
+                    : 'border-(--border) bg-(--card) hover:border-(--muted-foreground)/30',
                 )}
               >
                 {isEditing ? (
                   <div className="space-y-3">
                     {/* Edit scope toggle */}
                     <div className="flex items-center gap-2">
-                      <span className="text-caption text-[var(--muted-foreground)]">Scope:</span>
-                      <div className="flex items-center gap-1 p-0.5 bg-[var(--muted)]/40 rounded-lg">
+                      <span className="text-caption text-(--muted-foreground)">Scope:</span>
+                      <div className="flex items-center gap-1 p-0.5 bg-(--muted)/40 rounded-lg">
                         {(['page', 'document'] as NoteScope[]).map((s) => (
                           <button
                             key={s}
@@ -292,8 +292,8 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
                             className={cn(
                               'flex items-center gap-1 px-2 py-1 rounded text-caption font-medium transition-colors capitalize',
                               editScope === s
-                                ? 'bg-[var(--foreground)] text-[var(--background)]'
-                                : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]',
+                                ? 'bg-(--foreground) text-(--background)'
+                                : 'text-(--muted-foreground) hover:text-(--foreground)',
                             )}
                           >
                             {s === 'page' ? <FileText size={11} /> : <BookOpen size={11} />}
@@ -307,13 +307,13 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
                       value={editContent}
                       onChange={(e) => setEditContent(e.target.value)}
                       rows={6}
-                      className="w-full text-code bg-[var(--white)]"
+                      className="w-full text-code bg-(--white)"
                       placeholder="Write your note..."
                       autoFocus
                       disabled={updateMutation.isPending}
                     />
 
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border)]">
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-(--border)">
                       <Button variant="ghost" size="sm" onClick={cancelEdit} disabled={updateMutation.isPending}>
                         <X size={13} className="mr-1" />
                         Cancel
@@ -332,8 +332,8 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
                   <>
                     <div className="mb-3">{renderContent(note.content)}</div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-[var(--border)]">
-                      <div className="flex items-center gap-2 text-micro text-[var(--muted-foreground)] opacity-60">
+                    <div className="flex items-center justify-between pt-2 border-t border-(--border)">
+                      <div className="flex items-center gap-2 text-micro text-(--muted-foreground) opacity-60">
                         {note.note_scope === 'page' && notePage && (
                           <span>Page {notePage}</span>
                         )}
@@ -354,7 +354,7 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0 text-[var(--destructive)] hover:bg-[var(--destructive)]/10"
+                          className="h-6 w-6 p-0 text-(--destructive) hover:bg-(--destructive)/10"
                           onClick={() => handleDelete(note.id)}
                           disabled={deleteMutation.isPending || editingId !== null}
                         >
@@ -369,9 +369,9 @@ export function NotesPanel({ paperId, currentPage, annotations, isLoading }: Not
           })}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-[var(--muted)]/10 rounded-2xl border border-dashed border-[var(--border)]">
-          <StickyNote size={32} className="mb-4 text-[var(--muted-foreground)] opacity-30" />
-          <p className="text-code text-[var(--muted-foreground)]">
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-(--muted)/10 rounded-2xl border border-dashed border-(--border)">
+          <StickyNote size={32} className="mb-4 text-(--muted-foreground) opacity-30" />
+          <p className="text-code text-(--muted-foreground)">
             {scope === 'all' ? 'No notes yet' : scope === 'page' ? `No notes for page ${currentPage}` : 'No document notes yet'}
           </p>
         </div>

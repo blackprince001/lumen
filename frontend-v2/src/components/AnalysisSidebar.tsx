@@ -40,9 +40,9 @@ export function AnalysisSidebar({
   const [activeTab, setActiveTab] = useState('details');
 
   return (
-    <div className="flex flex-col h-full bg-[var(--white)] border-l border-[var(--border)] overflow-hidden shadow-sm">
+    <div className="flex flex-col h-full bg-(--white) border-l border-(--border) overflow-hidden shadow-sm">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-        <TabsList className="px-4 gap-2 border-b border-[var(--border)] bg-[var(--white)] shrink-0">
+        <TabsList className="px-4 gap-2 border-b border-(--border) bg-(--white) shrink-0">
           <TabsTrigger value="details" className="h-12 gap-2 border-b-2 rounded-none">
             <FileText size={14} />
             <span className="hidden lg:inline">Details</span>
@@ -55,7 +55,7 @@ export function AnalysisSidebar({
             <Highlighter size={14} />
             <span className="hidden lg:inline">Notes</span>
             {annotations.length > 0 && (
-              <span className="text-micro bg-[var(--muted)] px-1.5 py-0.5 rounded-full">
+              <span className="text-micro bg-(--muted) px-1.5 py-0.5 rounded-full">
                 {annotations.length}
               </span>
             )}
@@ -71,7 +71,7 @@ export function AnalysisSidebar({
             <PaperDetails paper={paper} onDelete={onDeletePaper} />
           </TabsContent>
 
-          <TabsContent value="ai" className="h-full overflow-y-auto scrollbar-none p-6 text-[var(--foreground)]">
+          <TabsContent value="ai" className="h-full overflow-y-auto scrollbar-none p-6 text-(--foreground)">
             <div className="space-y-8">
               <AutoHighlights paperId={paper.id} />
               
@@ -82,7 +82,7 @@ export function AnalysisSidebar({
                 <AISummary paperId={paper.id} />
               </section>
               
-              <div className="h-px bg-[var(--border)]" />
+              <div className="h-px bg-(--border)" />
               
               <section>
                 <div className="flex items-center gap-2 mb-4">
@@ -91,7 +91,7 @@ export function AnalysisSidebar({
                 <KeyFindings paperId={paper.id} />
               </section>
 
-              <div className="h-px bg-[var(--border)]" />
+              <div className="h-px bg-(--border)" />
 
               <section>
                 <div className="flex items-center gap-2 mb-4">

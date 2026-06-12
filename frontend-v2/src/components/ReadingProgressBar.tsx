@@ -20,7 +20,7 @@ export function ReadingProgressBar({ currentPage, totalPages, readingTimeMinutes
     <div className={cn('space-y-1.5', className)}>
       {hasPageProgress && (
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-caption text-[var(--muted-foreground)]">
+          <div className="flex items-center justify-between text-caption text-(--muted-foreground)">
             <span>Page {currentPage} of {totalPages}</span>
             <span>{Math.round(pct)}%</span>
           </div>
@@ -28,7 +28,7 @@ export function ReadingProgressBar({ currentPage, totalPages, readingTimeMinutes
         </div>
       )}
       {readingTimeMinutes !== undefined && readingTimeMinutes > 0 && (
-        <p className="text-caption text-[var(--muted-foreground)]">
+        <p className="text-caption text-(--muted-foreground)">
           Reading time: {readingLabel}
         </p>
       )}

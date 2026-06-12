@@ -160,7 +160,7 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       {...props}
     >
-      <span className="pointer-events-none absolute start-2 flex size-4 items-center justify-center">
+      <span className="pointer-events-none absolute inset-s-2 flex size-4 items-center justify-center">
         <DropdownMenuPrimitive.CheckboxItemIndicator>
           <HugeiconsIcon icon={Tick02Icon} />
         </DropdownMenuPrimitive.CheckboxItemIndicator>
@@ -195,7 +195,7 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       {...props}
     >
-      <span className="pointer-events-none absolute start-2 flex size-4 items-center justify-center">
+      <span className="pointer-events-none absolute inset-s-2 flex size-4 items-center justify-center">
         <DropdownMenuPrimitive.RadioItemIndicator>
           <span className="size-2 rounded-full bg-current" />
         </DropdownMenuPrimitive.RadioItemIndicator>

@@ -96,8 +96,8 @@ export function PopoverContent({
     <div
       ref={ref}
       className={cn(
-        'absolute z-50 min-w-[12rem]',
-        'bg-[var(--popover)] border border-[var(--border)] rounded-card',
+        'absolute z-50 min-w-48',
+        'bg-(--popover) border border-(--border) rounded-card',
         'shadow-elevated p-1',
         sideMap[side][align],
         className,
@@ -118,8 +118,8 @@ export function PopoverItem({ className, children, ...props }: HTMLAttributes<HT
       onClick={() => setOpen(false)}
       className={cn(
         'flex w-full items-center gap-2 px-3 py-1.5 rounded-interactive',
-        'text-code text-[var(--foreground)] text-left',
-        'hover:bg-[var(--muted)] transition-colors duration-100',
+        'text-code text-(--foreground) text-left',
+        'hover:bg-(--muted) transition-colors duration-100',
         className,
       )}
       {...props}

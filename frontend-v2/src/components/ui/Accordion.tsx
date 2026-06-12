@@ -39,7 +39,7 @@ export function Accordion({ type = 'single', defaultValue, className, children, 
 
   return (
     <AccordionContext.Provider value={{ openItems, toggle }}>
-      <div className={cn('divide-y divide-[var(--border)]', className)} {...props}>
+      <div className={cn('divide-y divide-(--border)', className)} {...props}>
         {children}
       </div>
     </AccordionContext.Provider>
@@ -75,9 +75,9 @@ export function AccordionTrigger({ className, children, ...props }: AccordionTri
       aria-expanded={isOpen}
       className={cn(
         'flex w-full items-center justify-between py-3',
-        'text-code font-medium text-[var(--foreground)] text-left',
+        'text-code font-medium text-(--foreground) text-left',
         'hover:opacity-70 transition-opacity duration-150',
-        'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/20 rounded-sm',
+        'focus:outline-none focus-visible:ring-2 focus-visible:ring-(--ring)/20 rounded-sm',
         className,
       )}
       {...props}
@@ -86,7 +86,7 @@ export function AccordionTrigger({ className, children, ...props }: AccordionTri
       <ChevronDown
         size={14}
         className={cn(
-          'shrink-0 text-[var(--muted-foreground)] transition-transform duration-200',
+          'shrink-0 text-(--muted-foreground) transition-transform duration-200',
           isOpen && 'rotate-180',
         )}
       />
@@ -104,7 +104,7 @@ export function AccordionContent({ className, children, ...props }: AccordionCon
   if (!openItems.includes(value)) return null;
 
   return (
-    <div className={cn('pb-3 text-code text-[var(--muted-foreground)]', className)} {...props}>
+    <div className={cn('pb-3 text-code text-(--muted-foreground)', className)} {...props}>
       {children}
     </div>
   );

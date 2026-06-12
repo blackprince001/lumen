@@ -27,14 +27,14 @@ export default function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[var(--background)] px-4">
-      <div className="w-full max-w-sm bg-[var(--white)] border border-[var(--border)] rounded-2xl p-8 shadow-sm">
+    <div className="min-h-screen flex items-center justify-center bg-(--background) px-4">
+      <div className="w-full max-w-sm bg-(--white) border border-(--border) rounded-2xl p-8 shadow-sm">
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-4">
             <Logo size={120} />
           </div>
-          <h1 className="text-page-title font-bold tracking-tight text-[var(--foreground)]">Administrator</h1>
-          <p className="mt-1 text-body text-[var(--muted-foreground)]">Sign in with admin credentials</p>
+          <h1 className="text-page-title font-bold tracking-tight text-(--foreground)">Administrator</h1>
+          <p className="mt-1 text-body text-(--muted-foreground)">Sign in with admin credentials</p>
         </div>
 
         {error && (
@@ -51,7 +51,7 @@ export default function AdminLogin() {
             onChange={(e) => setUsername(e.target.value)}
             required
             autoFocus
-            className="w-full h-9 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-body text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            className="w-full h-9 rounded-lg border border-(--border) bg-(--background) px-3 text-body text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:ring-2 focus:ring-(--ring)"
           />
           <input
             type="password"
@@ -59,12 +59,12 @@ export default function AdminLogin() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full h-9 rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-body text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            className="w-full h-9 rounded-lg border border-(--border) bg-(--background) px-3 text-body text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:ring-2 focus:ring-(--ring)"
           />
           <button
             type="submit"
             disabled={loading}
-            className="w-full h-9 rounded-lg bg-[var(--foreground)] text-[var(--background)] text-body font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="w-full h-9 rounded-lg bg-(--foreground) text-(--background) text-body font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
           >
             {loading ? 'Signing in…' : 'Admin Login'}
           </button>

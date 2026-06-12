@@ -85,7 +85,7 @@ export function ShareDialog({ open, onClose, resourceId, resourceType, resourceT
             }}
             placeholder="Enter email addresses, separated by commas, spaces, or new lines"
             rows={4}
-            className="w-full min-h-[96px] px-3 py-2 text-body border border-[var(--border)] rounded-interactive bg-[var(--white)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-1 focus:ring-[var(--ring)] resize-y leading-relaxed"
+            className="w-full min-h-[96px] px-3 py-2 text-body border border-(--border) rounded-interactive bg-(--white) text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:ring-1 focus:ring-(--ring) resize-y leading-relaxed"
           />
           <div className="flex items-center justify-between gap-2">
             <div className="w-32 shrink-0">
@@ -105,22 +105,22 @@ export function ShareDialog({ open, onClose, resourceId, resourceType, resourceT
         </div>
 
         {feedback && (
-          <p className="text-caption text-[var(--muted-foreground)]">{feedback}</p>
+          <p className="text-caption text-(--muted-foreground)">{feedback}</p>
         )}
 
         {/* Current shares */}
         {isLoading ? (
-          <p className="text-caption text-[var(--muted-foreground)]">Loading shares...</p>
+          <p className="text-caption text-(--muted-foreground)">Loading shares...</p>
         ) : shares.length === 0 ? (
-          <p className="text-caption text-[var(--muted-foreground)]">Not shared with anyone yet.</p>
+          <p className="text-caption text-(--muted-foreground)">Not shared with anyone yet.</p>
         ) : (
           <div className="space-y-2">
-            <p className="text-caption font-medium text-[var(--muted-foreground)]">Shared with</p>
+            <p className="text-caption font-medium text-(--muted-foreground)">Shared with</p>
             {shares.map((share: ShareRecipient) => (
-              <div key={share.user_id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-interactive hover:bg-[var(--muted)]">
+              <div key={share.user_id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-interactive hover:bg-(--muted)">
                 <div className="flex flex-col min-w-0">
-                  <span className="text-body font-medium text-[var(--foreground)] truncate">{share.display_name}</span>
-                  <span className="text-caption text-[var(--muted-foreground)] truncate">{share.email}</span>
+                  <span className="text-body font-medium text-(--foreground) truncate">{share.display_name}</span>
+                  <span className="text-caption text-(--muted-foreground) truncate">{share.email}</span>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <div className="w-28">
@@ -134,7 +134,7 @@ export function ShareDialog({ open, onClose, resourceId, resourceType, resourceT
                   </div>
                   <button
                     onClick={() => revokeMutation.mutate(share.user_id)}
-                    className="p-1 rounded-interactive text-[var(--muted-foreground)] hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/10 transition-colors"
+                    className="p-1 rounded-interactive text-(--muted-foreground) hover:text-(--destructive) hover:bg-(--destructive)/10 transition-colors"
                     aria-label={`Remove ${share.display_name}`}
                   >
                     <Trash size={14} />

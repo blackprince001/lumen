@@ -17,14 +17,14 @@ export function TagList({ tags, onRemove, showRemove = false, className }: TagLi
       {tags.map((tag) => (
         <span
           key={tag.id}
-          className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--muted)] rounded-badge text-caption text-[var(--foreground)]"
+          className="inline-flex items-center gap-1 px-2 py-0.5 bg-(--muted) rounded-badge text-caption text-(--foreground)"
         >
           {tag.name}
           {showRemove && onRemove && (
             <button
               onClick={() => onRemove(tag.id)}
               aria-label={`Remove ${tag.name}`}
-              className="hover:bg-[var(--border)] rounded-full p-0.5 transition-colors"
+              className="hover:bg-(--border) rounded-full p-0.5 transition-colors"
             >
               <X size={10} />
             </button>

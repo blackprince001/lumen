@@ -11,7 +11,7 @@ function RoleBadge({ role }: { role: string }) {
   return (
     <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${role === 'admin'
         ? 'text-amber-700 bg-amber-50 border-amber-200'
-        : 'text-[var(--muted-foreground)] bg-[var(--muted)] border-[var(--border)]'
+        : 'text-(--muted-foreground) bg-(--muted) border-(--border)'
       }`}>
       {role}
     </span>
@@ -20,7 +20,7 @@ function RoleBadge({ role }: { role: string }) {
 
 function StatusDot({ active }: { active: boolean }) {
   return (
-    <span className={`inline-block w-2 h-2 rounded-full ${active ? 'bg-green-500' : 'bg-[var(--muted-foreground)]'}`} />
+    <span className={`inline-block w-2 h-2 rounded-full ${active ? 'bg-green-500' : 'bg-(--muted-foreground)'}`} />
   );
 }
 
@@ -32,22 +32,22 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-[var(--white)] border border-[var(--border)] rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-(--white) border border-(--border) rounded-2xl p-6 w-full max-w-sm shadow-xl" onClick={(e) => e.stopPropagation()}>
         {isLoading || !data ? (
-          <div className="h-32 flex items-center justify-center text-body text-[var(--muted-foreground)]">Loading…</div>
+          <div className="h-32 flex items-center justify-center text-body text-(--muted-foreground)">Loading…</div>
         ) : (
           <>
             <div className="flex items-center gap-3 mb-4">
               {data.avatar_url ? (
                 <img src={data.avatar_url} alt="" className="w-10 h-10 rounded-full object-cover" />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-[var(--muted)] flex items-center justify-center text-body font-semibold">
+                <div className="w-10 h-10 rounded-full bg-(--muted) flex items-center justify-center text-body font-semibold">
                   {data.display_name.slice(0, 2).toUpperCase()}
                 </div>
               )}
               <div>
-                <p className="font-medium text-body text-[var(--foreground)]">{data.display_name}</p>
-                <p className="text-caption text-[var(--muted-foreground)]">{data.email}</p>
+                <p className="font-medium text-body text-(--foreground)">{data.display_name}</p>
+                <p className="text-caption text-(--muted-foreground)">{data.email}</p>
               </div>
             </div>
             <div className="space-y-2 text-body">
@@ -64,12 +64,12 @@ function UserDetailModal({ userId, onClose }: { userId: number; onClose: () => v
                 ['Last login', data.last_login_at ? formatDistanceToNow(new Date(data.last_login_at), { addSuffix: true }) : 'Never'],
               ].map(([label, value]) => value && (
                 <div key={label} className="flex justify-between">
-                  <span className="text-[var(--muted-foreground)]">{label}</span>
-                  <span className="text-[var(--foreground)] font-medium">{value}</span>
+                  <span className="text-(--muted-foreground)">{label}</span>
+                  <span className="text-(--foreground) font-medium">{value}</span>
                 </div>
               ))}
             </div>
-            <button onClick={onClose} className="mt-5 w-full h-8 rounded-lg border border-[var(--border)] text-body hover:bg-[var(--muted)] transition-colors">
+            <button onClick={onClose} className="mt-5 w-full h-8 rounded-lg border border-(--border) text-body hover:bg-(--muted) transition-colors">
               Close
             </button>
           </>
@@ -126,19 +126,19 @@ export default function UserManagement() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-subsection font-semibold text-[var(--foreground)]">User Management</h1>
-        <p className="text-body text-[var(--muted-foreground)] mt-0.5">{users.length} users</p>
+        <h1 className="text-subsection font-semibold text-(--foreground)">User Management</h1>
+        <p className="text-body text-(--muted-foreground) mt-0.5">{users.length} users</p>
       </div>
 
       {/* Filters */}
       <div className="flex gap-3 mb-4 flex-wrap">
         <div className="relative flex-1 min-w-48">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-(--muted-foreground)" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search users…"
-            className="w-full h-9 pl-8 pr-3 rounded-lg border border-[var(--border)] bg-[var(--background)] text-body focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+            className="w-full h-9 pl-8 pr-3 rounded-lg border border-(--border) bg-(--background) text-body focus:outline-none focus:ring-2 focus:ring-(--ring)"
           />
         </div>
         <div className="w-40">
@@ -164,37 +164,37 @@ export default function UserManagement() {
       </div>
 
       {/* Table */}
-      <div className="border border-[var(--border)] rounded-xl overflow-hidden">
+      <div className="border border-(--border) rounded-xl overflow-hidden">
         <table className="w-full text-body">
-          <thead className="bg-[var(--muted)] border-b border-[var(--border)]">
+          <thead className="bg-(--muted) border-b border-(--border)">
             <tr>
               {(['display_name', 'email', 'organization', 'role'] as const).map((f) => (
                 <th
                   key={f}
                   onClick={() => toggleSort(f)}
-                  className="text-left px-4 py-2.5 text-caption font-semibold text-[var(--muted-foreground)] uppercase tracking-wide cursor-pointer hover:text-[var(--foreground)] select-none"
+                  className="text-left px-4 py-2.5 text-caption font-semibold text-(--muted-foreground) uppercase tracking-wide cursor-pointer hover:text-(--foreground) select-none"
                 >
                   <span className="flex items-center gap-1">{f.replace('_', ' ')} <SortIcon field={f} /></span>
                 </th>
               ))}
-              <th className="text-left px-4 py-2.5 text-caption font-semibold text-[var(--muted-foreground)] uppercase tracking-wide">Status</th>
+              <th className="text-left px-4 py-2.5 text-caption font-semibold text-(--muted-foreground) uppercase tracking-wide">Status</th>
               <th className="px-4 py-2.5" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--border)]">
+          <tbody className="divide-y divide-(--border)">
             {isLoading ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-body text-[var(--muted-foreground)]">Loading…</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-body text-(--muted-foreground)">Loading…</td></tr>
             ) : sorted.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-body text-[var(--muted-foreground)]">No users found</td></tr>
+              <tr><td colSpan={6} className="px-4 py-8 text-center text-body text-(--muted-foreground)">No users found</td></tr>
             ) : sorted.map((user) => (
-              <tr key={user.id} className="hover:bg-[var(--muted)] transition-colors">
+              <tr key={user.id} className="hover:bg-(--muted) transition-colors">
                 <td className="px-4 py-3">
-                  <button onClick={() => setSelectedUser(user.id)} className="font-medium text-[var(--foreground)] hover:underline text-left">
+                  <button onClick={() => setSelectedUser(user.id)} className="font-medium text-(--foreground) hover:underline text-left">
                     {user.display_name}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-[var(--muted-foreground)]">{user.email}</td>
-                <td className="px-4 py-3 text-[var(--muted-foreground)]">{user.organization ?? '—'}</td>
+                <td className="px-4 py-3 text-(--muted-foreground)">{user.email}</td>
+                <td className="px-4 py-3 text-(--muted-foreground)">{user.organization ?? '—'}</td>
                 <td className="px-4 py-3"><RoleBadge role={user.role} /></td>
                 <td className="px-4 py-3"><StatusDot active={user.is_active} /></td>
                 <td className="px-4 py-3">
@@ -202,14 +202,14 @@ export default function UserManagement() {
                     <button
                       onClick={() => updateMutation.mutate({ id: user.id, data: { is_active: !user.is_active } })}
                       title={user.is_active ? 'Deactivate' : 'Activate'}
-                      className="p-1.5 rounded-lg hover:bg-[var(--border)] transition-colors text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                      className="p-1.5 rounded-lg hover:bg-(--border) transition-colors text-(--muted-foreground) hover:text-(--foreground)"
                     >
                       {user.is_active ? <ShieldOff size={14} /> : <Shield size={14} />}
                     </button>
                     <button
                       onClick={() => { if (confirm(`Delete ${user.display_name}?`)) deleteMutation.mutate(user.id); }}
                       title="Delete user"
-                      className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-[var(--muted-foreground)] hover:text-red-600"
+                      className="p-1.5 rounded-lg hover:bg-red-50 transition-colors text-(--muted-foreground) hover:text-red-600"
                     >
                       <Trash2 size={14} />
                     </button>

@@ -54,8 +54,8 @@ export function PDFToolbar(props: PDFToolbarProps) {
         <Button
           variant="ghost"
           className={cn(
-            "h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]",
-            props.showTOC && "bg-[var(--foreground)]/[0.08] text-[var(--foreground)]"
+            "h-8 w-8 p-0 hover:bg-(--foreground)/8",
+            props.showTOC && "bg-(--foreground)/8 text-(--foreground)"
           )}
           onClick={props.onTOCToggle}
         >
@@ -68,12 +68,12 @@ export function PDFToolbar(props: PDFToolbarProps) {
   const SectionNav = () => (
     <div className="flex items-center gap-1 shrink-0" data-section="nav">
       <Tooltip content="First Page" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.currentPage <= 1} onClick={props.onFirstPage}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" disabled={props.currentPage <= 1} onClick={props.onFirstPage}>
           <ChevronsLeft size={16} />
         </Button>
       </Tooltip>
       <Tooltip content="Previous Page" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.currentPage <= 1} onClick={props.onPreviousPage}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" disabled={props.currentPage <= 1} onClick={props.onPreviousPage}>
           <ChevronLeft size={16} />
         </Button>
       </Tooltip>
@@ -82,21 +82,21 @@ export function PDFToolbar(props: PDFToolbarProps) {
           type="number"
           value={props.currentPage}
           onChange={handlePageInput}
-          className="w-12 h-7 bg-[var(--muted)] border border-[var(--border)] rounded text-code text-center focus:outline-none focus:ring-1 focus:ring-[var(--foreground)]"
+          className="w-12 h-7 bg-(--muted) border border-(--border) rounded text-code text-center focus:outline-none focus:ring-1 focus:ring-(--foreground)"
           min={1}
           max={props.numPages || 1}
         />
-        <span className="text-caption text-[var(--muted-foreground)] whitespace-nowrap">
+        <span className="text-caption text-(--muted-foreground) whitespace-nowrap">
           / {props.numPages || '?'}
         </span>
       </div>
       <Tooltip content="Next Page" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.currentPage >= (props.numPages || 1)} onClick={props.onNextPage}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" disabled={props.currentPage >= (props.numPages || 1)} onClick={props.onNextPage}>
           <ChevronRight size={16} />
         </Button>
       </Tooltip>
       <Tooltip content="Last Page" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.currentPage >= (props.numPages || 1)} onClick={props.onLastPage}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" disabled={props.currentPage >= (props.numPages || 1)} onClick={props.onLastPage}>
           <ChevronsRight size={16} />
         </Button>
       </Tooltip>
@@ -106,17 +106,17 @@ export function PDFToolbar(props: PDFToolbarProps) {
   const SectionZoom = () => (
     <div className="flex items-center gap-1 shrink-0" data-section="zoom">
       <Tooltip content="Zoom Out" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.zoom <= 0.5} onClick={handleZoomOut}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" disabled={props.zoom <= 0.5} onClick={handleZoomOut}>
           <ZoomOut size={16} />
         </Button>
       </Tooltip>
       <Tooltip content="Reset Zoom" side="bottom">
-        <button className="text-code font-medium min-w-[3.125rem] text-center hover:bg-[var(--foreground)]/[0.08] rounded py-1 px-1.5 transition-colors" onClick={handleZoomReset}>
+        <button className="text-code font-medium min-w-12.5 text-center hover:bg-(--foreground)/8 rounded py-1 px-1.5 transition-colors" onClick={handleZoomReset}>
           {Math.round(props.zoom * 100)}%
         </button>
       </Tooltip>
       <Tooltip content="Zoom In" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" disabled={props.zoom >= 3} onClick={handleZoomIn}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" disabled={props.zoom >= 3} onClick={handleZoomIn}>
           <ZoomIn size={16} />
         </Button>
       </Tooltip>
@@ -126,7 +126,7 @@ export function PDFToolbar(props: PDFToolbarProps) {
   const SectionRotate = () => (
     <div className="flex items-center gap-1 shrink-0" data-section="rotate">
       <Tooltip content="Rotate Page" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={() => props.onRotationChange((props.rotation + 90) % 360)}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" onClick={() => props.onRotationChange((props.rotation + 90) % 360)}>
           <RotateCw size={16} />
         </Button>
       </Tooltip>
@@ -141,8 +141,8 @@ export function PDFToolbar(props: PDFToolbarProps) {
           className={cn(
             "h-8 w-8 p-0",
             props.highlightMode
-              ? "bg-[var(--sky-blue)]/15 text-[var(--sky-blue)] ring-1 ring-[var(--sky-blue)]/30 hover:bg-[var(--sky-blue)]/25"
-              : "hover:bg-[var(--foreground)]/[0.08]"
+              ? "bg-(--sky-blue)/15 text-(--sky-blue) ring-1 ring-(--sky-blue)/30 hover:bg-(--sky-blue)/25"
+              : "hover:bg-(--foreground)/8"
           )}
           onClick={props.onHighlightModeToggle}
         >
@@ -150,7 +150,7 @@ export function PDFToolbar(props: PDFToolbarProps) {
         </Button>
       </Tooltip>
       <Tooltip content="Open Notes Panel" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={props.onNoteAction}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" onClick={props.onNoteAction}>
           <PenLine size={16} />
         </Button>
       </Tooltip>
@@ -164,7 +164,7 @@ export function PDFToolbar(props: PDFToolbarProps) {
           <Select
             value={props.readingStatus}
             onChange={(e) => props.onReadingStatusChange!(e.target.value as any)}
-            className="h-8 border-none bg-transparent hover:bg-[var(--foreground)]/[0.08] text-caption font-medium px-4 pr-4 transition-all"
+            className="h-8 border-none bg-transparent hover:bg-(--foreground)/8 text-caption font-medium px-4 pr-4 transition-all"
           >
             <option value="not_started">Unread</option>
             <option value="in_progress">Reading</option>
@@ -183,7 +183,7 @@ export function PDFToolbar(props: PDFToolbarProps) {
           <Select
             value={props.priority}
             onChange={(e) => props.onPriorityChange!(e.target.value as any)}
-            className="h-8 border-none bg-transparent hover:bg-[var(--foreground)]/[0.08] text-caption font-medium px-2 pr-4 transition-all"
+            className="h-8 border-none bg-transparent hover:bg-(--foreground)/8 text-caption font-medium px-2 pr-4 transition-all"
           >
             <option value="low">Low</option>
             <option value="medium">Medium</option>
@@ -198,7 +198,7 @@ export function PDFToolbar(props: PDFToolbarProps) {
   const SectionBookmark = () => (
     <div className="flex items-center gap-1 shrink-0" data-section="bookmark">
       <Tooltip content="Bookmark Page" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={props.onBookmarkAdd}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" onClick={props.onBookmarkAdd}>
           <Bookmark size={16} />
         </Button>
       </Tooltip>
@@ -208,7 +208,7 @@ export function PDFToolbar(props: PDFToolbarProps) {
   const SectionDownload = () => (
     <div className="flex items-center gap-1 shrink-0" data-section="download">
       <Tooltip content="Download PDF" side="bottom">
-        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-[var(--foreground)]/[0.08]" onClick={props.onDownload}>
+        <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-(--foreground)/8" onClick={props.onDownload}>
           <Download size={16} />
         </Button>
       </Tooltip>
@@ -231,25 +231,25 @@ export function PDFToolbar(props: PDFToolbarProps) {
   const overflowItems = allSections.filter(s => isHidden(s.id));
 
   return (
-    <div ref={containerRef} className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--white)] shrink-0 z-20">
+    <div ref={containerRef} className="flex items-center gap-2 px-4 py-2 border-b border-(--border) bg-(--white) shrink-0 z-20">
       {/* Visible sections */}
       {visible.map(s => <s.Comp key={s.id} />)}
 
       {/* Separator before dots when overflow exists */}
       {overflowItems.length > 0 && (
-        <div className="w-px h-6 bg-[var(--border)] shrink-0" />
+        <div className="w-px h-6 bg-(--border) shrink-0" />
       )}
 
       {/* Overflow menu */}
       <div data-section="dots" className="shrink-0">
         {overflowItems.length > 0 && (
           <Popover>
-            <PopoverTrigger className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-[var(--foreground)]/[0.08] transition-colors">
+            <PopoverTrigger className="h-8 w-8 flex items-center justify-center rounded-lg hover:bg-(--foreground)/8 transition-colors">
               <More size={16} />
             </PopoverTrigger>
-            <PopoverContent side="bottom" align="end" className="min-w-[12rem] p-2 space-y-1" style={{ zIndex: 100 }}>
+            <PopoverContent side="bottom" align="end" className="min-w-48 p-2 space-y-1" style={{ zIndex: 100 }}>
               {overflowItems.map(s => (
-                <div key={s.id} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-[var(--muted)] transition-colors">
+                <div key={s.id} className="flex items-center gap-1 px-2 py-1 rounded hover:bg-(--muted) transition-colors">
                   <s.Comp />
                 </div>
               ))}

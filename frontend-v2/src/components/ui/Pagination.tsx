@@ -17,13 +17,13 @@ export function Pagination({ currentPage, totalPages, onPageChange, itemsToShow 
 
   const btnBase = cn(
     'inline-flex items-center justify-center h-8 w-8 rounded-lg text-code font-medium',
-    'border border-[var(--border)] transition-all duration-150',
-    'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]/20',
+    'border border-(--border) transition-all duration-150',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-(--ring)/20',
     'disabled:opacity-40 disabled:cursor-not-allowed',
   );
 
-  const btnIdle = 'bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]';
-  const btnActive = 'bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)]';
+  const btnIdle = 'bg-(--card) text-(--muted-foreground) hover:bg-(--muted) hover:text-(--foreground)';
+  const btnActive = 'bg-(--primary) text-(--primary-foreground) border-(--primary)';
 
   return (
     <nav role="navigation" aria-label="Pagination" className={cn('flex items-center gap-1', className)}>
@@ -39,7 +39,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, itemsToShow 
       {showLeftEllipsis && (
         <>
           <PageBtn page={1} active={false} onClick={onPageChange} btnBase={btnBase} btnIdle={btnIdle} btnActive={btnActive} />
-          <span className="inline-flex items-center justify-center h-8 w-8 text-[var(--muted-foreground)]">
+          <span className="inline-flex items-center justify-center h-8 w-8 text-(--muted-foreground)">
             <MoreHorizontal size={14} />
           </span>
         </>
@@ -59,7 +59,7 @@ export function Pagination({ currentPage, totalPages, onPageChange, itemsToShow 
 
       {showRightEllipsis && (
         <>
-          <span className="inline-flex items-center justify-center h-8 w-8 text-[var(--muted-foreground)]">
+          <span className="inline-flex items-center justify-center h-8 w-8 text-(--muted-foreground)">
             <MoreHorizontal size={14} />
           </span>
           <PageBtn page={totalPages} active={false} onClick={onPageChange} btnBase={btnBase} btnIdle={btnIdle} btnActive={btnActive} />

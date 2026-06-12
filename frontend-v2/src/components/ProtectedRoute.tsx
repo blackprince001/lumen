@@ -12,8 +12,8 @@ export default function ProtectedRoute({ children, requireAdmin = false }: Props
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="w-6 h-6 rounded-full border-2 border-[var(--border)] border-t-[var(--foreground)] animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-(--background)">
+        <div className="w-6 h-6 rounded-full border-2 border-(--border) border-t-(--foreground) animate-spin" />
       </div>
     );
   }

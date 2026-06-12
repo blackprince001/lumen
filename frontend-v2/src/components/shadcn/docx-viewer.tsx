@@ -312,7 +312,7 @@ function DocxPageNumberControl({
           pattern="[0-9]*"
           size="sm"
           value={draftPage}
-          className="mx-1 w-14 min-w-14 rounded-md [&_[data-slot=input]]:text-center"
+          className="mx-1 w-14 min-w-14 rounded-md **:data-[slot=input]:text-center"
           onBlur={() => setIsEditing(false)}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
             const nextValue = event.target.value
@@ -573,7 +573,7 @@ function DocxSidebarThumbnail({
           ref={canvasRef}
           width={pixelWidthPx}
           height={pixelHeightPx}
-          className="!size-full bg-white object-cover object-top"
+          className="size-full! bg-white object-cover object-top"
         />
       }
       isLoading={isLoading}
@@ -985,7 +985,7 @@ function DocxViewerContent({
                       variant="ghost"
                       size="sm"
                       className={cn(
-                        "!h-auto w-full flex-col items-center gap-2 p-2 text-xs shadow-none hover:bg-sidebar-accent",
+                        "h-auto! w-full flex-col items-center gap-2 p-2 text-xs shadow-none hover:bg-sidebar-accent",
                         thumbnail.pageNumber === activePage &&
                           "bg-sidebar-accent text-foreground",
                         thumbnail.pageNumber !== activePage &&

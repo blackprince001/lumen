@@ -109,10 +109,10 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
   const threadCount = parentMessage.thread_count || threadMessages.length;
 
   return (
-    <div className="mt-2 ml-4 pl-3 border-l-2 border-[var(--border)]">
+    <div className="mt-2 ml-4 pl-3 border-l-2 border-(--border)">
       {/* Thread header */}
       {threadCount > 0 && (
-        <div className="mb-2 text-caption text-[var(--muted-foreground)] font-medium">
+        <div className="mb-2 text-caption text-(--muted-foreground) font-medium">
           {threadCount} {threadCount === 1 ? 'reply' : 'replies'}
         </div>
       )}
@@ -140,11 +140,11 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
                         msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
                       )} />
                       {msg.role === 'user' ? (
-                        <div className="whitespace-pre-wrap break-words">{msg.content}</div>
+                        <div className="whitespace-pre-wrap wrap-break-word">{msg.content}</div>
                       ) : (
                         <MarkdownMessage content={msg.content} />
                       )}
-                      <span className="absolute bottom-1 right-2 text-[10px] text-[var(--muted-foreground)] opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
+                      <span className="absolute bottom-1 right-2 text-[10px] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
                         {format(new Date(msg.created_at), 'HH:mm')}
                       </span>
                     </div>
@@ -155,7 +155,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
                   <div className="flex justify-start">
                     <div className="relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent border border-transparent">
                       <span className="absolute top-0 left-0 h-[2px] w-8 bg-[rgba(60,145,230,0.5)]" />
-                      <div className="whitespace-pre-wrap break-words">{pendingUserMessage}</div>
+                      <div className="whitespace-pre-wrap wrap-break-word">{pendingUserMessage}</div>
                     </div>
                   </div>
                 )}

@@ -9,10 +9,10 @@ interface PriorityBadgeProps {
 }
 
 const PRIORITY_CONFIG: Record<Priority, { label: string; className: string }> = {
-  low:      { label: 'Low',      className: 'bg-[var(--muted)] text-[var(--muted-foreground)]' },
-  medium:   { label: 'Medium',   className: 'bg-[rgba(228,91,60,0.10)] text-[var(--coral-red)]' },
-  high:     { label: 'High',     className: 'bg-[rgba(228,91,60,0.18)] text-[var(--coral-red)]' },
-  critical: { label: 'Critical', className: 'bg-[rgba(209,46,62,0.12)] text-[var(--destructive)]' },
+  low:      { label: 'Low',      className: 'bg-(--muted) text-(--muted-foreground)' },
+  medium:   { label: 'Medium',   className: 'bg-[rgba(228,91,60,0.10)] text-(--coral-red)' },
+  high:     { label: 'High',     className: 'bg-[rgba(228,91,60,0.18)] text-(--coral-red)' },
+  critical: { label: 'Critical', className: 'bg-[rgba(209,46,62,0.12)] text-(--destructive)' },
 };
 
 export function PriorityBadge({ priority, className }: PriorityBadgeProps) {

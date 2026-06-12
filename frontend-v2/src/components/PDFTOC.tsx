@@ -37,8 +37,8 @@ function TOCItemComponent({
         className={cn(
           "flex items-center gap-2 px-3 py-1.5 text-code rounded-lg cursor-pointer transition-colors",
           isActive
-            ? "bg-[var(--muted)] text-[var(--foreground)] font-medium"
-            : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]/50"
+            ? "bg-(--muted) text-(--foreground) font-medium"
+            : "text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted)/50"
         )}
         style={{ paddingLeft: `${0.75 + level * 1}rem` }}
         onClick={(e) => {
@@ -48,7 +48,7 @@ function TOCItemComponent({
       >
         {hasChildren ? (
           <button
-            className="p-0.5 hover:bg-[var(--muted)] rounded"
+            className="p-0.5 hover:bg-(--muted) rounded"
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(!isExpanded);
@@ -82,9 +82,9 @@ function TOCItemComponent({
 
 export function PDFTOC({ items, onItemClick, currentPage, onClose }: PDFTOCProps) {
   return (
-    <div className="flex flex-col h-full bg-[var(--white)] overflow-hidden">
+    <div className="flex flex-col h-full bg-(--white) overflow-hidden">
       <div className="flex items-center justify-between px-2">
-        <h3 className="text-btn font-semibold text-[var(--foreground)]">Content</h3>
+        <h3 className="text-btn font-semibold text-(--foreground)">Content</h3>
         {onClose && (
           <Button variant="ghost" className="h-8 w-8 p-0" onClick={onClose}>
             <X size={16} />
@@ -105,7 +105,7 @@ export function PDFTOC({ items, onItemClick, currentPage, onClose }: PDFTOCProps
             ))}
           </div>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-center p-6 text-[var(--muted-foreground)] opacity-60">
+          <div className="h-full flex flex-col items-center justify-center text-center p-6 text-(--muted-foreground) opacity-60">
             <p className="text-code">No table of contents</p>
           </div>
         )}

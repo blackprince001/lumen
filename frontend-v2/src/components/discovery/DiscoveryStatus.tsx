@@ -35,41 +35,41 @@ export function DiscoveryStatus({ status, timeline, isSearching }: DiscoveryStat
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
       transition={{ duration: 0.18 }}
-      className="bg-[var(--card)] border border-[var(--border)] rounded-xl mb-6 overflow-hidden"
+      className="bg-(--card) border border-(--border) rounded-xl mb-6 overflow-hidden"
     >
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-baseline justify-between gap-4 mb-2">
           <div className="flex items-center gap-2 min-w-0">
             {isSearching ? (
-              <Loader2 size={13} className="text-[var(--muted-foreground)] animate-spin shrink-0" />
+              <Loader2 size={13} className="text-(--muted-foreground) animate-spin shrink-0" />
             ) : (
-              <Check size={13} className="text-[var(--foreground)] shrink-0" />
+              <Check size={13} className="text-(--foreground) shrink-0" />
             )}
-            <span className="text-caption uppercase tracking-wider text-[var(--muted-foreground)] font-medium shrink-0">
+            <span className="text-caption uppercase tracking-wider text-(--muted-foreground) font-medium shrink-0">
               {stageLabel}
             </span>
             {status?.source && (
               <>
-                <span className="text-[var(--border)]">·</span>
-                <span className="text-caption text-[var(--foreground)] truncate">
+                <span className="text-(--border)">·</span>
+                <span className="text-caption text-(--foreground) truncate">
                   {status.source}
                 </span>
               </>
             )}
           </div>
-          <span className="text-caption text-[var(--muted-foreground)] tabular-nums shrink-0">
+          <span className="text-caption text-(--muted-foreground) tabular-nums shrink-0">
             {progress}%
           </span>
         </div>
 
-        <p className="text-code text-[var(--foreground)] leading-snug">
+        <p className="text-code text-(--foreground) leading-snug">
           {headline}
         </p>
       </div>
 
-      <div className="relative h-px w-full bg-[var(--border)]">
+      <div className="relative h-px w-full bg-(--border)">
         <motion.div
-          className="absolute top-0 left-0 h-full bg-[var(--foreground)]"
+          className="absolute top-0 left-0 h-full bg-(--foreground)"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ type: 'tween', duration: 0.25, ease: 'easeOut' }}
@@ -93,16 +93,16 @@ export function DiscoveryStatus({ status, timeline, isSearching }: DiscoveryStat
                     className={cn(
                       'mt-1.5 w-1 h-1 rounded-full shrink-0',
                       isLast && isSearching
-                        ? 'bg-[var(--foreground)]'
-                        : 'bg-[var(--muted-foreground)] opacity-50'
+                        ? 'bg-(--foreground)'
+                        : 'bg-(--muted-foreground) opacity-50'
                     )}
                   />
                   <span
                     className={cn(
                       'truncate',
                       isLast && isSearching
-                        ? 'text-[var(--foreground)]'
-                        : 'text-[var(--muted-foreground)]'
+                        ? 'text-(--foreground)'
+                        : 'text-(--muted-foreground)'
                     )}
                   >
                     {entry.message}

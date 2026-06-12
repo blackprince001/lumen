@@ -32,8 +32,8 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
             onClick={() => onSort(field)}
             className={cn(
               'inline-flex items-center gap-1 text-caption font-medium',
-              'transition-colors hover:text-[var(--foreground)]',
-              isActive ? 'text-[var(--foreground)]' : 'text-[var(--muted-foreground)]',
+              'transition-colors hover:text-(--foreground)',
+              isActive ? 'text-(--foreground)' : 'text-(--muted-foreground)',
             )}
           >
             {children}
@@ -54,7 +54,7 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
   };
 
   return (
-    <div className="rounded-xl border border-[var(--border)] overflow-hidden">
+    <div className="rounded-xl border border-(--border) overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
@@ -87,11 +87,11 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
                     <div className={cn(
                       'w-4 h-4 rounded border-2 flex items-center justify-center transition-colors',
                       isSelected
-                        ? 'bg-[var(--foreground)] border-[var(--foreground)]'
-                        : 'border-[var(--border)]',
+                        ? 'bg-(--foreground) border-(--foreground)'
+                        : 'border-(--border)',
                     )}>
                       {isSelected && (
-                        <svg className="w-2.5 h-2.5 text-[var(--background)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                        <svg className="w-2.5 h-2.5 text-(--background)" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                         </svg>
                       )}
@@ -121,7 +121,7 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
                       )}
                     </div>
                     {paper.doi && (
-                      <span className="text-caption text-[var(--muted-foreground)] pl-4">{paper.doi}</span>
+                      <span className="text-caption text-(--muted-foreground) pl-4">{paper.doi}</span>
                     )}
                   </div>
                 </TableCell>
@@ -131,10 +131,10 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
                   <div className="flex items-center gap-1.5">
                     {paper.reading_status
                       ? <ReadingStatusBadge status={paper.reading_status} />
-                      : <span className="text-[var(--muted-foreground)] text-caption">—</span>
+                      : <span className="text-(--muted-foreground) text-caption">—</span>
                     }
                     {paper.is_shared && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[var(--sky-blue)]/10 text-[var(--sky-blue)]" title="Shared with you">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-(--sky-blue)/10 text-(--sky-blue)" title="Shared with you">
                         <People size={10} />
                       </span>
                     )}
@@ -145,7 +145,7 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
                 <TableCell className="hidden lg:table-cell">
                   {paper.priority && paper.priority !== 'low'
                     ? <PriorityBadge priority={paper.priority} />
-                    : <span className="text-[var(--muted-foreground)] text-caption">—</span>
+                    : <span className="text-(--muted-foreground) text-caption">—</span>
                   }
                 </TableCell>
 
@@ -163,28 +163,28 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
                         </span>
                       ))}
                       {paper.tags.length > 3 && (
-                        <span className="text-micro text-[var(--muted-foreground)]">+{paper.tags.length - 3}</span>
+                        <span className="text-micro text-(--muted-foreground)">+{paper.tags.length - 3}</span>
                       )}
                     </div>
                   ) : (
-                    <span className="text-[var(--muted-foreground)] text-caption">—</span>
+                    <span className="text-(--muted-foreground) text-caption">—</span>
                   )}
                 </TableCell>
 
                 {/* Authors */}
-                <TableCell className="max-w-[11.25rem] truncate text-caption text-[var(--muted-foreground)]">
+                <TableCell className="max-w-45 truncate text-caption text-(--muted-foreground)">
                   {(paper.metadata_json?.authors_list as string[] | undefined)?.join(', ')
                     ?? (paper.metadata_json?.author as string | undefined)
                     ?? '—'}
                 </TableCell>
 
                 {/* Date added */}
-                <TableCell className="text-caption text-[var(--muted-foreground)] whitespace-nowrap">
+                <TableCell className="text-caption text-(--muted-foreground) whitespace-nowrap">
                   {format(new Date(paper.created_at), 'MMM d, yyyy')}
                 </TableCell>
 
                 {/* Views */}
-                <TableCell className="hidden xl:table-cell text-caption text-[var(--muted-foreground)]">
+                <TableCell className="hidden xl:table-cell text-caption text-(--muted-foreground)">
                   {paper.viewed_count ?? 0}
                 </TableCell>
 
@@ -195,7 +195,7 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
                       variant="ghost"
                       size="sm"
                       onClick={(e) => { e.stopPropagation(); onDelete(paper.id); }}
-                      className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:text-[var(--destructive)] hover:bg-[var(--destructive)]/5"
+                      className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 hover:text-(--destructive) hover:bg-(--destructive)/5"
                       title="Delete paper"
                     >
                       <Trash2 size={13} />

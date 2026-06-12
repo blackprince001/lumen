@@ -51,7 +51,7 @@ export function MovePapersDialog({
         onSearchChange={setSearch}
       />
 
-      <p className="mt-2 text-caption text-[var(--muted-foreground)]">
+      <p className="mt-2 text-caption text-(--muted-foreground)">
         {selected.length} group{selected.length !== 1 ? 's' : ''} selected
       </p>
 

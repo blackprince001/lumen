@@ -9,7 +9,7 @@ interface GroupTreeSelectorProps {
   onChange: (ids: number[]) => void;
   search: string;
   onSearchChange: (q: string) => void;
-  /** Tailwind height class for the scroll area, e.g. "h-[17.5rem]" or "h-48". */
+  /** Tailwind height class for the scroll area, e.g. "h-70" or "h-48". */
   heightClass?: string;
   /** Hide the search box (useful when the parent supplies its own search UI). */
   hideSearch?: boolean;
@@ -40,8 +40,8 @@ function GroupItem({ group, level, selectedIds, onToggle, search }: GroupItemPro
       <div
         className={cn(
           'flex items-center gap-2 py-1.5 px-2 rounded-lg cursor-pointer transition-colors',
-          'hover:bg-[var(--muted)]',
-          isSelected && 'bg-[var(--muted)]',
+          'hover:bg-(--muted)',
+          isSelected && 'bg-(--muted)',
         )}
         style={{ paddingLeft: `${0.5 + level * 1.25}rem` }}
         onClick={() => onToggle(group.id)}
@@ -50,11 +50,11 @@ function GroupItem({ group, level, selectedIds, onToggle, search }: GroupItemPro
           className={cn(
             'w-4 h-4 rounded border-2 flex items-center justify-center transition-colors shrink-0',
             isSelected
-              ? 'bg-[var(--foreground)] border-[var(--foreground)]'
-              : 'border-[var(--border)]',
+              ? 'bg-(--foreground) border-(--foreground)'
+              : 'border-(--border)',
           )}
         >
-          {isSelected && <Check size={10} className="text-[var(--background)]" strokeWidth={3} />}
+          {isSelected && <Check size={10} className="text-(--background)" strokeWidth={3} />}
         </div>
 
         <span
@@ -116,7 +116,7 @@ export function GroupTreeSelector({
   onChange,
   search,
   onSearchChange,
-  heightClass = 'h-[17.5rem]',
+  heightClass = 'h-70',
   hideSearch = false,
   emptyLabel = 'No groups yet',
 }: GroupTreeSelectorProps) {
@@ -136,7 +136,7 @@ export function GroupTreeSelector({
         <div className="relative mb-3">
           <Search
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] pointer-events-none"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-(--muted-foreground) pointer-events-none"
           />
           <Input
             placeholder="Search groups…"
@@ -149,7 +149,7 @@ export function GroupTreeSelector({
 
       <div
         className={cn(
-          'border border-[var(--border)] rounded-xl p-2 overflow-y-auto space-y-0.5',
+          'border border-(--border) rounded-xl p-2 overflow-y-auto space-y-0.5',
           heightClass,
         )}
       >
@@ -165,7 +165,7 @@ export function GroupTreeSelector({
             />
           ))
         ) : (
-          <div className="flex flex-col items-center justify-center h-full gap-2 text-[var(--muted-foreground)]">
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-(--muted-foreground)">
             <Folder size={28} className="opacity-30" />
             <span className="text-code">{emptyLabel}</span>
           </div>

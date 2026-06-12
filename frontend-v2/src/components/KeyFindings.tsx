@@ -44,7 +44,7 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
 
   if (isLoading) {
     return (
-      <div className="p-6 flex flex-col items-center justify-center text-[var(--muted-foreground)] animate-pulse">
+      <div className="p-6 flex flex-col items-center justify-center text-(--muted-foreground) animate-pulse">
         <Lightbulb size={24} className="mb-2 opacity-50" />
         <p className="text-code">Extracting insights...</p>
       </div>
@@ -56,8 +56,8 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
   if (editing) {
     return (
       <div className="space-y-4">
-        <div className="p-3 bg-[var(--muted)]/30 rounded-lg border border-[var(--border)] mb-2">
-          <p className="text-caption text-[var(--muted-foreground)]">
+        <div className="p-3 bg-(--muted)/30 rounded-lg border border-(--border) mb-2">
+          <p className="text-caption text-(--muted-foreground)">
             Note: Findings are stored as structured JSON. Edit with caution.
           </p>
         </div>
@@ -65,7 +65,7 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
           value={editedFindings || JSON.stringify(findingsData, null, 2)}
           onChange={(e) => setEditedFindings(e.target.value)}
           rows={15}
-          className="w-full text-caption bg-[var(--white)]"
+          className="w-full text-caption bg-(--white)"
           autoFocus
         />
         <div className="flex items-center gap-2">
@@ -104,15 +104,15 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
 
     return (
       <div className="space-y-3">
-        <h4 className="text-caption font-bold uppercase tracking-wider text-[var(--muted-foreground)] flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-[var(--foreground)]/20" />
+        <h4 className="text-caption font-bold uppercase tracking-wider text-(--muted-foreground) flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-(--foreground)/20" />
           {title}
         </h4>
         {Array.isArray(items) ? (
           <ul className="space-y-3 pl-1">
             {items.map((item, idx) => (
-              <li key={idx} className="text-code leading-relaxed text-[var(--foreground)] flex gap-3">
-                <span className="text-[var(--muted-foreground)] opacity-40 mt-1.5 text-micro tabular-nums shrink-0">
+              <li key={idx} className="text-code leading-relaxed text-(--foreground) flex gap-3">
+                <span className="text-(--muted-foreground) opacity-40 mt-1.5 text-micro tabular-nums shrink-0">
                   {String(idx + 1).padStart(2, '0')}
                 </span>
                 <div className="prose-inline">
@@ -121,8 +121,8 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
                     rehypePlugins={[rehypeKatex]}
                     components={{
                       p: ({ children }) => <span>{children}</span>,
-                      a: ({ href, children }) => <a href={href} className="text-[var(--sky-blue)] hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
-                      code: ({ children }) => <code className="bg-[var(--muted)] px-1 py-0.5 rounded text-caption">{children}</code>
+                      a: ({ href, children }) => <a href={href} className="text-(--sky-blue) hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>,
+                      code: ({ children }) => <code className="bg-(--muted) px-1 py-0.5 rounded text-caption">{children}</code>
                     }}
                   >
                     {item}
@@ -132,7 +132,7 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
             ))}
           </ul>
         ) : (
-          <div className="text-code leading-relaxed text-[var(--foreground)] prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0">
+          <div className="text-code leading-relaxed text-(--foreground) prose prose-sm max-w-none prose-p:my-2 first:prose-p:mt-0">
              <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
               {items}
             </ReactMarkdown>
@@ -157,7 +157,7 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
           {renderSection("Limitations", findingsData.limitations)}
           {renderSection("Future Work", findingsData.future_work)}
           
-          <div className="flex items-center gap-2 pt-6 border-t border-[var(--border)]">
+          <div className="flex items-center gap-2 pt-6 border-t border-(--border)">
             <Button
               variant="ghost"
               className="h-8 text-caption px-3"
@@ -181,10 +181,10 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
           </div>
         </>
       ) : (
-        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-[var(--muted)]/20 rounded-2xl border border-dashed border-[var(--border)]">
-          <Lightbulb size={32} className="mb-4 text-[var(--muted-foreground)] opacity-40" />
-          <h3 className="text-btn font-semibold text-[var(--foreground)] mb-2">Findings Not Extracted</h3>
-          <p className="text-code text-[var(--muted-foreground)] mb-6 max-w-[15rem]">
+        <div className="flex flex-col items-center justify-center py-12 px-6 text-center bg-(--muted)/20 rounded-2xl border border-dashed border-(--border)">
+          <Lightbulb size={32} className="mb-4 text-(--muted-foreground) opacity-40" />
+          <h3 className="text-btn font-semibold text-(--foreground) mb-2">Findings Not Extracted</h3>
+          <p className="text-code text-(--muted-foreground) mb-6 max-w-60">
             Use AI to identify key contributions, methodology details, and limitations from this paper.
           </p>
           <Button
@@ -208,11 +208,11 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
       )}
 
       {(generateMutation.isError || error) && (
-        <div className="p-4 bg-[var(--destructive)]/5 border border-[var(--destructive)]/20 rounded-xl flex items-start gap-3">
-          <AlertCircle size={16} className="text-[var(--destructive)] shrink-0 mt-0.5" />
+        <div className="p-4 bg-(--destructive)/5 border border-(--destructive)/20 rounded-xl flex items-start gap-3">
+          <AlertCircle size={16} className="text-(--destructive) shrink-0 mt-0.5" />
           <div>
-            <p className="text-caption font-semibold text-[var(--destructive)]">Extraction failed</p>
-            <p className="text-caption text-[var(--destructive)]/80 mt-1 uppercase">
+            <p className="text-caption font-semibold text-(--destructive)">Extraction failed</p>
+            <p className="text-caption text-(--destructive)/80 mt-1 uppercase">
               {generateMutation.error instanceof Error ? generateMutation.error.message : 'Server error'}
             </p>
           </div>

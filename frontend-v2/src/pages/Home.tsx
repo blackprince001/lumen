@@ -31,10 +31,10 @@ export default function Home() {
       {/* ── Hero ── */}
       <div className="flex flex-col items-center px-4 sm:px-6 pt-12 sm:pt-20 pb-10 sm:pb-16">
         <div className="mb-6 sm:mb-8 text-center">
-          <h1 className="text-section-title sm:text-display font-bold tracking-tight text-[var(--foreground)] leading-none mb-2">
+          <h1 className="text-section-title sm:text-display font-bold tracking-tight text-(--foreground) leading-none mb-2">
             Lumen
           </h1>
-          <p className="text-body sm:text-btn text-[var(--muted-foreground)] max-w-sm mx-auto leading-relaxed">
+          <p className="text-body sm:text-btn text-(--muted-foreground) max-w-sm mx-auto leading-relaxed">
             Your personal research library
           </p>
         </div>
@@ -58,7 +58,7 @@ export default function Home() {
         <div className="max-w-content mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-5">
-            <h4 className="text-btn font-semibold text-[var(--foreground)]">
+            <h4 className="text-btn font-semibold text-(--foreground)">
               Recent Papers: {total > 0 && ` · ${total} papers`}
             </h4>
             <Link to="/ingest" aria-label="Add paper">
@@ -72,7 +72,7 @@ export default function Home() {
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="rounded-2xl border border-[var(--border)] p-5 h-44 flex flex-col gap-3">
+                <div key={i} className="rounded-2xl border border-(--border) p-5 h-44 flex flex-col gap-3">
                   <div className="flex gap-2">
                     <Skeleton className="h-5 w-16 rounded" />
                     <Skeleton className="h-5 w-12 rounded" />
@@ -91,7 +91,7 @@ export default function Home() {
             </div>
           ) : (
             <div className="py-20 text-center">
-              <p className="text-[var(--muted-foreground)] mb-4">Your groups are empty</p>
+              <p className="text-(--muted-foreground) mb-4">Your groups are empty</p>
               <Link to="/ingest">
                 <Button variant="outlined">Add your first paper</Button>
               </Link>
@@ -103,7 +103,7 @@ export default function Home() {
             <div className="mt-6 text-center">
               <Link
                 to="/papers"
-                className="text-code font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                className="text-code font-medium text-(--muted-foreground) hover:text-(--foreground) transition-colors"
               >
                 View all {total} papers →
               </Link>

@@ -127,14 +127,14 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--panel-border)] bg-[var(--panel-surface)]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-(--panel-border) bg-(--panel-surface)">
         <div>
           <h2 className="text-body font-medium">{groupName}</h2>
-          <p className="text-caption text-[var(--muted-foreground)]">
+          <p className="text-caption text-(--muted-foreground)">
             {currentSession?.papers.length || 0} papers
           </p>
         </div>
-        <Button variant="ghost" className="!h-8 !w-8 !p-0" onClick={onClose}>
+        <Button variant="ghost" className="h-8! w-8! p-0!" onClick={onClose}>
           <X size={16} />
         </Button>
       </div>
@@ -146,7 +146,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
             <Skeleton className="w-12 h-12 rounded-full" />
           </div>
         ) : messages.length === 0 && !isStreaming && !pendingUserMessage ? (
-          <div className="flex flex-col items-center justify-center h-full text-center text-[var(--muted-foreground)] opacity-50">
+          <div className="flex flex-col items-center justify-center h-full text-center text-(--muted-foreground) opacity-50">
             <Sparkles size={32} className="mb-3" />
             <p className="text-code">Ask about papers in this group</p>
           </div>
@@ -190,12 +190,12 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
                   <div className="space-y-2.5 w-72">
                     <div className="flex flex-wrap gap-1.5">
                       {[12, 16, 8, 20, 14, 10, 24].map((w, i) => (
-                        <div key={i} className={`h-3 bg-[var(--muted)] rounded animate-pulse w-${w}`} />
+                        <div key={i} className={`h-3 bg-(--muted) rounded animate-pulse w-${w}`} />
                       ))}
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {[20, 8, 16, 12, 10].map((w, i) => (
-                        <div key={i} className={`h-3 bg-[var(--muted)] rounded animate-pulse w-${w}`} />
+                        <div key={i} className={`h-3 bg-(--muted) rounded animate-pulse w-${w}`} />
                       ))}
                     </div>
                   </div>
@@ -208,7 +208,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
       </div>
 
       {/* Input */}
-      <div className="border-t border-[var(--panel-border)] p-3 shrink-0 bg-[var(--panel-surface)]">
+      <div className="border-t border-(--panel-border) p-3 shrink-0 bg-(--panel-surface)">
         <ExpandedInput
           value={message}
           onChange={setMessage}

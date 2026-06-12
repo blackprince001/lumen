@@ -29,7 +29,7 @@ type ViewMode = 'grid' | 'table';
 /* ===== Skeleton helpers ===== */
 function PaperCardSkeleton() {
   return (
-    <div className="rounded-2xl border border-[var(--border)] overflow-hidden">
+    <div className="rounded-2xl border border-(--border) overflow-hidden">
       {/* Header skeleton */}
       <div className="flex items-center justify-between px-4 py-3.5">
         <div className="flex items-center gap-1.5">
@@ -38,7 +38,7 @@ function PaperCardSkeleton() {
         <Skeleton className="h-4 w-10" />
       </div>
       {/* Inset content skeleton */}
-      <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] px-4 pt-3.5 pb-4 space-y-2">
+      <div className="rounded-t-xl border-t border-(--border) bg-(--card) px-4 pt-3.5 pb-4 space-y-2">
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />
         <Skeleton className="h-3 w-1/2" />
@@ -222,7 +222,7 @@ export default function PapersList() {
   if (isError) {
     return (
       <div className="max-w-content mx-auto px-6 py-16 text-center">
-        <p className="text-[var(--muted-foreground)] mb-4">
+        <p className="text-(--muted-foreground) mb-4">
           {error instanceof Error ? error.message : 'Failed to load papers'}
         </p>
         <Button variant="outlined" onClick={() => queryClient.invalidateQueries({ queryKey: ['papers'] })}>
@@ -238,9 +238,9 @@ export default function PapersList() {
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="tracking-tight mb-0.5">Library</h1>
-          <p className="text-body text-[var(--muted-foreground)]">
+          <p className="text-body text-(--muted-foreground)">
             {total > 0
-              ? <><span className="font-semibold text-[var(--foreground)]">{total}</span> papers in your collection</>
+              ? <><span className="font-semibold text-(--foreground)">{total}</span> papers in your collection</>
               : 'Your library is empty'}
           </p>
         </div>
@@ -265,7 +265,7 @@ export default function PapersList() {
       {/* ===== Continue reading strip (page 1, no search) ===== */}
       {page === 1 && !searchQuery && recentPapers.length > 0 && (
         <section>
-          <h2 className="text-code font-semibold text-[var(--muted-foreground)] uppercase tracking-widest mb-3">
+          <h2 className="text-code font-semibold text-(--muted-foreground) uppercase tracking-widest mb-3">
             Continue Reading
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -281,7 +281,7 @@ export default function PapersList() {
             ))}
           </div>
           {/* Decorative separator */}
-          <div className="mt-6 mb-2 border-t-2 border-dashed border-[var(--border)]" />
+          <div className="mt-6 mb-2 border-t-2 border-dashed border-(--border)" />
         </section>
       )}
 
@@ -300,8 +300,8 @@ export default function PapersList() {
             onClick={() => { setOwnership(tab); setPage(1); }}
             className={`px-3 py-1 text-caption rounded-full transition-colors ${
               ownership === tab
-                ? 'bg-[var(--foreground)] text-[var(--white)]'
-                : 'bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                ? 'bg-(--foreground) text-(--white)'
+                : 'bg-(--muted) text-(--muted-foreground) hover:bg-(--border)'
             }`}
           >
             {tab === 'all' ? 'All' : tab === 'mine' ? 'My Papers' : 'Shared with me'}
@@ -313,7 +313,7 @@ export default function PapersList() {
       {papers.length > 0 && (
         <div className="flex items-center justify-between gap-3 flex-wrap">
           {/* View toggle */}
-          <div className="flex items-center gap-1 border border-[var(--border)] rounded-lg p-0.5">
+          <div className="flex items-center gap-1 border border-(--border) rounded-lg p-0.5">
             <Tooltip content="Grid view" side="bottom">
               <button
                 id="view-grid"
@@ -321,8 +321,8 @@ export default function PapersList() {
                 className={cn(
                   'inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors',
                   viewMode === 'grid'
-                    ? 'bg-[var(--foreground)] text-[var(--background)]'
-                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]',
+                    ? 'bg-(--foreground) text-(--background)'
+                    : 'text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted)',
                 )}
               >
                 <LayoutGrid size={14} />
@@ -335,8 +335,8 @@ export default function PapersList() {
                 className={cn(
                   'inline-flex items-center justify-center h-7 w-7 rounded-md transition-colors',
                   viewMode === 'table'
-                    ? 'bg-[var(--foreground)] text-[var(--background)]'
-                    : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)]',
+                    ? 'bg-(--foreground) text-(--background)'
+                    : 'text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted)',
                 )}
               >
                 <List size={14} />
@@ -352,7 +352,7 @@ export default function PapersList() {
                 <button
                   id="btn-select-mode"
                   onClick={() => setSelectionMode(true)}
-                  className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+                  className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-(--border) text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
                 >
                   <CheckSquare size={14} />
                 </button>
@@ -362,16 +362,16 @@ export default function PapersList() {
                 {/* Selection count + select all */}
                 <button
                   onClick={selectAll}
-                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[var(--border)] text-caption font-medium hover:bg-[var(--muted)] transition-colors"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-(--border) text-caption font-medium hover:bg-(--muted) transition-colors"
                 >
                   <div className={cn(
                     'w-3.5 h-3.5 rounded border-2 flex items-center justify-center',
                     selectedIds.length === papers.length
-                      ? 'bg-[var(--foreground)] border-[var(--foreground)]'
+                      ? 'bg-(--foreground) border-(--foreground)'
                       : 'border-current',
                   )}>
                     {selectedIds.length === papers.length && (
-                      <svg className="w-2 h-2 text-[var(--background)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <svg className="w-2 h-2 text-(--background)" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                       </svg>
                     )}
@@ -385,7 +385,7 @@ export default function PapersList() {
                     <button
                       id="btn-move-group"
                       onClick={() => setMoveDialogOpen(true)}
-                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-(--border) text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
                     >
                       <FolderInput size={14} />
                     </button>
@@ -398,7 +398,7 @@ export default function PapersList() {
                     <button
                       id="btn-export-selected"
                       onClick={() => navigate('/export', { state: { paperIds: selectedIds } })}
-                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-(--border) text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
                     >
                       <Layer size={14} />
                     </button>
@@ -412,7 +412,7 @@ export default function PapersList() {
                       id="btn-delete-selected"
                       onClick={handleDeleteSelected}
                       disabled={deleteMutation.isPending}
-                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--destructive)] hover:border-[var(--destructive)]/30 hover:bg-[var(--destructive)]/5 transition-colors disabled:opacity-40"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-(--border) text-(--muted-foreground) hover:text-(--destructive) hover:border-(--destructive)/30 hover:bg-(--destructive)/5 transition-colors disabled:opacity-40"
                     >
                       <Trash2 size={14} />
                     </button>
@@ -424,7 +424,7 @@ export default function PapersList() {
                   <button
                     id="btn-cancel-select"
                     onClick={exitSelection}
-                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+                    className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-(--border) text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
                   >
                     <X size={14} />
                   </button>
@@ -438,7 +438,7 @@ export default function PapersList() {
                 id="btn-regen-meta"
                 onClick={handleRegenerate}
                 disabled={regenMutation.isPending}
-                className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-[var(--border)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors disabled:opacity-40"
+                className="inline-flex items-center justify-center h-8 w-8 rounded-lg border border-(--border) text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors disabled:opacity-40"
               >
                 <RefreshCw size={14} className={regenMutation.isPending ? 'animate-spin' : ''} />
               </button>
@@ -450,7 +450,7 @@ export default function PapersList() {
       {/* ===== Papers content ===== */}
       {papers.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="text-[var(--muted-foreground)] text-btn mb-2">
+          <p className="text-(--muted-foreground) text-btn mb-2">
             {searchQuery ? `No papers matching "${searchQuery}"` : 'Your library is empty'}
           </p>
           {!searchQuery && (
@@ -488,9 +488,9 @@ export default function PapersList() {
       {/* ===== Pagination + page-size ===== */}
       {totalPages > 1 && (
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pt-2">
-          <p className="hidden md:block text-code text-[var(--muted-foreground)] whitespace-nowrap order-1">
-            Page <span className="font-semibold text-[var(--foreground)]">{page}</span> of{' '}
-            <span className="font-semibold text-[var(--foreground)]">{totalPages}</span>
+          <p className="hidden md:block text-code text-(--muted-foreground) whitespace-nowrap order-1">
+            Page <span className="font-semibold text-(--foreground)">{page}</span> of{' '}
+            <span className="font-semibold text-(--foreground)">{totalPages}</span>
             {' '}({total} total)
           </p>
 
@@ -498,10 +498,10 @@ export default function PapersList() {
             <Pagination currentPage={page} totalPages={totalPages} onPageChange={setPage} />
           </div>
 
-          <div className="flex items-center justify-between md:justify-end gap-2 text-code text-[var(--muted-foreground)] order-3">
+          <div className="flex items-center justify-between md:justify-end gap-2 text-code text-(--muted-foreground) order-3">
             <span className="md:hidden">
-              Page <span className="font-semibold text-[var(--foreground)]">{page}</span> of{' '}
-              <span className="font-semibold text-[var(--foreground)]">{totalPages}</span>
+              Page <span className="font-semibold text-(--foreground)">{page}</span> of{' '}
+              <span className="font-semibold text-(--foreground)">{totalPages}</span>
             </span>
             <div className="flex items-center gap-2">
               <span>Per page</span>

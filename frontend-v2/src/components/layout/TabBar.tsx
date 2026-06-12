@@ -48,8 +48,8 @@ export function TabBar() {
   if (tabs.length === 0) return null;
 
   return (
-    <div className="relative bg-[var(--white)] overflow-x-auto border-b border-[var(--border)]">
-      <div className="flex items-end gap-0.5 min-h-[2.25rem] bg-[var(--white)]">
+    <div className="relative bg-(--white) overflow-x-auto border-b border-(--border)">
+      <div className="flex items-end gap-0.5 min-h-9 bg-(--white)">
         {tabs.map((tab) => {
           const isActive = activeTabId === tab.id;
           return (
@@ -58,10 +58,10 @@ export function TabBar() {
               onClick={() => handleTabClick(tab)}
               className={cn(
                 'relative flex items-center gap-1.5 px-3 py-1.5 rounded-t-lg border-x border-t',
-                'cursor-pointer transition-colors min-w-0 max-w-[12.5rem] shrink-0',
+                'cursor-pointer transition-colors min-w-0 max-w-50 shrink-0',
                 isActive
-                  ? 'bg-[var(--background)] border-[var(--border)] text-[var(--foreground)] z-10'
-                  : 'bg-[var(--white)] border-transparent text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)]',
+                  ? 'bg-(--background) border-(--border) text-(--foreground) z-10'
+                  : 'bg-(--white) border-transparent text-(--muted-foreground) hover:bg-(--muted) hover:text-(--foreground)',
               )}
             >
               <FileText size={12} className="shrink-0 opacity-60" />
@@ -69,7 +69,7 @@ export function TabBar() {
               <button
                 onClick={(e) => handleClose(e, tab.id)}
                 aria-label="Close tab"
-                className="p-0.5 hover:bg-[var(--border)] rounded shrink-0"
+                className="p-0.5 hover:bg-(--border) rounded shrink-0"
               >
                 <X size={11} />
               </button>

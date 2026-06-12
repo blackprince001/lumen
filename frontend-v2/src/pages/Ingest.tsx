@@ -200,10 +200,10 @@ export default function Ingest() {
   }
 
   return (
-    <div className="max-w-[56.25rem] mx-auto px-6 py-8">
+    <div className="max-w-225 mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-page-title mb-1">Add Paper</h1>
-        <p className="text-body text-[var(--muted-foreground)]">
+        <p className="text-body text-(--muted-foreground)">
           Import papers from URLs or upload PDFs directly
         </p>
       </div>
@@ -211,7 +211,7 @@ export default function Ingest() {
       <div className="space-y-6">
         {/* Groups Selection */}
         {groups && groups.length > 0 && (
-          <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl">
+          <div className="bg-(--card) border border-(--border) rounded-xl">
             <button
               type="button"
               onClick={() => setGroupsExpanded((v) => !v)}
@@ -219,7 +219,7 @@ export default function Ingest() {
               aria-expanded={groupsExpanded}
             >
               <div className="flex items-center gap-2">
-                <h4 className="text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">
+                <h4 className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wider">
                   Add to Groups (Optional)
                 </h4>
                 {selectedGroupIds.length > 0 && (
@@ -229,9 +229,9 @@ export default function Ingest() {
                 )}
               </div>
               {groupsExpanded ? (
-                <ArrowDown2 size={14} className="text-[var(--muted-foreground)]" />
+                <ArrowDown2 size={14} className="text-(--muted-foreground)" />
               ) : (
-                <ArrowRight2 size={14} className="text-[var(--muted-foreground)]" />
+                <ArrowRight2 size={14} className="text-(--muted-foreground)" />
               )}
             </button>
             {groupsExpanded && (
@@ -250,7 +250,7 @@ export default function Ingest() {
         )}
 
         {/* Import Methods */}
-        <div className="bg-[var(--card)] border border-[var(--border)] rounded-xl p-6">
+        <div className="bg-(--card) border border-(--border) rounded-xl p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger value="url">Single URL</TabsTrigger>
@@ -260,7 +260,7 @@ export default function Ingest() {
 
             <TabsContent value="url" className="space-y-4">
               <div>
-                <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-2">
+                <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider mb-2">
                   Paper URL
                 </label>
                 <Input
@@ -275,11 +275,11 @@ export default function Ingest() {
               {urlMutation.isPending && (
                 <div className="space-y-1.5">
                   <Progress value={100} fillClassName="animate-pulse" />
-                  <p className="text-caption text-[var(--muted-foreground)]">Fetching paper…</p>
+                  <p className="text-caption text-(--muted-foreground)">Fetching paper…</p>
                 </div>
               )}
               <div className="flex flex-wrap gap-1.5">
-                <span className="text-micro text-[var(--muted-foreground)] uppercase tracking-wider">Supported:</span>
+                <span className="text-micro text-(--muted-foreground) uppercase tracking-wider">Supported:</span>
                 {SUPPORTED_SOURCES.map((s) => (
                   <Badge key={s} variant="secondary" className="text-micro h-5">
                     {s}
@@ -291,13 +291,13 @@ export default function Ingest() {
             <TabsContent value="batch" className="space-y-4">
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-caption font-medium text-[var(--muted-foreground)] uppercase tracking-wider">
+                  <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider">
                     URLs (one per line, max 5)
                   </label>
                   {batchUrls.trim() && (
                     <button
                       onClick={() => setBatchUrls('')}
-                      className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                      className="text-caption text-(--muted-foreground) hover:text-(--foreground) transition-colors"
                     >
                       Clear all
                     </button>
@@ -305,7 +305,7 @@ export default function Ingest() {
                 </div>
                 <textarea
                   placeholder="https://arxiv.org/abs/1706.03762&#10;https://arxiv.org/abs/..."
-                  className="w-full bg-[var(--white)] text-[var(--foreground)] text-body px-3 py-2 h-32 rounded-lg border border-[var(--border)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:border-[var(--foreground)] focus:ring-2 focus:ring-[var(--foreground)]/10 resize-none"
+                  className="w-full bg-(--white) text-(--foreground) text-body px-3 py-2 h-32 rounded-lg border border-(--border) placeholder:text-(--muted-foreground) focus:outline-none focus:border-(--foreground) focus:ring-2 focus:ring-(--foreground)/10 resize-none"
                   value={batchUrls}
                   onChange={(e) => {
                     const lines = e.target.value.split('\n');
@@ -321,14 +321,14 @@ export default function Ingest() {
                 {(() => {
                   const count = batchUrls.split('\n').filter((l) => l.trim().length > 0).length;
                   return count > 0 ? (
-                    <p className="text-caption text-[var(--muted-foreground)] mt-1">{count}/5 URLs</p>
+                    <p className="text-caption text-(--muted-foreground) mt-1">{count}/5 URLs</p>
                   ) : null;
                 })()}
               </div>
               {batchMutation.isPending && (
                 <div className="space-y-1.5">
                   <Progress value={100} fillClassName="animate-pulse" />
-                  <p className="text-caption text-[var(--muted-foreground)]">Processing URLs…</p>
+                  <p className="text-caption text-(--muted-foreground)">Processing URLs…</p>
                 </div>
               )}
             </TabsContent>
@@ -345,30 +345,30 @@ export default function Ingest() {
 
               <div
                 className={cn(
-                  'border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-colors border-[var(--border)]',
+                  'border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-colors border-(--border)',
                   !isProcessing && selectedFiles.length < 5
-                    ? 'cursor-pointer hover:border-[var(--foreground)] hover:bg-[var(--muted)]/30'
+                    ? 'cursor-pointer hover:border-(--foreground) hover:bg-(--muted)/30'
                     : 'opacity-50 cursor-not-allowed',
                 )}
                 onClick={() => !isProcessing && selectedFiles.length < 5 && fileInputRef.current?.click()}
               >
-                <Upload size={28} className="text-[var(--muted-foreground)] mb-2" />
-                <p className="text-code font-medium text-[var(--foreground)] text-center mb-1">
+                <Upload size={28} className="text-(--muted-foreground) mb-2" />
+                <p className="text-code font-medium text-(--foreground) text-center mb-1">
                   Drop PDF files here or click to browse
                 </p>
-                <p className="text-caption text-[var(--muted-foreground)]">Max 50MB per file · Up to 5 files</p>
+                <p className="text-caption text-(--muted-foreground)">Max 50MB per file · Up to 5 files</p>
               </div>
 
               {selectedFiles.length > 0 && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-caption font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+                    <p className="text-caption font-medium uppercase tracking-wider text-(--muted-foreground)">
                       {selectedFiles.length}/5 file(s) selected
                     </p>
                     {!isProcessing && (
                       <button
                         onClick={() => setSelectedFiles([])}
-                        className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                        className="text-caption text-(--muted-foreground) hover:text-(--foreground) transition-colors"
                       >
                         Clear all
                       </button>
@@ -376,14 +376,14 @@ export default function Ingest() {
                   </div>
 
                   {uploadMutation.isPending && uploadProgress && (
-                    <div className="space-y-1.5 p-3 rounded-lg bg-[var(--muted)] border border-[var(--border)]">
+                    <div className="space-y-1.5 p-3 rounded-lg bg-(--muted) border border-(--border)">
                       <div className="flex items-center justify-between text-caption">
-                        <span className="font-medium text-[var(--foreground)]">
+                        <span className="font-medium text-(--foreground)">
                           {isProcessingServer
                             ? 'Processing on server…'
                             : `Uploading ${formatBytes(uploadProgress.loaded)} / ${formatBytes(uploadProgress.total)}`}
                         </span>
-                        <span className="text-[var(--muted-foreground)]">
+                        <span className="text-(--muted-foreground)">
                           {isProcessingServer ? '' : `${aggregatePct}%`}
                         </span>
                       </div>
@@ -400,24 +400,24 @@ export default function Ingest() {
                     return (
                       <div
                         key={i}
-                        className="p-2 rounded-lg bg-[var(--muted)] border border-[var(--border)] space-y-1.5"
+                        className="p-2 rounded-lg bg-(--muted) border border-(--border) space-y-1.5"
                       >
                         <div className="flex items-center gap-2 text-code">
-                          <FileUp size={14} className="text-[var(--muted-foreground)]" />
+                          <FileUp size={14} className="text-(--muted-foreground)" />
                           <span className="flex-1 truncate">{file.name}</span>
-                          <span className="text-caption text-[var(--muted-foreground)] shrink-0">
+                          <span className="text-caption text-(--muted-foreground) shrink-0">
                             {formatBytes(file.size)}
                           </span>
                           {state === 'uploading' && (
-                            <Loader2 size={12} className="text-[var(--muted-foreground)] animate-spin" />
+                            <Loader2 size={12} className="text-(--muted-foreground) animate-spin" />
                           )}
                           {state === 'processing' && (
-                            <span className="text-caption text-[var(--muted-foreground)]">processing…</span>
+                            <span className="text-caption text-(--muted-foreground)">processing…</span>
                           )}
                           {!isProcessing && (
                             <button
                               onClick={() => removeFile(i)}
-                              className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1 rounded hover:bg-[var(--border)] transition-colors"
+                              className="text-(--muted-foreground) hover:text-(--foreground) p-1 rounded hover:bg-(--border) transition-colors"
                               aria-label={`Remove ${file.name}`}
                             >
                               <X size={14} />

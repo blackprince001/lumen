@@ -47,9 +47,9 @@ function ResizeDivider({ onDrag }: { onDrag: (dx: number) => void }) {
     >
       <div className="absolute inset-y-0 -left-2 -right-2" />
       <div className="h-full w-px rounded-full bg-transparent transition-colors duration-150" />
-      <div className="absolute top-1/2 -translate-y-1/2 flex flex-col gap-[0.25rem] opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-1/2 -translate-y-1/2 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {[0,1,2].map(i => (
-          <div key={i} className="w-1 h-1 rounded-full bg-[var(--mid-gray)] opacity-80" />
+          <div key={i} className="w-1 h-1 rounded-full bg-(--mid-gray) opacity-80" />
         ))}
       </div>
     </div>
@@ -113,7 +113,7 @@ export default function Layout() {
 
   return (
     <div
-      className="w-full h-dvh flex overflow-hidden bg-[var(--background)] p-1 gap-[var(--panel-gap)]"
+      className="w-full h-dvh flex overflow-hidden bg-(--background) p-1 gap-(--panel-gap)"
       style={{ backgroundImage: 'linear-gradient(180deg, rgba(60,145,230,0.05) 0%, transparent 26%)' }}
     >
       {/* === Desktop Sidebar — left column === */}
@@ -135,14 +135,14 @@ export default function Layout() {
       {/* === Mobile Sidebar Overlay (scrim) === */}
       {mobileMenuOpen && (
         <div
-          className="fixed inset-0 z-[60] bg-[rgba(0,0,0,0.4)] md:hidden animate-fade-in"
+          className="fixed inset-0 z-60 bg-[rgba(0,0,0,0.4)] md:hidden animate-fade-in"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
       {/* === Mobile Sidebar Drawer === */}
       <div
-        className={`fixed inset-y-0 left-0 z-[70] w-[15rem] p-1 transform transition-transform duration-300 ease-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-70 w-60 p-1 transform transition-transform duration-300 ease-out md:hidden ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -150,7 +150,7 @@ export default function Layout() {
       </div>
 
       {/* === Center: Navbar + Page === */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden rounded-[var(--panel-radius)] border border-[var(--panel-border)] bg-[var(--panel-surface)] shadow-[var(--shadow-panel)] backdrop-blur-sm">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden rounded-(--panel-radius) border border-(--panel-border) bg-(--panel-surface) shadow-(--shadow-panel) backdrop-blur-sm">
         <Navbar
           onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
           showChatToggle={isPaperDetailPage && !chatPanelOpen}
@@ -160,7 +160,7 @@ export default function Layout() {
           }}
         />
         {isPaperDetailPage && <TabBar />}
-        <main className={`flex-1 w-full bg-[var(--panel-surface)] ${isPaperDetailPage ? 'overflow-hidden' : 'overflow-auto'}`}>
+        <main className={`flex-1 w-full bg-(--panel-surface) ${isPaperDetailPage ? 'overflow-hidden' : 'overflow-auto'}`}>
           <Outlet context={{ 
             chatPanelOpen, 
             setChatPanelOpen,

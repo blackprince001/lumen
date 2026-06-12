@@ -22,14 +22,14 @@ function DashCard({
   className?: string;
 }) {
   return (
-    <div className={`bg-[var(--background)] border border-[var(--border)] rounded-xl overflow-hidden flex flex-col ${className ?? ''}`}>
+    <div className={`bg-(--background) border border-(--border) rounded-xl overflow-hidden flex flex-col ${className ?? ''}`}>
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3.5">
         <h2 className="text-body-lg font-medium">{title}</h2>
         {trailing}
       </div>
       {/* Inset content area */}
-      <div className="bg-[var(--card)] rounded-t-xl border-t border-[var(--border)] flex-1">
+      <div className="bg-(--card) rounded-t-xl border-t border-(--border) flex-1">
         {children}
       </div>
     </div>
@@ -39,11 +39,11 @@ function DashCard({
 /* ===== Skeleton variant of the card ===== */
 function DashCardSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="bg-[var(--background)] border border-[var(--border)] rounded-xl overflow-hidden">
+    <div className="bg-(--background) border border-(--border) rounded-xl overflow-hidden">
       <div className="px-5 py-3.5">
         <Skeleton className="h-5 w-32" />
       </div>
-      <div className="bg-[var(--card)] rounded-t-xl border-t border-[var(--border)] divide-y divide-[var(--border)]">
+      <div className="bg-(--card) rounded-t-xl border-t border-(--border) divide-y divide-(--border)">
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="flex items-center justify-between px-5 py-3.5">
             <div className="flex items-center gap-3">
@@ -112,18 +112,18 @@ export default function Dashboard() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="tracking-tight">Dashboard</h1>
-        <p className="text-body text-[var(--muted-foreground)] mt-1">Your research velocity at a glance</p>
+        <p className="text-body text-(--muted-foreground) mt-1">Your research velocity at a glance</p>
       </div>
 
       {/* Stats grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {statsLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="bg-[var(--background)] border border-[var(--border)] rounded-xl overflow-hidden">
+            <div key={i} className="bg-(--background) border border-(--border) rounded-xl overflow-hidden">
               <div className="px-5 py-3.5">
                 <Skeleton className="h-4 w-24" />
               </div>
-              <div className="bg-[var(--card)] rounded-t-xl border-t border-[var(--border)] px-5 py-4">
+              <div className="bg-(--card) rounded-t-xl border-t border-(--border) px-5 py-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <Skeleton className="h-8 w-16 mb-2" />
@@ -198,7 +198,7 @@ export default function Dashboard() {
               {statusChartData.map((item) => (
                 <div key={item.name} className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                  <span className="text-caption text-[var(--muted-foreground)]">
+                  <span className="text-caption text-(--muted-foreground)">
                     {item.name}: {item.value}
                   </span>
                 </div>
@@ -217,12 +217,12 @@ export default function Dashboard() {
         ) : (
           <div className="flex items-center justify-center py-8">
             <div className="text-center">
-              <div className="text-[5.25rem] font-bold text-[var(--foreground)] leading-none mb-3">{currentStreak}</div>
-              <div className="text-body-lg text-[var(--muted-foreground)] uppercase tracking-[0.2em] font-medium">
+              <div className="text-[5.25rem] font-bold text-(--foreground) leading-none mb-3">{currentStreak}</div>
+              <div className="text-body-lg text-(--muted-foreground) uppercase tracking-[0.2em] font-medium">
                 Day Reading Streak
               </div>
               {longestStreak > currentStreak && (
-                <p className="text-body text-[var(--muted-foreground)] mt-4">
+                <p className="text-body text-(--muted-foreground) mt-4">
                   Personal best: {longestStreak} days
                 </p>
               )}
@@ -240,15 +240,15 @@ export default function Dashboard() {
           <DashCard
             title="Recently Added"
             trailing={
-              <Link to="/papers" className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              <Link to="/papers" className="text-caption text-(--muted-foreground) hover:text-(--foreground)">
                 View all →
               </Link>
             }
           >
             {recentPapers.length === 0 ? (
-              <div className="text-center py-8 text-[var(--muted-foreground)]">
+              <div className="text-center py-8 text-(--muted-foreground)">
                 <p className="text-code">No papers yet</p>
-                <Link to="/ingest" className="text-caption text-[var(--primary)] hover:underline mt-2 inline-block">
+                <Link to="/ingest" className="text-caption text-(--primary) hover:underline mt-2 inline-block">
                   Add your first paper
                 </Link>
               </div>
@@ -269,13 +269,13 @@ export default function Dashboard() {
           <DashCard
             title="Tags"
             trailing={
-              <Link to="/papers" className="text-caption text-[var(--muted-foreground)] hover:text-[var(--foreground)]">
+              <Link to="/papers" className="text-caption text-(--muted-foreground) hover:text-(--foreground)">
                 Manage →
               </Link>
             }
           >
             {tags.length === 0 ? (
-              <div className="text-center py-8 text-[var(--muted-foreground)]">
+              <div className="text-center py-8 text-(--muted-foreground)">
                 <p className="text-code">No tags yet</p>
               </div>
             ) : (
@@ -306,20 +306,20 @@ function StatCard({ label, value, icon: Icon, change }: {
   change: string;
 }) {
   return (
-    <div className="bg-[var(--background)] border border-[var(--border)] rounded-xl overflow-hidden">
+    <div className="bg-(--background) border border-(--border) rounded-xl overflow-hidden">
       <div className="px-5 py-3.5">
-        <p className="text-caption font-medium uppercase tracking-wider text-[var(--muted-foreground)]">
+        <p className="text-caption font-medium uppercase tracking-wider text-(--muted-foreground)">
           {label}
         </p>
       </div>
-      <div className="bg-[var(--card)] rounded-t-xl border-t border-[var(--border)] px-5 py-4">
+      <div className="bg-(--card) rounded-t-xl border-t border-(--border) px-5 py-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-stat text-[var(--foreground)] leading-none mb-2">{value}</p>
-            <p className="text-caption text-[var(--muted-foreground)]">{change}</p>
+            <p className="text-stat text-(--foreground) leading-none mb-2">{value}</p>
+            <p className="text-caption text-(--muted-foreground)">{change}</p>
           </div>
-          <div className="w-12 h-12 rounded-xl bg-[var(--muted)] flex items-center justify-center">
-            <Icon size={22} className="text-[var(--muted-foreground)]" />
+          <div className="w-12 h-12 rounded-xl bg-(--muted) flex items-center justify-center">
+            <Icon size={22} className="text-(--muted-foreground)" />
           </div>
         </div>
       </div>

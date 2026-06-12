@@ -57,16 +57,16 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
   if (!isOpen) return null;
 
   return (
-    <div className="w-full h-full rounded-[var(--panel-radius)] border border-[var(--panel-border)] bg-[var(--panel-surface)] shadow-[var(--shadow-panel)] backdrop-blur-sm flex flex-col overflow-hidden">
+    <div className="w-full h-full rounded-(--panel-radius) border border-(--panel-border) bg-(--panel-surface) shadow-(--shadow-panel) backdrop-blur-sm flex flex-col overflow-hidden">
       {!paperId || !paper ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-[var(--muted-foreground)] opacity-50">
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center text-(--muted-foreground) opacity-50">
           <FileText size={32} className="mb-3" />
           <p className="text-code">Open a paper to see details</p>
         </div>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
           {/* Tab header */}
-          <div className="flex items-center justify-between shrink-0 border-b border-[var(--panel-border)] px-3 py-2.5 bg-[var(--panel-surface)]">
+          <div className="flex items-center justify-between shrink-0 border-b border-(--panel-border) px-3 py-2.5 bg-(--panel-surface)">
             <TabsList className="gap-0 border-none bg-transparent px-0 flex-1 overflow-x-auto overflow-y-hidden scrollbar-none items-center h-12">
               <TabsTrigger value="details" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
                 <FileText size={13} />
@@ -81,7 +81,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
                 <span className="hidden xl:inline text-caption">Related</span>
               </TabsTrigger>
 
-              <div className="h-6 w-px bg-[var(--border)] mx-1 shrink-0" />
+              <div className="h-6 w-px bg-(--border) mx-1 shrink-0" />
               <TabsTrigger value="chat" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
                 <MessageSquare size={13} />
                 <span className="hidden xl:inline text-caption">Chat</span>
@@ -90,7 +90,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
                 <StickyNote size={13} />
                 <span className="hidden xl:inline text-caption">Notes</span>
                 {noteItems.length > 0 && (
-                  <span className="text-micro bg-[var(--muted)] px-1.5 py-0.5 rounded-full tabular-nums">
+                  <span className="text-micro bg-(--muted) px-1.5 py-0.5 rounded-full tabular-nums">
                     {noteItems.length}
                   </span>
                 )}
@@ -99,7 +99,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
                 <Highlighter size={13} />
                 <span className="hidden xl:inline text-caption">Annotate</span>
                 {annotationItems.length > 0 && (
-                  <span className="text-micro bg-[var(--muted)] px-1.5 py-0.5 rounded-full tabular-nums">
+                  <span className="text-micro bg-(--muted) px-1.5 py-0.5 rounded-full tabular-nums">
                     {annotationItems.length}
                   </span>
                 )}
@@ -112,7 +112,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
 
             <button
               onClick={onToggle}
-              className="p-1.5 text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-lg transition-colors ml-1 shrink-0"
+              className="p-1.5 text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) rounded-lg transition-colors ml-1 shrink-0"
               aria-label="Close panel"
             >
               <PanelRightClose size={16} />
@@ -120,12 +120,12 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
           </div>
 
           {/* Tab content */}
-          <div className="flex-1 overflow-hidden relative bg-[var(--panel-surface)]">
+          <div className="flex-1 overflow-hidden relative bg-(--panel-surface)">
             <TabsContent value="details" className="h-full overflow-y-auto scrollbar-none">
               <PaperDetails paper={paper} onDelete={() => { }} />
             </TabsContent>
 
-            <TabsContent value="ai" className="h-full overflow-y-auto scrollbar-none p-6 text-[var(--foreground)]">
+            <TabsContent value="ai" className="h-full overflow-y-auto scrollbar-none p-6 text-(--foreground)">
               <div className="space-y-8">
                 <AutoHighlights paperId={paper.id} />
 
@@ -134,14 +134,14 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
                   <AISummary paperId={paper.id} />
                 </section>
 
-                <div className="border-t border-dashed border-[var(--border)]" />
+                <div className="border-t border-dashed border-(--border)" />
 
                 <section>
                   <h3 className="text-body font-bold mb-4">Core Insights</h3>
                   <KeyFindings paperId={paper.id} />
                 </section>
 
-                <div className="border-t border-dashed border-[var(--border)]" />
+                <div className="border-t border-dashed border-(--border)" />
 
                 <section>
                   <h3 className="text-body font-bold mb-4">Reading Guide</h3>

@@ -82,13 +82,13 @@ export function TagInput({ selectedTags, onTagsChange, className }: TagInputProp
           {selectedTags.map((tag) => (
             <span
               key={tag.id}
-              className="inline-flex items-center gap-1 px-2 py-0.5 bg-[var(--muted)] rounded-badge text-caption text-[var(--foreground)]"
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-(--muted) rounded-badge text-caption text-(--foreground)"
             >
               {tag.name}
               <button
                 onClick={() => removeTag(tag.id)}
                 aria-label={`Remove ${tag.name}`}
-                className="hover:bg-[var(--border)] rounded-full p-0.5 transition-colors"
+                className="hover:bg-(--border) rounded-full p-0.5 transition-colors"
               >
                 <X size={10} />
               </button>
@@ -109,16 +109,16 @@ export function TagInput({ selectedTags, onTagsChange, className }: TagInputProp
         />
 
         {isOpen && (
-          <div className="absolute z-50 w-full mt-1 bg-[var(--popover)] border border-[var(--border)] rounded-card shadow-elevated max-h-52 overflow-auto">
+          <div className="absolute z-50 w-full mt-1 bg-(--popover) border border-(--border) rounded-card shadow-elevated max-h-52 overflow-auto">
             {isLoading ? (
-              <p className="px-3 py-2 text-caption text-[var(--muted-foreground)]">Loading…</p>
+              <p className="px-3 py-2 text-caption text-(--muted-foreground)">Loading…</p>
             ) : (
               <>
                 {available.map((tag) => (
                   <button
                     key={tag.id}
                     onClick={() => selectTag(tag)}
-                    className="w-full text-left px-3 py-2 text-code hover:bg-[var(--muted)] transition-colors"
+                    className="w-full text-left px-3 py-2 text-code hover:bg-(--muted) transition-colors"
                   >
                     {tag.name}
                   </button>
@@ -127,14 +127,14 @@ export function TagInput({ selectedTags, onTagsChange, className }: TagInputProp
                   <button
                     onClick={createNew}
                     disabled={createTag.isPending}
-                    className="w-full text-left px-3 py-2 text-code text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-colors flex items-center gap-2"
+                    className="w-full text-left px-3 py-2 text-code text-(--muted-foreground) hover:bg-(--muted) transition-colors flex items-center gap-2"
                   >
                     <Plus size={12} />
                     Create "{inputValue.trim()}"
                   </button>
                 )}
                 {!available.length && !showCreate && (
-                  <p className="px-3 py-2 text-caption text-[var(--muted-foreground)]">Type to search or create tags</p>
+                  <p className="px-3 py-2 text-caption text-(--muted-foreground)">Type to search or create tags</p>
                 )}
               </>
             )}

@@ -40,7 +40,7 @@ export function Dialog({ open, onClose, title, description, children, className,
       ref={ref}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
       className={cn(
-        'w-full bg-[var(--white)] border border-[var(--border)] rounded-card shadow-modal',
+        'w-full bg-(--white) border border-(--border) rounded-card shadow-modal',
         'fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 p-0 flex flex-col',
         sizeClass[size],
         className,
@@ -48,15 +48,15 @@ export function Dialog({ open, onClose, title, description, children, className,
     >
       {/* Header */}
       {(title || description) && (
-        <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-[var(--border)]">
+        <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-4 border-b border-(--border)">
           <div className="flex flex-col gap-0.5">
-            {title && <p className="text-body font-semibold text-[var(--foreground)]">{title}</p>}
-            {description && <p className="text-caption text-[var(--muted-foreground)]">{description}</p>}
+            {title && <p className="text-body font-semibold text-(--foreground)">{title}</p>}
+            {description && <p className="text-caption text-(--muted-foreground)">{description}</p>}
           </div>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="shrink-0 p-0.5 rounded-interactive text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+            className="shrink-0 p-0.5 rounded-interactive text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
           >
             <X size={15} />
           </button>

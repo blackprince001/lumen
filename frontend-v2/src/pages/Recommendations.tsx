@@ -25,14 +25,14 @@ export default function Recommendations() {
     <div className="max-w-content mx-auto px-4 sm:px-6 py-6 sm:py-8">
       <div className="mb-6 sm:mb-8">
         <h1 className="text-page-title mb-1">Recommended Papers</h1>
-        <p className="text-body text-[var(--muted-foreground)]">
+        <p className="text-body text-(--muted-foreground)">
           Personalized recommendations based on your library
         </p>
       </div>
 
       {/* Actions */}
       <div className="flex items-center justify-between mb-6 gap-3">
-        <div className="text-code text-[var(--muted-foreground)] min-w-0 truncate">
+        <div className="text-code text-(--muted-foreground) min-w-0 truncate">
           {data?.total !== undefined && data.total > 0 && (
             <span>Found {data.total} recommendations</span>
           )}
@@ -53,14 +53,14 @@ export default function Recommendations() {
       {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="rounded-2xl border border-[var(--border)] overflow-hidden">
+            <div key={i} className="rounded-2xl border border-(--border) overflow-hidden">
               {/* Header skeleton */}
               <div className="flex items-center justify-between px-4 py-3">
                 <Skeleton className="h-5 w-20 rounded" />
                 <Skeleton className="h-4 w-12" />
               </div>
               {/* Inset content skeleton */}
-              <div className="rounded-t-xl border-t border-[var(--border)] bg-[var(--card)] px-4 pt-3 pb-4 space-y-2">
+              <div className="rounded-t-xl border-t border-(--border) bg-(--card) px-4 pt-3 pb-4 space-y-2">
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-3/4" />
                 <Skeleton className="h-3 w-40" />
@@ -77,7 +77,7 @@ export default function Recommendations() {
         <div className="text-center py-16">
           <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
           <h2 className="text-body-lg font-bold mb-2">Couldn't load recommendations</h2>
-          <p className="text-code text-[var(--muted-foreground)] mb-6 max-w-md mx-auto">
+          <p className="text-code text-(--muted-foreground) mb-6 max-w-md mx-auto">
             Make sure you have papers with DOIs in your library. Recommendations are generated based on your existing papers.
           </p>
           <div className="flex items-center justify-center gap-3">
@@ -94,9 +94,9 @@ export default function Recommendations() {
       {/* Empty State */}
       {!isLoading && !error && recommendations.length === 0 && (
         <div className="text-center py-16">
-          <Sparkles size={48} className="text-[var(--muted-foreground)] mx-auto mb-4" />
+          <Sparkles size={48} className="text-(--muted-foreground) mx-auto mb-4" />
           <h2 className="text-body-lg font-bold mb-2">No recommendations yet</h2>
-          <p className="text-code text-[var(--muted-foreground)] mb-6 max-w-md mx-auto">
+          <p className="text-code text-(--muted-foreground) mb-6 max-w-md mx-auto">
             Add more papers with DOIs to your library to get personalized recommendations based on your research interests.
           </p>
           <div className="flex items-center justify-center gap-3">

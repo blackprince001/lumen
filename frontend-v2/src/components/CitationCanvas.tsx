@@ -127,7 +127,7 @@ function CitationCanvasInner({ onDropPaper: _onDropPaper }: CitationCanvasProps)
   const isEmpty = useMemo(() => !isLoading && nodes.length === 0, [isLoading, nodes.length]);
 
   return (
-    <div ref={wrapperRef} className="relative w-full h-full bg-[var(--background)]" onDrop={handleDrop} onDragOver={handleDragOver}>
+    <div ref={wrapperRef} className="relative w-full h-full bg-(--background)" onDrop={handleDrop} onDragOver={handleDragOver}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -155,9 +155,9 @@ function CitationCanvasInner({ onDropPaper: _onDropPaper }: CitationCanvasProps)
 
       {isEmpty && (
         <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center gap-2">
-          <Network size={36} className="text-[var(--border)]" />
-          <p className="text-code text-[var(--foreground)]">Drag papers from the sidebar to start</p>
-          <p className="text-caption text-[var(--muted-foreground)]">Citation edges will appear automatically between papers on the canvas</p>
+          <Network size={36} className="text-(--border)" />
+          <p className="text-code text-(--foreground)">Drag papers from the sidebar to start</p>
+          <p className="text-caption text-(--muted-foreground)">Citation edges will appear automatically between papers on the canvas</p>
         </div>
       )}
     </div>
