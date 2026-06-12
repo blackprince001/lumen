@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTabs } from '@/contexts/TabContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DocumentText as FileText, MagicStar as Sparkles, Magicpen as Highlighter, Link, Message as MessageSquare, Stickynote as StickyNote, SidebarRight as PanelRightClose, Bookmark, AlignBoxBottomCenter as LayoutBlocks } from 'iconsax-reactjs';
+import { DocumentText as FileText, MagicStar as Sparkles, Magicpen as Highlighter, Link, Message as MessageSquare, Stickynote as StickyNote, SidebarRight as PanelRightClose, Bookmark, Note1 as LayoutBlocks } from 'iconsax-reactjs';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { PaperDetails } from '@/components/PaperDetails';
 import { AISummary } from '@/components/AISummary';
@@ -17,7 +17,6 @@ import { AnnotationsPanel } from '@/components/reader/AnnotationsPanel';
 import {
   getOcrBlocks,
   OcrBlocksPanel,
-  type OcrBlock,
   type ParsedOcrOutput,
 } from '@/components/shadcn/layout-blocks';
 import { useReader } from '@/contexts/ReaderContext';
@@ -34,11 +33,9 @@ interface ChatPanelProps {
 export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }: ChatPanelProps) {
   const { id } = useParams<{ id: string }>();
   const paperId = id ? parseInt(id) : undefined;
-  // activeTab is now managed by Layout
-  const [filterByPage, setFilterByPage] = useState(false);
   const [aiTab, setAiTab] = useState('summary');
   const queryClient = useQueryClient();
-  const { tabs, activeTabId, updateTab } = useTabs();
+  const { tabs, activeTabId } = useTabs();
   const currentPage = tabs.find((t) => t.id === activeTabId)?.currentPage ?? 1;
   const reader = useReader();
 

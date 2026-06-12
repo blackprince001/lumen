@@ -389,7 +389,7 @@ export default function GroupsFinder() {
             {
               label: 'Share paper',
               icon: <Share size={15} />,
-              onSelect: () => setSharePaper({ id: meta.paperId, title: meta.title ?? 'Paper' }),
+              onSelect: () => setSharePaper({ id: meta.paperId, title: String(meta.title ?? 'Paper') }),
             } as MenuAction,
           ]
         : []),

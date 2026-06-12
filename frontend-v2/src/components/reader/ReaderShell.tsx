@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 import { useReader } from '@/contexts/ReaderContext';
 import { usePaperFile } from './use-paper-file';
 import { annotationPage, annotationRects, type NormalizedRect } from './annotation-geometry';
-import { highlightTheme, THEME_NAMES } from './highlight-colors';
+import { highlightTheme } from './highlight-colors';
 import type { ThemeName } from '@/lib/paper-themes';
 import { AnnotationCard } from './AnnotationCard';
 import { OutlinePanel } from './OutlinePanel';
@@ -102,17 +102,6 @@ export function ReaderShell({
     [layout]
   );
 
-  /* ── register scroll callbacks with ReaderContext ──────────────────── */
-
-  useEffect(() => {
-    registerScrollCallbacks({
-      scrollToAnnotation,
-      scrollToBlock: focusBlock,
-    });
-    return () => unregisterScrollCallbacks();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scrollToAnnotation, focusBlock, registerScrollCallbacks, unregisterScrollCallbacks]);
-
   /* ── navigation ─────────────────────────────────────────────────────── */
 
   const scrollToAnnotation = useCallback((annotation: Annotation) => {
@@ -148,6 +137,17 @@ export function ReaderShell({
       { behavior: 'auto' }
     );
   }, []);
+
+  /* ── register scroll callbacks with ReaderContext ──────────────────── */
+
+  useEffect(() => {
+    registerScrollCallbacks({
+      scrollToAnnotation,
+      scrollToBlock: focusBlock,
+    });
+    return () => unregisterScrollCallbacks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollToAnnotation, focusBlock, registerScrollCallbacks, unregisterScrollCallbacks]);
 
   /* ── mutations ──────────────────────────────────────────────────────── */
 
