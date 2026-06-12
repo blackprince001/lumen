@@ -28,12 +28,10 @@ export function AnnotationsPanel({
         if (pageDiff !== 0) return pageDiff;
         return annotationAnchorY(a) - annotationAnchorY(b);
       });
-    let lastPage: number | null = null;
-    return sorted.map((annotation) => {
+    return sorted.map((annotation, i) => {
       const page = annotationPage(annotation);
-      const showPageHeading = page !== null && page !== lastPage;
-      lastPage = page ?? lastPage;
-      return { annotation, page, showPageHeading };
+      const prevPage = i > 0 ? annotationPage(sorted[i - 1]) : null;
+      return { annotation, page, showPageHeading: page !== null && page !== prevPage };
     });
   }, [annotations]);
 
