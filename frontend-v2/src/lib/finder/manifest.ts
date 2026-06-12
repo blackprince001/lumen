@@ -117,6 +117,10 @@ export function buildManifest(groups: Group[], userId: number | undefined): Mani
       createdAt: paper.created_at,
       updatedAt: paper.updated_at,
       url: paper.file_url,
+      // Enables lazy page-0 cover loading in FileVisual (we don't know the
+      // real page count; 1 is the safe minimum and suppresses the pager).
+      previewPageCount: paper.file_url ? 1 : undefined,
+      previewAspectRatio: 0.7727,
       // FileSystemFileItem.metadata is Record<string, string>; the component
       // only passes it through, so richer values survive a cast.
       metadata: metadata as unknown as Record<string, string>,

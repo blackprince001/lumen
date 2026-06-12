@@ -194,6 +194,8 @@ export type FileSystemProps = {
   toolbarExtra?: React.ReactNode
   /** Fires when the cmd/ctrl-click multi-selection of files changes. */
   onMultiSelectionChange?: (items: FileSystemFileItem[]) => void
+  /** Extra content under the Information rows in preview panes. */
+  renderInformationExtra?: (item: FileSystemItem) => React.ReactNode
 }
 
 type FolderEntry = FileSystemFolderItem & {
@@ -1096,7 +1098,9 @@ function FileVisual({
   renderFilePreview?: (file: FileSystemFileItem) => React.ReactNode
 }) {
   const previewUrls = filePreviewUrls(file)
-  const canLoadLazily = pageable && Boolean(loadPreviewImageUrl)
+  // PAPERS-FORK: covers (page 0) lazy-load even when not pageable; the hover
+  // pager itself stays gated on `pageable` below.
+  const canLoadLazily = Boolean(loadPreviewImageUrl)
   const totalPages = Math.max(
     previewUrls.length,
     canLoadLazily ? (file.previewPageCount ?? 0) : 0
@@ -1112,8 +1116,16 @@ function FileVisual({
     pageUrlCache?.get(`${file.path}#${clampedPageIndex}`) ??
     null
   const resolvedAspectRatio = file.previewAspectRatio ?? previewAspectRatio
+  // PAPERS-FORK: pages whose load resolved null (no file, render failure)
+  // fall back to the placeholder instead of spinning forever.
+  const [failedPages, setFailedPages] = React.useState<Set<number>>(
+    () => new Set()
+  )
   const isLazyPagePending =
-    canLoadLazily && !previewUrl && clampedPageIndex < totalPages
+    canLoadLazily &&
+    !previewUrl &&
+    clampedPageIndex < totalPages &&
+    !failedPages.has(clampedPageIndex)
 
   const fileRef = React.useRef(file)
 
@@ -1124,6 +1136,7 @@ function FileVisual({
   React.useEffect(() => {
     setPageIndex(0)
     setLazyPageUrls({})
+    setFailedPages(new Set())
   }, [file.path])
 
   // Keyed by path (not object identity) so manifest churn doesn't re-request
@@ -1144,8 +1157,16 @@ function FileVisual({
             [clampedPageIndex]: url,
           }))
         }
+        // PAPERS-FORK: remember unloadable pages so the placeholder shows.
+        if (isCurrent && !url) {
+          setFailedPages((previous) => new Set(previous).add(clampedPageIndex))
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (isCurrent) {
+          setFailedPages((previous) => new Set(previous).add(clampedPageIndex))
+        }
+      })
 
     return () => {
       isCurrent = false
@@ -1249,6 +1270,7 @@ export function FileSystem({
   onItemContextMenu,
   toolbarExtra,
   onMultiSelectionChange,
+  renderInformationExtra,
 }: FileSystemProps) {
   const [internalView, setInternalView] = React.useState(defaultView)
   const view = viewProp ?? internalView
@@ -1977,6 +1999,7 @@ export function FileSystem({
     // PAPERS-FORK
     multiSelectedPaths,
     onItemContextMenu: onItemContextMenu ? handleItemContextMenu : undefined,
+    renderInformationExtra,
     pageUrlCache,
     poolStagePath,
     registerStageHost,
@@ -2015,7 +2038,9 @@ export function FileSystem({
         }
       }}
       className={cn(
-        "flex h-[480px] min-h-0 flex-col overflow-hidden rounded-xl border bg-background text-foreground outline-none",
+        // PAPERS-FORK: named container so toolbarExtra can respond to the
+        // component's own width with @container variants.
+        "@container/finder flex h-[480px] min-h-0 flex-col overflow-hidden rounded-xl border bg-background text-foreground outline-none",
         className
       )}
     >
@@ -3126,6 +3151,7 @@ type FileSystemViewProps = {
   // PAPERS-FORK: multi-selection styling + wrapper-owned context menu.
   multiSelectedPaths: ReadonlySet<string>
   onItemContextMenu?: (entry: FileSystemEntry, event: React.MouseEvent) => void
+  renderInformationExtra?: (item: FileSystemItem) => React.ReactNode
   /** Pooled paths currently attached to the DOM (reveal instantly). */
   attachedStagePaths: string[]
   /** `"path#pageIndex"` → thumbnail URL, shared by every pager. */
@@ -3392,10 +3418,12 @@ const ICON_ROW_STRIDE = ICON_TILE_HEIGHT + ICON_ROW_GAP
 
 function FileSystemIconsView({
   entries,
+  loadPreviewImageUrl,
   multiSelectedPaths,
   onItemContextMenu,
   onOpen,
   onSelect,
+  pageUrlCache,
   renderFilePreview,
   selectedPath,
 }: FileSystemViewProps) {
@@ -3592,6 +3620,8 @@ function FileSystemIconsView({
                           ? "w-19"
                           : "w-12"
                       )}
+                      loadPreviewImageUrl={loadPreviewImageUrl}
+                      pageUrlCache={pageUrlCache}
                       previewAspectRatio={0.78}
                       renderFilePreview={renderFilePreview}
                     />
@@ -4278,6 +4308,7 @@ function FileSystemColumnsView(props: FileSystemViewProps) {
     onSelect,
     pageUrlCache,
     renderFilePreview,
+    renderInformationExtra,
     selectedEntry,
     selectedPath,
   } = props
@@ -4496,6 +4527,8 @@ function FileSystemColumnsView(props: FileSystemViewProps) {
                 </div>
               </div>
               <FileSystemInformation entry={selectedFile} index={index} />
+              {/* PAPERS-FORK */}
+              {renderInformationExtra?.(selectedFile)}
             </div>
           </ScrollArea>
         ) : null}
@@ -4881,13 +4914,16 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
     attachedStagePaths,
     entries,
     index,
+    loadPreviewImageUrl,
     multiSelectedPaths,
     onItemContextMenu,
     onOpen,
     onSelect,
+    pageUrlCache,
     poolStagePath,
     registerStageHost,
     renderFilePreview,
+    renderInformationExtra,
     selectedEntry,
     selectedPath,
   } = props
@@ -5054,6 +5090,8 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
                     <FileVisual
                       file={entry}
                       className="w-9 rounded-sm"
+                      loadPreviewImageUrl={loadPreviewImageUrl}
+                      pageUrlCache={pageUrlCache}
                       previewAspectRatio={0.78}
                       renderFilePreview={renderFilePreview}
                     />
@@ -5117,6 +5155,8 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
                       ? "w-16"
                       : "w-9"
                   )}
+                  loadPreviewImageUrl={loadPreviewImageUrl}
+                  pageUrlCache={pageUrlCache}
                   previewAspectRatio={0.78}
                   renderFilePreview={renderFilePreview}
                 />
@@ -5141,6 +5181,8 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
               </div>
             </div>
             <FileSystemInformation entry={activeEntry} index={index} />
+            {/* PAPERS-FORK */}
+            {renderInformationExtra?.(activeEntry)}
           </ScrollArea>
         ) : null}
       </div>

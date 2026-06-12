@@ -25,17 +25,17 @@ const CHAT_PROMPT_GROUPS: PromptGroup[] = [
       .map(p => ({ icon: p.icon, text: p.label, prompt: p.content })),
   },
   {
-    label: 'Analysis',
+    label: 'Scrutiny',
     icon: Microscope,
     prompts: defaultPrompts
-      .filter(p => ['critique', 'deep-dive'].includes(p.id))
+      .filter(p => ['critique', 'deep-dive', 'figures-breakdown', 'landscape'].includes(p.id))
       .map(p => ({ icon: p.icon, text: p.label, prompt: p.content })),
   },
   {
-    label: 'Knowledge',
+    label: 'Deep Knowledge',
     icon: Lightbulb,
     prompts: defaultPrompts
-      .filter(p => ['future-work', 'landscape', 'synthesis'].includes(p.id))
+      .filter(p => ['claims-evidence', 'citation-radar', 'reproducibility', 'future-work', 'synthesis'].includes(p.id))
       .map(p => ({ icon: p.icon, text: p.label, prompt: p.content })),
   },
 ];

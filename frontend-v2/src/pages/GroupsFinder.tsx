@@ -32,6 +32,7 @@ import {
   type PaperFileMetadata,
 } from '@/lib/finder/manifest';
 import { loadPaperThumbnail } from '@/lib/finder/thumbnails';
+import { PaperInfoPanel } from '@/components/finder/PaperInfoPanel';
 import { Button } from '@/components/ui/Button';
 import { Dialog, DialogFooter } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -412,18 +413,34 @@ export default function GroupsFinder() {
     [multiSelected]
   );
 
+  // Labels collapse based on the Finder component's own width (named
+  // @container/finder on the block root), not the viewport.
   const toolbarExtra = (
-    <div className="flex items-center gap-1">
+    <div className="flex shrink-0 items-center gap-1 whitespace-nowrap">
       {selectedPaperIds.length > 0 && (
         <>
-          <span className="px-1 text-caption text-(--muted-foreground)">
+          <span className="hidden px-1 text-caption text-(--muted-foreground) @[36rem]/finder:inline">
             {selectedPaperIds.length} selected
           </span>
-          <Button variant="ghost" size="sm" onClick={() => setMovePaperIds(selectedPaperIds)}>
-            Move
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<ArrowRight size={14} />}
+            onClick={() => setMovePaperIds(selectedPaperIds)}
+            aria-label={`Move ${selectedPaperIds.length} selected papers`}
+            title="Move selected"
+          >
+            <span className="hidden @[30rem]/finder:inline">Move</span>
           </Button>
-          <Button variant="ghost" size="sm" onClick={() => exportPapers(selectedPaperIds)}>
-            Export
+          <Button
+            variant="ghost"
+            size="sm"
+            icon={<DocumentDownload size={14} />}
+            onClick={() => exportPapers(selectedPaperIds)}
+            aria-label={`Export ${selectedPaperIds.length} selected papers`}
+            title="Export selected"
+          >
+            <span className="hidden @[30rem]/finder:inline">Export</span>
           </Button>
           <div className="mx-0.5 h-4 w-px bg-(--border)" />
         </>
@@ -438,8 +455,9 @@ export default function GroupsFinder() {
             setNameDialog({ mode: 'create', parentId: currentGroupId });
           }}
           aria-label="New folder"
+          title="New folder"
         >
-          <span className="hidden sm:inline">New Folder</span>
+          <span className="hidden @[44rem]/finder:inline">New Folder</span>
         </Button>
       )}
       {currentGroup && !inSharedTree && (
@@ -451,8 +469,9 @@ export default function GroupsFinder() {
             navigate('/ingest', { state: { preselectedGroupIds: [currentGroup.id] } })
           }
           aria-label="Add paper"
+          title="Add paper"
         >
-          <span className="hidden sm:inline">Add Paper</span>
+          <span className="hidden @[44rem]/finder:inline">Add Paper</span>
         </Button>
       )}
     </div>
@@ -497,6 +516,11 @@ export default function GroupsFinder() {
         }
         onMultiSelectionChange={setMultiSelected}
         toolbarExtra={toolbarExtra}
+        renderInformationExtra={(item) => {
+          const meta = fileMeta(item);
+          const paper = meta ? index.papers.get(meta.paperId) : undefined;
+          return paper ? <PaperInfoPanel paper={paper} /> : null;
+        }}
         loadPreviewImageUrl={loadPaperThumbnail}
         renderFilePreview={(file) => {
           const meta = fileMeta(file);
