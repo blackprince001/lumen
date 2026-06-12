@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { Annotation } from './annotations';
 
 export interface SummaryResponse {
   summary: string;
@@ -53,4 +54,17 @@ export const aiFeaturesApi = {
 
   generateHighlights: (paperId: number): Promise<{ message: string; count: number }> =>
     api.post(`/papers/${paperId}/generate-highlights`),
+
+  /** Selection AI action — the answer is saved (and returned) as an annotation. */
+  aiAction: (paperId: number, payload: AIActionPayload): Promise<Annotation> =>
+    api.post<Annotation>(`/papers/${paperId}/ai-actions`, payload),
 };
+
+export type AIActionKind = 'explain' | 'why' | 'define';
+
+export interface AIActionPayload {
+  action: AIActionKind;
+  selection_text: string;
+  page: number;
+  rects: Array<{ left: number; top: number; width: number; height: number }>;
+}

@@ -28,7 +28,7 @@ class BYOContext:
   extra: dict[str, Any] = field(default_factory=dict)
 
 
-_byo_context: ContextVar[BYOContext] = ContextVar("byo_context", default=BYOContext())
+_byo_context: ContextVar[BYOContext] = ContextVar("byo_context", default=BYOContext())  # noqa: B039
 
 
 def get_byo_context() -> BYOContext:

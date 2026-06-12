@@ -54,16 +54,24 @@ HIGHLIGHTS_PROMPT = """Identify key sections in this research paper:
 
 Paper Title: {title}
 
-For each section, provide the exact text excerpt and its type.
-IMPORTANT: Use exactly these type values: "method", "result", "conclusion", "key_contribution"
+The paper's text is provided below as numbered layout blocks in the form
+`[block_id] (p<page>) <text>`. For each key section, name the block it comes
+from and give a short verbatim quote from that block, so the highlight can be
+anchored to the block's position on the page.
+
+IMPORTANT:
+- Use exactly these type values: "method", "result", "conclusion", "key_contribution"
+- "block_id" must be one of the provided block ids
+- "quote" must be copied verbatim from that block's text
 
 Return a JSON array with this structure:
 [
-  {{"text": "exact excerpt", "type": "method"}},
-  {{"text": "exact excerpt", "type": "result"}},
-  {{"text": "exact excerpt", "type": "conclusion"}},
-  {{"text": "exact excerpt", "type": "key_contribution"}}
-]"""
+  {{"type": "method", "block_id": "b3-2", "quote": "exact words from the block"}},
+  ...
+]
+
+Layout blocks:
+{blocks}"""
 
 VALID_HIGHLIGHT_TYPES = {"method", "result", "conclusion", "key_contribution"}
 HIGHLIGHT_TYPE_ALIASES = {
@@ -108,6 +116,98 @@ def _normalize_highlight_type(raw_type: str | None) -> str | None:
   if normalized in VALID_HIGHLIGHT_TYPES:
     return normalized
   return HIGHLIGHT_TYPE_ALIASES.get(normalized)
+
+
+# ── Layout-anchored highlight helpers ───────────────────────────────────────
+# Layout blocks (see app/services/layout_extractor.py) carry absolute
+# page-unit bounding boxes; annotations store normalized 0-1 rects, so the
+# conversion happens here at annotation-write time.
+
+LAYOUT_DIGEST_MAX_CHARS = 30000
+LAYOUT_BLOCK_SNIPPET_CHARS = 300
+FUZZY_MATCH_THRESHOLD = 0.6
+
+
+def _layout_digest(blocks: list[dict[str, Any]]) -> str:
+  """Numbered text-block digest for the highlights prompt."""
+  lines: list[str] = []
+  total = 0
+  for block in blocks:
+    if block.get("type") not in ("text", "heading"):
+      continue
+    page = block["metadata"]["page"]["number"]
+    snippet = block["content"][:LAYOUT_BLOCK_SNIPPET_CHARS].replace("\n", " ")
+    line = f"[{block['id']}] (p{page}) {snippet}"
+    total += len(line) + 1
+    if total > LAYOUT_DIGEST_MAX_CHARS:
+      break
+    lines.append(line)
+  return "\n".join(lines)
+
+
+def _block_geometry(block: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
+  """Normalized (selection_data, coordinate_data) for a layout block."""
+  bb = block["boundingBox"]
+  page = block["metadata"]["page"]
+  w, h = float(page["width"]), float(page["height"])
+  rect = {
+    "left": bb["left"] / w,
+    "top": bb["top"] / h,
+    "width": (bb["right"] - bb["left"]) / w,
+    "height": (bb["bottom"] - bb["top"]) / h,
+  }
+  selection_data = {"rects": [rect], "boundingBox": rect, "source": "layout_block"}
+  coordinate_data = {
+    "page": page["number"],
+    "x": rect["left"] + rect["width"] / 2,
+    "y": rect["top"],
+  }
+  return selection_data, coordinate_data
+
+
+def _anchor_quote_to_block(
+  quote: str, block_id: str | None, blocks: list[dict[str, Any]]
+) -> dict[str, Any] | None:
+  """Find the layout block a quote belongs to.
+
+  Exact substring match on the named block first; otherwise fuzzy-match
+  across blocks near the named block's page (all blocks when the id is
+  unknown). Returns None when nothing clears the threshold.
+  """
+  import difflib
+
+  by_id = {b["id"]: b for b in blocks}
+  named = by_id.get(block_id or "")
+  text_blocks = [b for b in blocks if b.get("type") in ("text", "heading")]
+  quote_norm = " ".join(quote.split()).lower()
+  if not quote_norm:
+    return None
+
+  if named and quote_norm in " ".join(named["content"].split()).lower():
+    return named
+
+  candidates = text_blocks
+  if named:
+    page = named["metadata"]["page"]["number"]
+    nearby = [
+      b for b in text_blocks if abs(b["metadata"]["page"]["number"] - page) <= 1
+    ]
+    candidates = nearby or text_blocks
+
+  best: dict[str, Any] | None = None
+  best_ratio = 0.0
+  for block in candidates:
+    content_norm = " ".join(block["content"].split()).lower()
+    if quote_norm in content_norm:
+      return block
+    ratio = difflib.SequenceMatcher(
+      None, quote_norm, content_norm[: max(len(quote_norm) * 3, 600)]
+    ).ratio()
+    if ratio > best_ratio:
+      best_ratio = ratio
+      best = block
+
+  return best if best_ratio > FUZZY_MATCH_THRESHOLD else None
 
 
 @celery_app.task(bind=True, base=BaseAITask, name="ai.generate_summary")
@@ -262,34 +362,93 @@ def generate_highlights_task(self, paper_id: int) -> dict[str, Any]:
 
     import asyncio
 
-    full_prompt = _build_prompt_with_content(HIGHLIGHTS_PROMPT, paper)
+    # Layout blocks let the model name real page geometry instead of
+    # guessing positions; extract inline for papers ingested before the
+    # layout task joined the chain.
+    blocks: list[dict[str, Any]] = paper.layout_blocks or []
+    if not blocks and paper.file_path:
+      from datetime import datetime, timezone
+      from pathlib import Path
+
+      from app.services.layout_extractor import extract_layout
+
+      path = Path(cast(str, paper.file_path))
+      if not path.is_absolute():
+        path = Path(settings.STORAGE_PATH) / path
+      if path.exists():
+        blocks = extract_layout(path.read_bytes())
+        paper.layout_blocks = blocks
+        paper.layout_extracted_at = datetime.now(timezone.utc)
+        session.commit()
+
+    if blocks:
+      prompt = HIGHLIGHTS_PROMPT.format(
+        title=paper.title or "Unknown", blocks=_layout_digest(blocks)
+      )
+    else:
+      # No geometry available (e.g. URL-only papers): fall back to plain
+      # content context; highlights save without positions.
+      prompt = _build_prompt_with_content(
+        HIGHLIGHTS_PROMPT.replace("{blocks}", "(no layout blocks available)"),
+        paper,
+      )
+
     config = GenerateConfig(
       model=p.config.model or settings.GENAI_MODEL, temperature=0.3
     )
-    text = asyncio.run(p.generate(full_prompt, config))
+    text = asyncio.run(p.generate(prompt, config))
 
     parsed = extract_json_from_text(text)
     if isinstance(parsed, list):
+      # Regeneration replaces previous auto-highlights instead of stacking.
+      session.query(Annotation).filter(
+        Annotation.paper_id == paper_id,
+        Annotation.auto_highlighted.is_(True),
+      ).delete(synchronize_session=False)
+
       count = 0
+      anchored = 0
       for item in parsed:
         if not isinstance(item, dict):
           continue
         h_type = _normalize_highlight_type(item.get("type"))
         if not h_type:
           continue
+
+        quote = item.get("quote") or item.get("text") or ""
+        selection_data = None
+        coordinate_data: dict[str, Any] = {}
+        block = (
+          _anchor_quote_to_block(quote, item.get("block_id"), blocks)
+          if blocks and quote
+          else None
+        )
+        if block is not None:
+          selection_data, coordinate_data = _block_geometry(block)
+          anchored += 1
+
         annotation = Annotation(
           paper_id=paper_id,
-          content=item.get("text", ""),
-          highlighted_text=item.get("text", ""),
+          content=quote,
+          highlighted_text=quote,
           type="annotation",
           auto_highlighted=True,
           highlight_type=h_type,
+          selection_data=selection_data,
+          coordinate_data=coordinate_data,
         )
         session.add(annotation)
         count += 1
       session.commit()
-      logger.info(f"Generated {count} highlights", paper_id=paper_id)
-      return {"status": "success", "paper_id": paper_id, "count": count}
+      logger.info(
+        f"Generated {count} highlights ({anchored} anchored)", paper_id=paper_id
+      )
+      return {
+        "status": "success",
+        "paper_id": paper_id,
+        "count": count,
+        "anchored": anchored,
+      }
 
     return {"status": "error", "error": "Invalid response format", "paper_id": paper_id}
 

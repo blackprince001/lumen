@@ -34,7 +34,17 @@ class Annotation(Base):
   coordinate_data = Column(JSON, default=dict)
   auto_highlighted = Column(Boolean, default=False, nullable=False)
   highlight_type = Column(
-    Enum("method", "result", "conclusion", "key_contribution", name="highlighttype"),
+    Enum(
+      "method",
+      "result",
+      "conclusion",
+      "key_contribution",
+      # Selection AI actions (see migration add_ai_action_highlight_types)
+      "explain",
+      "why",
+      "define",
+      name="highlighttype",
+    ),
     nullable=True,
   )
   created_at = Column(

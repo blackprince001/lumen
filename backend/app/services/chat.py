@@ -25,7 +25,6 @@ from app.services.ai.agent import (
   ERROR_CODE_PROVIDER_UNAVAILABLE,
   ERROR_CODE_RATE_LIMIT,
   ERROR_CODE_TIMEOUT,
-  ERROR_CODE_TOOL_ERROR,
   adapt_stream,
   build_run_config,
 )
