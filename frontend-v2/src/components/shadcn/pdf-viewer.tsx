@@ -480,7 +480,7 @@ function PDFSidebarThumbnail({
           className="flex size-full items-center justify-center [&_.react-pdf__Thumbnail__page]:m-0! [&_.react-pdf__Thumbnail__page]:h-auto! [&_.react-pdf__Thumbnail__page]:w-full! [&_.react-pdf__Thumbnail__page]:overflow-hidden [&_canvas]:h-auto! [&_canvas]:w-full!"
         />
       }
-      className="w-[92px] rounded-md border-0 shadow-xs ring-0"
+      className="w-[5.75rem] rounded-md border-0 shadow-xs ring-0"
     />
   )
 }
@@ -704,7 +704,7 @@ function PDFViewerPage({
               {searchHighlights.map((highlight) => (
                 <div
                   key={highlight.id}
-                  className="absolute rounded-[2px] bg-yellow-300/45 mix-blend-multiply ring-1 ring-yellow-500/20 dark:bg-yellow-300/35"
+                  className="absolute rounded-[0.125rem] bg-yellow-300/45 mix-blend-multiply ring-1 ring-yellow-500/20 dark:bg-yellow-300/35"
                   style={{
                     left: highlight.left,
                     top: highlight.top,
@@ -1771,7 +1771,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                     disabled={controlsDisabled}
                     modal={false}
                   >
-                    <SelectTrigger size="sm" className="w-[84px] min-w-[84px]">
+                    <SelectTrigger size="sm" className="w-[5.25rem] min-w-[5.25rem]">
                       <SelectValue placeholder="Zoom">
                         {Math.round(zoom * 100)}%
                       </SelectValue>

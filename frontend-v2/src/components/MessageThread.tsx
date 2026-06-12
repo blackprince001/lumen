@@ -1,13 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { chatApi, type ChatMessage } from '@/lib/api/chat';
+import { chatStreamClient } from '@/lib/ai/chatStream';
+import type { StreamEvent } from '@/lib/ai/chatStream';
 import { MarkdownMessage } from './MarkdownMessage';
+import { StreamingMessage } from './ai/StreamingMessage';
 import { ExpandedInput } from './ExpandedInput';
 import { format } from 'date-fns';
 import { Send } from 'iconsax-reactjs';
 import { Skeleton } from './ui/Skeleton';
 import { cn } from '@/lib/utils';
-import { toastError } from '@/lib/utils/toast';
+import { logger } from '@/lib/logger';
 
 interface MessageThreadProps {
   parentMessage: ChatMessage;
@@ -17,13 +20,35 @@ interface MessageThreadProps {
 
 export function MessageThread({ parentMessage, showInput = false, onCloseInput }: MessageThreadProps) {
   const [message, setMessage] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
-  const [streamingContent, setStreamingContent] = useState('');
-  const [displayContent, setDisplayContent] = useState('');
+  const [streamState, setStreamState] = useState<{
+    status: 'idle' | 'connecting' | 'streaming' | 'thinking' | 'using_tool' | 'done' | 'error';
+    content: string;
+    displayedContent: string;
+    toolCalls: StreamEvent[];
+    toolResults: StreamEvent[];
+    thoughts: StreamEvent[];
+    currentTool: string | null;
+    error: { message: string; code: string; recoverable: boolean } | null;
+    messageId: number | null;
+    sessionId: number | null;
+  }>({
+    status: 'idle',
+    content: '',
+    displayedContent: '',
+    toolCalls: [],
+    toolResults: [],
+    thoughts: [],
+    currentTool: null,
+    error: null,
+    messageId: null,
+    sessionId: null,
+  });
+
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const displayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
+  const isStreaming = streamState.status !== 'idle' && streamState.status !== 'done' && streamState.status !== 'error';
 
   const { data: threadMessages = [], isLoading } = useQuery({
     queryKey: ['thread', parentMessage.id],
@@ -33,78 +58,183 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [threadMessages, displayContent, pendingUserMessage]);
+  }, [threadMessages, streamState.displayedContent, pendingUserMessage]);
 
-  // Word-by-word streaming
+  // Word-by-word display
   useEffect(() => {
-    if (streamingContent.length > displayContent.length) {
-      if (displayIntervalRef.current) clearInterval(displayIntervalRef.current);
+    if (!isStreaming || !streamState.content) return;
+    if (streamState.displayedContent.length >= streamState.content.length) {
+      setStreamState((prev) => ({ ...prev, displayedContent: prev.content }));
+      return;
+    }
+    const timer = setTimeout(() => {
+      setStreamState((prev) => {
+        const remaining = prev.content.slice(prev.displayedContent.length);
+        const wordMatch = remaining.match(/^(\s*\S+)/);
+        return {
+          ...prev,
+          displayedContent: wordMatch
+            ? prev.displayedContent + wordMatch[1]
+            : prev.content,
+        };
+      });
+    }, 1000 / 12);
+    return () => clearTimeout(timer);
+  }, [streamState.content, streamState.displayedContent, isStreaming]);
 
-      displayIntervalRef.current = setInterval(() => {
-        setDisplayContent(prev => {
-          if (prev.length >= streamingContent.length) {
-            if (displayIntervalRef.current) {
-              clearInterval(displayIntervalRef.current);
-              displayIntervalRef.current = null;
-            }
-            return prev;
+  const handleSend = useCallback(async () => {
+    if (!message.trim() || isStreaming) return;
+
+    const userMessage = message.trim();
+    setPendingUserMessage(userMessage);
+    setMessage('');
+
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    setStreamState({
+      status: 'connecting',
+      content: '',
+      displayedContent: '',
+      toolCalls: [],
+      toolResults: [],
+      thoughts: [],
+      currentTool: null,
+      error: null,
+      messageId: null,
+      sessionId: null,
+    });
+
+    try {
+      const gen = chatStreamClient.streamThreadMessage(
+        parentMessage.id,
+        userMessage,
+        undefined,
+        { signal: controller.signal, timeoutMs: 60_000 },
+      );
+
+      for await (const event of gen) {
+        if (controller.signal.aborted) break;
+
+        setStreamState((prev) => {
+          const next = { ...prev };
+
+          switch (event.type) {
+            case 'chunk':
+              next.content = prev.content + (event.content || '');
+              next.status = 'streaming';
+              break;
+            case 'tool_call':
+              next.toolCalls = [...prev.toolCalls, event];
+              next.currentTool = (event.tool as string) || null;
+              next.status = 'using_tool';
+              break;
+            case 'tool_result':
+              next.toolResults = [...prev.toolResults, event];
+              next.currentTool = null;
+              next.status = 'streaming';
+              break;
+            case 'thought':
+              next.thoughts = [...prev.thoughts, event];
+              next.status = 'thinking';
+              break;
+            case 'error':
+              next.status = 'error';
+              next.error = {
+                message: (event.error as string) || 'An error occurred',
+                code: (event.error_code as string) || 'internal',
+                recoverable: event.recoverable !== false,
+              };
+              break;
+            case 'keepalive':
+              break;
+            case 'done':
+              next.messageId = (event.message_id as number) ?? null;
+              next.sessionId = (event.session_id as number) ?? null;
+              next.status = 'done';
+              break;
           }
-          const remainingContent = streamingContent.slice(prev.length);
-          const wordMatch = remainingContent.match(/^(\s*\S+)/);
-          return wordMatch ? prev + wordMatch[1] : streamingContent;
+
+          return next;
         });
-      }, 83);
-    }
-
-    return () => {
-      if (displayIntervalRef.current) {
-        clearInterval(displayIntervalRef.current);
-        displayIntervalRef.current = null;
       }
-    };
-  }, [streamingContent, displayContent.length]);
 
-  const handleSend = async () => {
-    if (message.trim() && !isStreaming) {
-      const userMessage = message;
-      setPendingUserMessage(userMessage);
-      setMessage('');
-      setIsStreaming(true);
-      setStreamingContent('');
-      setDisplayContent('');
-
-      let accumulatedResponse = '';
-
-      try {
-        for await (const chunk of chatApi.streamThreadMessage(parentMessage.id, userMessage)) {
-          if (chunk.type === 'chunk' && chunk.content) {
-            accumulatedResponse += chunk.content;
-            setStreamingContent(prev => prev + chunk.content);
-          } else if (chunk.type === 'done') {
-            queryClient.invalidateQueries({ queryKey: ['thread', parentMessage.id] });
-            queryClient.invalidateQueries({ queryKey: ['chat', 'session'] });
-            setStreamingContent('');
-            setDisplayContent('');
-            setIsStreaming(false);
-            setPendingUserMessage(null);
-            onCloseInput?.(); // Close input after successful send
-          } else if (chunk.type === 'error') {
-            setStreamingContent('');
-            setDisplayContent('');
-            setIsStreaming(false);
-            setPendingUserMessage(null);
-            toastError(chunk.error || 'Failed to get response');
-          }
+      // Stream ended without explicit 'done'
+      setStreamState((prev) => {
+        if (prev.status !== 'done' && prev.status !== 'error') {
+          return { ...prev, status: 'done' };
         }
-      } catch (error) {
-        setStreamingContent('');
-        setDisplayContent('');
-        setIsStreaming(false);
-        setPendingUserMessage(null);
-        toastError('Failed to send message');
+        return prev;
+      });
+
+      // Invalidate caches and close input on success
+      setStreamState((prev) => {
+        if (prev.status === 'done') {
+          queryClient.invalidateQueries({ queryKey: ['thread', parentMessage.id] });
+          queryClient.invalidateQueries({ queryKey: ['chat', 'session'] });
+          onCloseInput?.();
+        }
+        return prev;
+      });
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        setStreamState({
+          status: 'idle',
+          content: '',
+          displayedContent: '',
+          toolCalls: [],
+          toolResults: [],
+          thoughts: [],
+          currentTool: null,
+          error: null,
+          messageId: null,
+          sessionId: null,
+        });
+        return;
       }
+      logger.error('Thread stream error:', err);
+      setStreamState((prev) => ({
+        ...prev,
+        status: 'error',
+        error: {
+          message: (err as Error).message || 'Failed to send message',
+          code: 'internal',
+          recoverable: true,
+        },
+      }));
+    } finally {
+      setPendingUserMessage(null);
     }
-  };
+  }, [message, isStreaming, parentMessage.id, queryClient, onCloseInput]);
+
+  const handleRetry = useCallback(() => {
+    if (!pendingUserMessage) return;
+    const msg = pendingUserMessage;
+    setPendingUserMessage(null);
+    setMessage(msg);
+    setTimeout(() => {
+      handleSend();
+    }, 0);
+  }, [pendingUserMessage, handleSend]);
+
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStreamState({
+      status: 'idle',
+      content: '',
+      displayedContent: '',
+      toolCalls: [],
+      toolResults: [],
+      thoughts: [],
+      currentTool: null,
+      error: null,
+      messageId: null,
+      sessionId: null,
+    });
+    setPendingUserMessage(null);
+  }, []);
 
   const threadCount = parentMessage.thread_count || threadMessages.length;
 
@@ -119,75 +249,97 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
 
       {/* Thread messages */}
       <div className="space-y-0.5">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Skeleton className="w-8 h-8 rounded-full" />
-              </div>
-            ) : (
-              <>
-                {threadMessages.map(msg => (
-                  <div key={msg.id} className="flex justify-start">
-                    <div
-                      className={cn(
-                        'group relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent transition-colors border border-transparent',
-                        msg.role === 'user'
-                          ? 'hover:bg-[rgba(60,145,230,0.05)] hover:border-[rgba(60,145,230,0.25)]'
-                          : 'hover:bg-[rgba(76,255,169,0.06)] hover:border-[rgba(76,255,169,0.3)]'
-                      )}
-                    >
-                      <span className={cn(
-                        'absolute top-0 left-0 h-[2px] w-8',
-                        msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
-                      )} />
-                      {msg.role === 'user' ? (
-                        <div className="whitespace-pre-wrap wrap-break-word">{msg.content}</div>
-                      ) : (
-                        <MarkdownMessage content={msg.content} />
-                      )}
-                      <span className="absolute bottom-1 right-2 text-[10px] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
-                        {format(new Date(msg.created_at), 'HH:mm')}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-
-                {pendingUserMessage && (
-                  <div className="flex justify-start">
-                    <div className="relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent border border-transparent">
-                      <span className="absolute top-0 left-0 h-[2px] w-8 bg-[rgba(60,145,230,0.5)]" />
-                      <div className="whitespace-pre-wrap wrap-break-word">{pendingUserMessage}</div>
-                    </div>
-                  </div>
-                )}
-
-                {isStreaming && displayContent && (
-                  <div className="flex justify-start">
-                    <div className="relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent border border-transparent">
-                      <span className="absolute top-0 left-0 h-[2px] w-8 bg-[rgba(76,255,169,0.5)]" />
-                      <MarkdownMessage content={displayContent} />
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-            <div ref={messagesEndRef} />
+        {isLoading ? (
+          <div className="flex items-center justify-center py-4">
+            <Skeleton className="w-8 h-8 rounded-full" />
           </div>
+        ) : (
+          <>
+            {threadMessages.map(msg => (
+              <div key={msg.id} className="flex justify-start">
+                <div
+                  className={cn(
+                    'group relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent transition-colors border border-transparent',
+                    msg.role === 'user'
+                      ? 'hover:bg-[rgba(60,145,230,0.05)] hover:border-[rgba(60,145,230,0.25)]'
+                      : 'hover:bg-[rgba(76,255,169,0.06)] hover:border-[rgba(76,255,169,0.3)]'
+                  )}
+                >
+                  <span className={cn(
+                    'absolute top-0 left-0 h-[0.125rem] w-8',
+                    msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
+                  )} />
+                  {msg.role === 'user' ? (
+                    <div className="whitespace-pre-wrap wrap-break-word">{msg.content}</div>
+                  ) : (
+                    <MarkdownMessage content={msg.content} />
+                  )}
+                  <span className="absolute bottom-1 right-2 text-[0.625rem] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
+                    {format(new Date(msg.created_at), 'HH:mm')}
+                  </span>
+                </div>
+              </div>
+            ))}
 
-          {/* Thread input - only show if explicitly requested */}
-          {showInput && (
-            <div className="mt-2">
-              <ExpandedInput
-                size="compact"
-                value={message}
-                onChange={setMessage}
-                onSubmit={handleSend}
-                placeholder="Reply in thread..."
-                disabled={isStreaming}
-                submitIcon={<Send size={11} />}
-                autoFocus
+            {pendingUserMessage && (
+              <div className="flex justify-start">
+                <div className="relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent border border-transparent">
+                  <span className="absolute top-0 left-0 h-[0.125rem] w-8 bg-[rgba(60,145,230,0.5)]" />
+                  <div className="whitespace-pre-wrap wrap-break-word">{pendingUserMessage}</div>
+                </div>
+              </div>
+            )}
+
+            {isStreaming && (
+              <StreamingMessage
+                state={{
+                  status: streamState.status as any,
+                  content: streamState.content,
+                  displayedContent: streamState.displayedContent,
+                  toolCalls: streamState.toolCalls.map(e => ({
+                    tool: e.tool as string,
+                    arguments: (e.arguments as Record<string, unknown>) || {},
+                    timestamp: Date.now(),
+                  })),
+                  toolResults: streamState.toolResults.map(e => ({
+                    tool: e.tool as string,
+                    result: e.result as string,
+                    timestamp: Date.now(),
+                  })),
+                  thoughts: streamState.thoughts.map(e => ({
+                    content: e.content as string,
+                    timestamp: Date.now(),
+                  })),
+                  currentTool: streamState.currentTool,
+                  error: streamState.error,
+                  messageId: streamState.messageId,
+                  sessionId: streamState.sessionId,
+                }}
+                isStreaming={isStreaming}
+                onRetry={handleRetry}
+                onDismiss={handleCancel}
               />
-            </div>
-          )}
+            )}
+          </>
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Thread input */}
+      {showInput && (
+        <div className="mt-2">
+          <ExpandedInput
+            size="compact"
+            value={message}
+            onChange={setMessage}
+            onSubmit={handleSend}
+            placeholder="Reply in thread..."
+            disabled={isStreaming}
+            submitIcon={<Send size={11} />}
+            autoFocus
+          />
+        </div>
+      )}
     </div>
   );
 }

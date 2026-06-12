@@ -1218,7 +1218,7 @@ function FileVisual({
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} className="size-3.5" />
         </button>
-        <span className="rounded-md bg-background/80 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground tabular-nums shadow-xs backdrop-blur-sm">
+        <span className="rounded-md bg-background/80 px-1.5 py-0.5 text-[0.625rem] font-medium text-muted-foreground tabular-nums shadow-xs backdrop-blur-sm">
           {clampedPageIndex + 1}/{totalPages}
         </span>
         <button
@@ -2040,7 +2040,7 @@ export function FileSystem({
       className={cn(
         // PAPERS-FORK: named container so toolbarExtra can respond to the
         // component's own width with @container variants.
-        "@container/finder flex h-[480px] min-h-0 flex-col overflow-hidden rounded-xl border bg-background text-foreground outline-none",
+        "@container/finder flex h-[30rem] min-h-0 flex-col overflow-hidden rounded-xl border bg-background text-foreground outline-none",
         className
       )}
     >
@@ -3409,11 +3409,11 @@ function moveGridSelection({
 // Icon grid geometry (px at the default 16px root font size). Tiles have a
 // fixed height — a 4rem glyph box plus a reserved two-line label — so rows
 // share one stride and the grid can window cleanly.
-const ICON_GRID_PADDING = 12 // p-3
-const ICON_MIN_TILE_WIDTH = 104 // 6.5rem
+const ICON_GRID_PADDING = 13 // p-3
+const ICON_MIN_TILE_WIDTH = 114 // 6.5rem
 const ICON_TILE_GAP_X = 4 // gap-x-1
-const ICON_TILE_HEIGHT = 102 // h-16 glyph box + gap-1.5 + two text-xs lines
-const ICON_ROW_GAP = 12 // gap-y-3
+const ICON_TILE_HEIGHT = 112 // h-16 glyph box + gap-1.5 + two text-xs lines
+const ICON_ROW_GAP = 13 // gap-y-3
 const ICON_ROW_STRIDE = ICON_TILE_HEIGHT + ICON_ROW_GAP
 
 function FileSystemIconsView({
@@ -3731,7 +3731,7 @@ function FileSystemListView({
       {/* Paddings match the tree's row geometry: name text starts 46px in
           (16px tree padding + 30px icon lane), metadata ends 24px from the
           right (16px tree padding + 8px decoration inset). */}
-      <div className="flex shrink-0 items-center border-b py-1 pr-6 pl-[46px] text-xs font-medium text-muted-foreground">
+      <div className="flex shrink-0 items-center border-b py-1 pr-6 pl-[2.875rem] text-xs font-medium text-muted-foreground">
         <FileSystemListColumnHeader
           className="flex-1 justify-start"
           label="Name"
@@ -4538,8 +4538,8 @@ function FileSystemColumnsView(props: FileSystemViewProps) {
 }
 
 // Column row geometry (px at the default 16px root font size).
-const COLUMN_PADDING = 6 // p-1.5
-const COLUMN_ROW_HEIGHT = 28 // h-7
+const COLUMN_PADDING = 7 // p-1.5
+const COLUMN_ROW_HEIGHT = 31 // h-7
 const COLUMN_ROW_GAP = 1 // gap-px
 const COLUMN_ROW_STRIDE = COLUMN_ROW_HEIGHT + COLUMN_ROW_GAP
 
@@ -4692,7 +4692,7 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
                       src={coverUrl}
                       alt=""
                       draggable={false}
-                      className="size-4 shrink-0 rounded-[3px] bg-white object-cover"
+                      className="size-4 shrink-0 rounded-[0.1875rem] bg-white object-cover"
                     />
                   ) : (
                     <FileTypeIcon
@@ -4769,9 +4769,9 @@ function FileSystemInformation({
 }
 
 // Filmstrip geometry (px at the default 16px root font size).
-const GALLERY_STRIP_PADDING = 8 // p-2
-const GALLERY_TILE_SIZE = 56 // size-14
-const GALLERY_TILE_GAP = 6 // gap-1.5
+const GALLERY_STRIP_PADDING = 9 // p-2
+const GALLERY_TILE_SIZE = 62 // size-14
+const GALLERY_TILE_GAP = 7 // gap-1.5
 const GALLERY_TILE_STRIDE = GALLERY_TILE_SIZE + GALLERY_TILE_GAP
 // How many visited stages stay mounted so stepping back to a recent file
 // restores its already-loaded preview without refetching or re-parsing;

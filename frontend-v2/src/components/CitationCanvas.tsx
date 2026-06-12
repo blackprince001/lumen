@@ -149,7 +149,7 @@ function CitationCanvasInner({ onDropPaper: _onDropPaper }: CitationCanvasProps)
           maskColor="rgba(0,0,0,0.04)"
           nodeColor={() => 'var(--muted)'}
           nodeStrokeColor={() => 'var(--border)'}
-          style={{ backgroundColor: 'var(--card)', border: '1px solid var(--border)' }}
+          style={{ backgroundColor: 'var(--card)', border: '0.0625rem solid var(--border)' }}
         />
       </ReactFlow>
 

@@ -151,14 +151,14 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <DashCard title="Reading Progress">
           <div className="px-5 pt-5 pb-2">
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={242}>
               <BarChart data={activityData}>
-                <XAxis dataKey="name" tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
-                <YAxis tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }} />
+                <XAxis dataKey="name" tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
+                <YAxis tick={{ fontSize: 12, fill: 'var(--muted-foreground)' }} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'var(--card)',
-                    border: '1px solid var(--border)',
+                    border: '0.0625rem solid var(--border)',
                     borderRadius: '0.5rem',
                     fontSize: '0.75rem'
                   }}
@@ -172,14 +172,14 @@ export default function Dashboard() {
 
         <DashCard title="Paper Status">
           <div className="p-5">
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={220}>
               <PieChart>
                 <Pie
                   data={statusChartData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={50}
-                  outerRadius={80}
+                  innerRadius={55}
+                  outerRadius={88}
                   paddingAngle={2}
                   dataKey="value"
                 >
@@ -190,7 +190,7 @@ export default function Dashboard() {
                 <Tooltip
                   contentStyle={{
                     backgroundColor: 'var(--card)',
-                    border: '1px solid var(--border)',
+                    border: '0.0625rem solid var(--border)',
                     borderRadius: '0.5rem',
                     fontSize: '0.75rem'
                   }}

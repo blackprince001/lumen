@@ -85,7 +85,7 @@ export function ShareDialog({ open, onClose, resourceId, resourceType, resourceT
             }}
             placeholder="Enter email addresses, separated by commas, spaces, or new lines"
             rows={4}
-            className="w-full min-h-[96px] px-3 py-2 text-body border border-(--border) rounded-interactive bg-(--white) text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:ring-1 focus:ring-(--ring) resize-y leading-relaxed"
+            className="w-full min-h-[6rem] px-3 py-2 text-body border border-(--border) rounded-interactive bg-(--white) text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:ring-1 focus:ring-(--ring) resize-y leading-relaxed"
           />
           <div className="flex items-center justify-between gap-2">
             <div className="w-32 shrink-0">

@@ -46,7 +46,7 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
         {user?.avatar_url ? (
           <img src={user.avatar_url} alt="" className="w-5 h-5 rounded-full shrink-0 object-cover" />
         ) : (
-          <div className="w-5 h-5 rounded-full bg-(--muted) border border-(--border) flex items-center justify-center shrink-0 text-[9px] font-semibold">
+          <div className="w-5 h-5 rounded-full bg-(--muted) border border-(--border) flex items-center justify-center shrink-0 text-[0.5625rem] font-semibold">
             {initials}
           </div>
         )}
@@ -54,7 +54,7 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
           <>
             <span className="text-code truncate flex-1 text-left">{user?.display_name ?? 'User'}</span>
             {isAdmin && (
-              <span className="text-[9px] font-semibold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 shrink-0">
+              <span className="text-[0.5625rem] font-semibold uppercase tracking-wide text-amber-600 bg-amber-50 border border-amber-200 rounded px-1 shrink-0">
                 admin
               </span>
             )}
@@ -68,7 +68,7 @@ export default function UserMenu({ isOpen }: UserMenuProps) {
           {isOpen && (
             <div className="px-3 py-2 border-b border-(--border) mb-1">
               <p className="text-caption font-medium text-(--foreground) truncate">{user?.display_name}</p>
-              <p className="text-[11px] text-(--muted-foreground) truncate">{user?.email}</p>
+              <p className="text-[0.6875rem] text-(--muted-foreground) truncate">{user?.email}</p>
             </div>
           )}
           <Link

@@ -134,7 +134,7 @@ export function PaperTable({ papers, sortBy, sortOrder, onSort, onDelete, select
                       : <span className="text-(--muted-foreground) text-caption">—</span>
                     }
                     {paper.is_shared && (
-                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-(--sky-blue)/10 text-(--sky-blue)" title="Shared with you">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[0.625rem] font-medium bg-(--sky-blue)/10 text-(--sky-blue)" title="Shared with you">
                         <People size={10} />
                       </span>
                     )}

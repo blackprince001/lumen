@@ -28,7 +28,7 @@ export function MarkdownMessage({ content, className }: MarkdownMessageProps) {
                 style={oneLight}
                 language={language}
                 PreTag="div"
-                customStyle={{ marginTop: '0.75rem', marginBottom: '0.75rem', padding: '1rem', borderRadius: '0.5rem', background: 'var(--muted)', fontSize: '12px' }}
+                customStyle={{ marginTop: '0.75rem', marginBottom: '0.75rem', padding: '1rem', borderRadius: '0.5rem', background: 'var(--muted)', fontSize: '0.75rem' }}
                 {...props}
               >
                 {String(children).replace(/\n$/, '')}

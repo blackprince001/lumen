@@ -63,8 +63,8 @@ import {
 const XLSX_LOADING_INDICATOR_DELAY_MS = 300
 const XLSX_DROPDOWN_Z_INDEX_CLASS = "z-40"
 const XLSX_SEARCH_BATCH_ROW_COUNT = 500
-const XLSX_GRID_HEADER_HEIGHT = 24
-const XLSX_GRID_ROW_HEADER_WIDTH = 40
+const XLSX_GRID_HEADER_HEIGHT = 26
+const XLSX_GRID_ROW_HEADER_WIDTH = 44
 const XLSX_MAX_FILE_SIZE_BYTES = 50 * 1024 * 1024
 const ZOOM_OPTIONS = [10, 25, 50, 75, 100, 125, 150, 175, 200, 400] as const
 
@@ -72,8 +72,8 @@ const ZOOM_OPTIONS = [10, 25, 50, 75, 100, 125, 150, 175, 200, 400] as const
 // (e.g. by selection changes), which would recompute every sheet thumbnail.
 const XLSX_SHEET_TAB_THUMBNAIL_OPTIONS = {
   resolution: {
-    maxHeight: 360,
-    maxWidth: 560,
+    maxHeight: 396,
+    maxWidth: 616,
   },
 } as const
 
@@ -852,7 +852,7 @@ function WorkbookToolbar({
             >
               <SelectTrigger
                 size="sm"
-                className="w-[84px] min-w-[84px]"
+                className="w-[5.25rem] min-w-[5.25rem]"
                 aria-label="Zoom level"
               >
                 <SelectValue>{currentZoom}%</SelectValue>
@@ -1223,7 +1223,7 @@ const WorkbookSheetTabsInner = React.memo(function WorkbookSheetTabsInner({
         <ScrollArea
           orientation="horizontal"
           scrollbarGutter
-          className="h-10 w-full has-[[data-slot=scroll-area-viewport][data-has-overflow-x]]:h-[50px]"
+          className="h-10 w-full has-[[data-slot=scroll-area-viewport][data-has-overflow-x]]:h-[3.125rem]"
           viewportClassName="overflow-y-hidden"
           viewportRef={scrollRef}
         >
@@ -1324,7 +1324,7 @@ export function XlsxWorkbookSurface({
   return (
     <div
       className={cn(
-        "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+        "flex h-[40rem] min-h-0 flex-col overflow-hidden bg-background",
         className,
         rounded && "rounded-lg"
       )}
@@ -1544,7 +1544,7 @@ function XlsxViewerContent({
     return (
       <div
         className={cn(
-          "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+          "flex h-[40rem] min-h-0 flex-col overflow-hidden bg-background",
           className
         )}
       >
@@ -1586,7 +1586,7 @@ function XlsxViewerContent({
     return (
       <div
         className={cn(
-          "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+          "flex h-[40rem] min-h-0 flex-col overflow-hidden bg-background",
           className
         )}
       >
@@ -1626,7 +1626,7 @@ function XlsxViewerContent({
     return (
       <div
         className={cn(
-          "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+          "flex h-[40rem] min-h-0 flex-col overflow-hidden bg-background",
           className
         )}
       >

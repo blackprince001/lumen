@@ -5,15 +5,15 @@ import Navbar from './Navbar';
 import ChatPanel from './ChatPanel';
 import { TabBar } from './TabBar';
 
-const SIDEBAR_MIN = 52;
-const SIDEBAR_SNAP_CLOSE = 140;  // below this → snap to collapsed icon-only mode
-const SIDEBAR_DEFAULT = 260;
-const SIDEBAR_MAX = 360;
+const SIDEBAR_MIN = 57;
+const SIDEBAR_SNAP_CLOSE = 154;  // below this → snap to collapsed icon-only mode
+const SIDEBAR_DEFAULT = 286;
+const SIDEBAR_MAX = 396;
 
-const CHAT_MIN = 52;          // collapsed sliver width
-const CHAT_SNAP_CLOSE = 120;  // below this → snap closed
-const CHAT_DEFAULT = 420;
-const CHAT_MAX = 680;
+const CHAT_MIN = 57;          // collapsed sliver width
+const CHAT_SNAP_CLOSE = 132;  // below this → snap closed
+const CHAT_DEFAULT = 462;
+const CHAT_MAX = 748;
 
 function ResizeDivider({ onDrag }: { onDrag: (dx: number) => void }) {
   const dragging = useRef(false);

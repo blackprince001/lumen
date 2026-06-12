@@ -48,7 +48,7 @@ import {
 const DOCX_MIME_TYPE =
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 const DOCX_LOADING_INDICATOR_DELAY_MS = 300
-const DOCX_THUMBNAIL_WIDTH = 92
+const DOCX_THUMBNAIL_WIDTH = 101
 const ZOOM_OPTIONS = [10, 25, 50, 75, 100, 125, 150, 175, 200, 400] as const
 const DOCX_PADDING_WARNING_TEXT = "a style property during rerender"
 
@@ -451,7 +451,7 @@ function DocxToolbar({
             >
               <SelectTrigger
                 size="sm"
-                className="w-[84px] min-w-[84px]"
+                className="w-[5.25rem] min-w-[5.25rem]"
                 aria-label="Zoom level"
               >
                 <SelectValue>{Math.round(zoomScale)}%</SelectValue>
@@ -579,7 +579,7 @@ function DocxSidebarThumbnail({
       isLoading={isLoading}
       hasError={hasError}
       className={cn(
-        "w-[92px] rounded-md border-0 shadow-xs ring-0 transition-shadow duration-150",
+        "w-[5.75rem] rounded-md border-0 shadow-xs ring-0 transition-shadow duration-150",
         isActive && "shadow-sm"
       )}
     />
@@ -928,7 +928,7 @@ function DocxViewerContent({
   return (
     <div
       className={cn(
-        "flex h-[640px] min-h-0 flex-col overflow-hidden bg-background",
+        "flex h-[40rem] min-h-0 flex-col overflow-hidden bg-background",
         className
       )}
     >

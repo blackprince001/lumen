@@ -9,7 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 function RoleBadge({ role }: { role: string }) {
   return (
-    <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${role === 'admin'
+    <span className={`text-[0.625rem] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded border ${role === 'admin'
         ? 'text-amber-700 bg-amber-50 border-amber-200'
         : 'text-(--muted-foreground) bg-(--muted) border-(--border)'
       }`}>

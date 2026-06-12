@@ -157,7 +157,7 @@ export default function Citations() {
               error={citationsError}
             />
           ) : (
-            <div className="bg-(--card) border border-(--border) rounded-xl overflow-hidden flex" style={{ height: 600 }}>
+            <div className="bg-(--card) border border-(--border) rounded-xl overflow-hidden flex" style={{ height: '37.5rem' }}>
               <CanvasPaperPicker className="w-64 shrink-0" />
               <div className="flex-1">
                 <CitationCanvas />

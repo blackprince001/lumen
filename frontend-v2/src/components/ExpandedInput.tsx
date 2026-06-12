@@ -324,7 +324,7 @@ export function ExpandedInput({
     <div className={cn('flex flex-col gap-4 w-full', className)}>
       <div className={cn(
         'flex flex-col bg-(--card) border border-(--border) shadow-lg',
-        isCompact ? 'rounded-xl' : 'min-h-[120px] rounded-2xl',
+        isCompact ? 'rounded-xl' : 'min-h-[7.5rem] rounded-2xl',
       )}>
         {/* Textarea container — no overflow-y so absolute mention dropdown isn't clipped */}
         <div className={cn('relative flex-1', isCompact ? '' : '')}>
@@ -339,8 +339,8 @@ export function ExpandedInput({
             className={cn(
               'w-full border-0 outline-none resize-none shadow-none bg-transparent whitespace-pre-wrap wrap-break-word placeholder:text-(--muted-foreground) disabled:opacity-50',
               isCompact
-                ? 'p-3 min-h-[36px] text-sm rounded-xl'
-                : 'p-5 transition-[padding] duration-200 ease-in-out min-h-[48.4px] max-h-[258px] overflow-y-auto text-[16px]',
+                ? 'p-3 min-h-[2.25rem] text-sm rounded-xl'
+                : 'p-5 transition-[padding] duration-200 ease-in-out min-h-[3.025rem] max-h-[16.125rem] overflow-y-auto text-[1rem]',
             )}
           />
 
@@ -383,7 +383,7 @@ export function ExpandedInput({
         {/* Toolbar — before children so submit button appears above filters */}
         <div className={cn(
           'flex items-center gap-2',
-          isCompact ? 'min-h-[32px] p-2 pb-1' : 'min-h-[40px] p-3 pb-2',
+          isCompact ? 'min-h-[2rem] p-2 pb-1' : 'min-h-[2.5rem] p-3 pb-2',
         )}>
           <div className="flex items-center gap-2 ml-auto">
             {isCompact ? (

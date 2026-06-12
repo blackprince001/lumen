@@ -570,7 +570,7 @@ export function PDFViewer({
                 console.error('[PDFViewer] Document load error:', error);
               }}
               loading={
-                <div className="flex flex-col items-center gap-4 py-8 w-full max-w-[612px] mx-auto">
+                <div className="flex flex-col items-center gap-4 py-8 w-full max-w-[38.25rem] mx-auto">
                   <div className="w-full aspect-8.5/11 bg-(--muted)/60 rounded-lg animate-pulse" />
                   <div className="w-full aspect-8.5/11 bg-(--muted)/40 rounded-lg animate-pulse" />
                 </div>
@@ -661,7 +661,7 @@ export function PDFViewer({
                                   width: Math.max(2, rect.width * renderedW),
                                   height: Math.max(2, rect.height * renderedH),
                                   backgroundColor: 'rgba(60,145,230,0.18)',
-                                  borderBottom: '2px solid rgba(60,145,230,0.5)',
+                                  borderBottom: '0.125rem solid rgba(60,145,230,0.5)',
                                   pointerEvents: 'auto',
                                   cursor: 'pointer',
                                 }}

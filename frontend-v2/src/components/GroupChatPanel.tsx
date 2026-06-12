@@ -1,21 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { multiChatApi } from '@/lib/api/multi-chat';
+import { chatStreamClient } from '@/lib/ai/chatStream';
+import type { StreamEvent } from '@/lib/ai/chatStream';
 import { CloseCircle as X, Send, MagicStar as Sparkles, DocumentText as FileText, Lamp as Lightbulb, Global } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MarkdownMessage } from '@/components/MarkdownMessage';
+import { StreamingMessage } from '@/components/ai/StreamingMessage';
 import { ExpandedInput } from '@/components/ExpandedInput';
 import { cn } from '@/lib/utils';
+import { logger } from '@/lib/logger';
 
 interface GroupChatPanelProps {
   groupId: number;
   groupName: string;
   onClose: () => void;
 }
-
-const WORDS_PER_SECOND = 12;
-const WORD_REVEAL_DELAY_MS = 1000 / WORDS_PER_SECOND;
 
 const GROUP_PROMPTS = [
   {
@@ -39,12 +40,35 @@ const GROUP_PROMPTS = [
 export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelProps) {
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
   const [message, setMessage] = useState('');
-  const [streamingContent, setStreamingContent] = useState('');
-  const [displayContent, setDisplayContent] = useState('');
-  const [isStreaming, setIsStreaming] = useState(false);
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
+  const [streamState, setStreamState] = useState<{
+    status: 'idle' | 'connecting' | 'streaming' | 'thinking' | 'using_tool' | 'done' | 'error';
+    content: string;
+    displayedContent: string;
+    toolCalls: StreamEvent[];
+    toolResults: StreamEvent[];
+    thoughts: StreamEvent[];
+    currentTool: string | null;
+    error: { message: string; code: string; recoverable: boolean } | null;
+    messageId: number | null;
+    sessionId: number | null;
+  }>({
+    status: 'idle',
+    content: '',
+    displayedContent: '',
+    toolCalls: [],
+    toolResults: [],
+    thoughts: [],
+    currentTool: null,
+    error: null,
+    messageId: null,
+    sessionId: null,
+  });
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
+  const isStreaming = streamState.status !== 'idle' && streamState.status !== 'done' && streamState.status !== 'error';
 
   const { data: latestSession } = useQuery({
     queryKey: ['multi-chat', 'latest', 'group', groupId],
@@ -72,55 +96,200 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     },
   });
 
-  // Word-by-word reveal effect
+  // Word-by-word display
   useEffect(() => {
-    if (!isStreaming || !streamingContent) return;
-    const words = streamingContent.split(/(\s+)/);
-    const displayWords = displayContent.split(/(\s+)/);
-    if (displayWords.length >= words.length) { setDisplayContent(streamingContent); return; }
+    if (!isStreaming || !streamState.content) return;
+    if (streamState.displayedContent.length >= streamState.content.length) {
+      setStreamState((prev) => ({ ...prev, displayedContent: prev.content }));
+      return;
+    }
     const timer = setTimeout(() => {
-      setDisplayContent(words.slice(0, displayWords.length + 1).join(''));
-    }, WORD_REVEAL_DELAY_MS);
+      setStreamState((prev) => {
+        const remaining = prev.content.slice(prev.displayedContent.length);
+        const wordMatch = remaining.match(/^(\s*\S+)/);
+        return {
+          ...prev,
+          displayedContent: wordMatch
+            ? prev.displayedContent + wordMatch[1]
+            : prev.content,
+        };
+      });
+    }, 1000 / 12);
     return () => clearTimeout(timer);
-  }, [streamingContent, displayContent, isStreaming]);
+  }, [streamState.content, streamState.displayedContent, isStreaming]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentSession?.messages, displayContent, pendingUserMessage]);
+  }, [currentSession?.messages, streamState.displayedContent, pendingUserMessage]);
 
-  const handleSend = async () => {
-    if (!message.trim() || isStreaming) return;
-    const userMessage = message.trim();
-    setMessage('');
+  const handleCancel = useCallback(() => {
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setStreamState({
+      status: 'idle',
+      content: '',
+      displayedContent: '',
+      toolCalls: [],
+      toolResults: [],
+      thoughts: [],
+      currentTool: null,
+      error: null,
+      messageId: null,
+      sessionId: null,
+    });
+    setPendingUserMessage(null);
+  }, []);
+
+  const handleRetry = useCallback(() => {
+    if (!pendingUserMessage) return;
+    const msg = pendingUserMessage;
+    setPendingUserMessage(null);
+    // Re-trigger send with the saved message
+    setStreamState({
+      status: 'idle',
+      content: '',
+      displayedContent: '',
+      toolCalls: [],
+      toolResults: [],
+      thoughts: [],
+      currentTool: null,
+      error: null,
+      messageId: null,
+      sessionId: null,
+    });
+    // Kick off send in next tick
+    setTimeout(() => handleSendWithText(msg), 0);
+  }, [pendingUserMessage]);
+
+  const handleSendWithText = useCallback(async (userMessage: string) => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     setPendingUserMessage(userMessage);
-    setIsStreaming(true);
-    setStreamingContent('');
-    setDisplayContent('');
+    setStreamState({
+      status: 'connecting',
+      content: '',
+      displayedContent: '',
+      toolCalls: [],
+      toolResults: [],
+      thoughts: [],
+      currentTool: null,
+      error: null,
+      messageId: null,
+      sessionId: null,
+    });
+
     try {
       let sessionId = currentSessionId;
       if (!sessionId) {
         const session = await createSessionMutation.mutateAsync();
         sessionId = session.id;
       }
-      let fullContent = '';
-      for await (const chunk of multiChatApi.streamGroupMessage(groupId, userMessage, undefined, sessionId)) {
-        if (chunk.type === 'chunk') {
-          fullContent += chunk.content;
-          setStreamingContent(fullContent);
-        } else if (chunk.type === 'done') {
-          setStreamingContent(fullContent);
-          setDisplayContent(fullContent);
-          setIsStreaming(false);
-          setPendingUserMessage(null);
-          queryClient.invalidateQueries({ queryKey: ['multi-chat', 'session', sessionId] });
-        }
+
+      const gen = chatStreamClient.streamGroupMessage(
+        groupId,
+        userMessage,
+        undefined,
+        sessionId,
+        { signal: controller.signal, timeoutMs: 60_000, maxRetries: 2 },
+      );
+
+      for await (const event of gen) {
+        if (controller.signal.aborted) break;
+
+        setStreamState((prev) => {
+          const next = { ...prev };
+
+          switch (event.type) {
+            case 'chunk':
+              next.content = prev.content + (event.content || '');
+              next.status = 'streaming';
+              break;
+            case 'tool_call':
+              next.toolCalls = [...prev.toolCalls, event];
+              next.currentTool = (event.tool as string) || null;
+              next.status = 'using_tool';
+              break;
+            case 'tool_result':
+              next.toolResults = [...prev.toolResults, event];
+              next.currentTool = null;
+              next.status = 'streaming';
+              break;
+            case 'thought':
+              next.thoughts = [...prev.thoughts, event];
+              next.status = 'thinking';
+              break;
+            case 'error':
+              next.status = 'error';
+              next.error = {
+                message: (event.error as string) || 'An error occurred',
+                code: (event.error_code as string) || 'internal',
+                recoverable: event.recoverable !== false,
+              };
+              break;
+            case 'keepalive':
+              break;
+            case 'done':
+              next.messageId = (event.message_id as number) ?? null;
+              next.sessionId = (event.session_id as number) ?? null;
+              next.status = 'done';
+              break;
+          }
+
+          return next;
+        });
       }
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      setIsStreaming(false);
+
+      // Stream ended without explicit 'done'
+      setStreamState((prev) => {
+        if (prev.status !== 'done' && prev.status !== 'error') {
+          return { ...prev, status: 'done' };
+        }
+        return prev;
+      });
+
+      // Invalidate cache to refresh persisted messages
+      if (sessionId) {
+        queryClient.invalidateQueries({ queryKey: ['multi-chat', 'session', sessionId] });
+      }
+    } catch (err) {
+      if ((err as Error).name === 'AbortError') {
+        setStreamState({
+          status: 'idle',
+          content: '',
+          displayedContent: '',
+          toolCalls: [],
+          toolResults: [],
+          thoughts: [],
+          currentTool: null,
+          error: null,
+          messageId: null,
+          sessionId: null,
+        });
+        return;
+      }
+      logger.error('Group chat stream error:', err);
+      setStreamState((prev) => ({
+        ...prev,
+        status: 'error',
+        error: {
+          message: (err as Error).message || 'Failed to send message',
+          code: 'internal',
+          recoverable: true,
+        },
+      }));
+    } finally {
       setPendingUserMessage(null);
     }
-  };
+  }, [currentSessionId, groupId, queryClient, createSessionMutation]);
+
+  const handleSend = useCallback(() => {
+    if (!message.trim() || isStreaming) return;
+    const msg = message.trim();
+    setMessage('');
+    handleSendWithText(msg);
+  }, [message, isStreaming, handleSendWithText]);
 
   const messages = currentSession?.messages || [];
 
@@ -163,7 +332,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
                 )}
               >
                 <span className={cn(
-                  'absolute top-0 left-0 h-[2px] w-10',
+                  'absolute top-0 left-0 h-[0.125rem] w-10',
                   msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
                 )} />
                 {msg.role === 'user' ? (
@@ -174,32 +343,50 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
               </div>
             ))}
 
+            {/* Pending user message */}
             {pendingUserMessage && (
               <div className="relative w-full px-4 py-2.5 rounded-b-interactive text-code bg-transparent border border-transparent">
-                <span className="absolute top-0 left-0 h-[2px] w-10 bg-[rgba(60,145,230,0.5)]" />
+                <span className="absolute top-0 left-0 h-[0.125rem] w-10 bg-[rgba(60,145,230,0.5)]" />
                 <p className="leading-relaxed whitespace-pre-wrap">{pendingUserMessage}</p>
               </div>
             )}
 
+            {/* Streaming response */}
             {isStreaming && (
-              <div className="relative w-full px-4 py-2.5 rounded-b-interactive text-code bg-transparent border border-transparent">
-                <span className="absolute top-0 left-0 h-[2px] w-10 bg-[rgba(76,255,169,0.5)]" />
-                {displayContent ? (
-                  <MarkdownMessage content={displayContent} />
-                ) : (
-                  <div className="space-y-2.5 w-72">
-                    <div className="flex flex-wrap gap-1.5">
-                      {[12, 16, 8, 20, 14, 10, 24].map((w, i) => (
-                        <div key={i} className={`h-3 bg-(--muted) rounded animate-pulse w-${w}`} />
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {[20, 8, 16, 12, 10].map((w, i) => (
-                        <div key={i} className={`h-3 bg-(--muted) rounded animate-pulse w-${w}`} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <StreamingMessage
+                state={{
+                  status: streamState.status as any,
+                  content: streamState.content,
+                  displayedContent: streamState.displayedContent,
+                  toolCalls: streamState.toolCalls.map(e => ({
+                    tool: e.tool as string,
+                    arguments: (e.arguments as Record<string, unknown>) || {},
+                    timestamp: Date.now(),
+                  })),
+                  toolResults: streamState.toolResults.map(e => ({
+                    tool: e.tool as string,
+                    result: e.result as string,
+                    timestamp: Date.now(),
+                  })),
+                  thoughts: streamState.thoughts.map(e => ({
+                    content: e.content as string,
+                    timestamp: Date.now(),
+                  })),
+                  currentTool: streamState.currentTool,
+                  error: streamState.error,
+                  messageId: streamState.messageId,
+                  sessionId: streamState.sessionId,
+                }}
+                isStreaming={isStreaming}
+                onRetry={handleRetry}
+                onDismiss={handleCancel}
+              />
+            )}
+
+            {/* Error state without active stream */}
+            {!isStreaming && streamState.error && (
+              <div className="mt-2">
+                {/* ErrorBanner is inside StreamingMessage on retry; just show inline error for now */}
               </div>
             )}
           </>

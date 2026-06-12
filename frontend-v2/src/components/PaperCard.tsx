@@ -79,7 +79,7 @@ export function PaperCard({
 
           {/* Shared indicator */}
           {isShared && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-(--sky-blue)/10 text-(--sky-blue)">
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[0.625rem] font-medium bg-(--sky-blue)/10 text-(--sky-blue)">
               <People size={10} />
               Shared
             </span>
@@ -125,7 +125,7 @@ export function PaperCard({
             <img
               src={coverUrl}
               alt=""
-              className="size-full object-cover"
+              className="size-full object-cover dark:invert"
               draggable={false}
             />
           ) : (
