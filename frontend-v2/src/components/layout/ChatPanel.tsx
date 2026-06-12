@@ -29,6 +29,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
   const paperId = id ? parseInt(id) : undefined;
   // activeTab is now managed by Layout
   const [filterByPage, setFilterByPage] = useState(false);
+  const [aiTab, setAiTab] = useState('summary');
   const queryClient = useQueryClient();
   const { tabs, activeTabId, updateTab } = useTabs();
   const currentPage = tabs.find((t) => t.id === activeTabId)?.currentPage ?? 1;
@@ -65,54 +66,45 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
         </div>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-          {/* Tab header */}
-          <div className="flex items-center justify-between shrink-0 border-b border-(--panel-border) px-3 py-2.5 bg-(--panel-surface)">
-            <TabsList className="gap-0 border-none bg-transparent px-0 flex-1 overflow-x-auto overflow-y-hidden scrollbar-none items-center h-12">
-              <TabsTrigger value="details" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
-                <FileText size={13} />
-                <span className="hidden xl:inline text-caption">Details</span>
+          {/* Icon-only pill bar */}
+          <div className="flex items-center justify-between shrink-0 border-b border-(--panel-border) bg-(--panel-surface)">
+            <TabsList className="flex items-center gap-1 px-3 py-2 border-none bg-transparent">
+              <TabsTrigger value="details" title="Details" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+                <FileText size={18} />
               </TabsTrigger>
-              <TabsTrigger value="ai" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
-                <Sparkles size={13} />
-                <span className="hidden xl:inline text-caption">Insights</span>
+              <TabsTrigger value="ai" title="Insights" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+                <Sparkles size={18} />
               </TabsTrigger>
-              <TabsTrigger value="related" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
-                <Link size={13} />
-                <span className="hidden xl:inline text-caption">Related</span>
+              <TabsTrigger value="related" title="Related" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+                <Link size={18} />
               </TabsTrigger>
-
-              <div className="h-6 w-px bg-(--border) mx-1 shrink-0" />
-              <TabsTrigger value="chat" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
-                <MessageSquare size={13} />
-                <span className="hidden xl:inline text-caption">Chat</span>
+              <TabsTrigger value="chat" title="Chat" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+                <MessageSquare size={18} />
               </TabsTrigger>
-              <TabsTrigger value="notes" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
-                <StickyNote size={13} />
-                <span className="hidden xl:inline text-caption">Notes</span>
+              <TabsTrigger value="notes" title="Notes" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+                <StickyNote size={18} />
                 {noteItems.length > 0 && (
-                  <span className="text-micro bg-(--muted) px-1.5 py-0.5 rounded-full tabular-nums">
+                  <span className="absolute -top-0.5 -right-0.5 text-micro bg-(--muted) px-1 py-0.5 rounded-full tabular-nums leading-none">
                     {noteItems.length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="annotations" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
-                <Highlighter size={13} />
-                <span className="hidden xl:inline text-caption">Annotate</span>
+              <TabsTrigger value="annotations" title="Annotations" className="relative inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+                <Highlighter size={18} />
                 {annotationItems.length > 0 && (
-                  <span className="text-micro bg-(--muted) px-1.5 py-0.5 rounded-full tabular-nums">
+                  <span className="absolute -top-0.5 -right-0.5 text-micro bg-(--muted) px-1 py-0.5 rounded-full tabular-nums leading-none">
                     {annotationItems.length}
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="bookmarks" className="h-12 gap-1.5 border-b-2 rounded-none px-3 shrink-0">
-                <Bookmark size={13} />
-                <span className="hidden xl:inline text-caption">Marks</span>
+              <TabsTrigger value="bookmarks" title="Bookmarks" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+                <Bookmark size={18} />
               </TabsTrigger>
             </TabsList>
 
             <button
               onClick={onToggle}
-              className="p-1.5 text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) rounded-lg transition-colors ml-1 shrink-0"
+              className="p-1.5 mr-2 text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) rounded-lg transition-colors shrink-0"
               aria-label="Close panel"
             >
               <PanelRightClose size={16} />
@@ -125,29 +117,48 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
               <PaperDetails paper={paper} onDelete={() => { }} />
             </TabsContent>
 
-            <TabsContent value="ai" className="h-full overflow-y-auto scrollbar-none p-6 text-(--foreground)">
-              <div className="space-y-8">
-                <AutoHighlights paperId={paper.id} />
-
-                <section>
-                  <h3 className="text-body font-bold mb-4">Executive Summary</h3>
-                  <AISummary paperId={paper.id} />
-                </section>
-
-                <div className="border-t border-dashed border-(--border)" />
-
-                <section>
-                  <h3 className="text-body font-bold mb-4">Core Insights</h3>
-                  <KeyFindings paperId={paper.id} />
-                </section>
-
-                <div className="border-t border-dashed border-(--border)" />
-
-                <section>
-                  <h3 className="text-body font-bold mb-4">Reading Guide</h3>
-                  <ReadingGuide paperId={paper.id} />
-                </section>
-              </div>
+            <TabsContent value="ai" className="h-full overflow-hidden flex flex-col">
+              <Tabs value={aiTab} onValueChange={setAiTab} className="flex flex-col h-full">
+                <div className="shrink-0 border-b border-(--border) px-3 py-1.5 bg-(--panel-surface)">
+                  <TabsList className="gap-0.5 border-none bg-transparent">
+                    <TabsTrigger value="summary" className="px-2.5 py-1 text-caption rounded-full border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border)">
+                      Summary
+                    </TabsTrigger>
+                    <TabsTrigger value="insights" className="px-2.5 py-1 text-caption rounded-full border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border)">
+                      Insights
+                    </TabsTrigger>
+                    <TabsTrigger value="guide" className="px-2.5 py-1 text-caption rounded-full border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border)">
+                      Guide
+                    </TabsTrigger>
+                    <TabsTrigger value="highlights" className="px-2.5 py-1 text-caption rounded-full border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border)">
+                      Highlights
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                <div className="flex-1 overflow-y-auto scrollbar-none p-6 text-(--foreground)">
+                  <TabsContent value="summary">
+                    <section>
+                      <h3 className="text-body font-bold mb-4">Executive Summary</h3>
+                      <AISummary paperId={paper.id} />
+                    </section>
+                  </TabsContent>
+                  <TabsContent value="insights">
+                    <section>
+                      <h3 className="text-body font-bold mb-4">Core Insights</h3>
+                      <KeyFindings paperId={paper.id} />
+                    </section>
+                  </TabsContent>
+                  <TabsContent value="guide">
+                    <section>
+                      <h3 className="text-body font-bold mb-4">Reading Guide</h3>
+                      <ReadingGuide paperId={paper.id} />
+                    </section>
+                  </TabsContent>
+                  <TabsContent value="highlights">
+                    <AutoHighlights paperId={paper.id} />
+                  </TabsContent>
+                </div>
+              </Tabs>
             </TabsContent>
 
             {/* Notes tab — freeform notes (type === 'note'), page/document scoped */}

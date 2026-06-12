@@ -36,7 +36,6 @@ export type {
   ReferenceItem,
   ThreadRequest,
   ThreadResponse,
-  StreamChunk,
 } from './chat';
 
 export { multiChatApi } from './multi-chat';

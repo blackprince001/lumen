@@ -8,7 +8,8 @@ const COVER_WIDTH = 320;
 export async function renderPdfCover(
   data: ArrayBuffer,
   pageIndex = 0,
-  width = COVER_WIDTH
+  width = COVER_WIDTH,
+  bgColor = '#ffffff'
 ): Promise<Blob | null> {
   const pdfjs = await import('pdfjs-dist');
   pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -34,6 +35,10 @@ export async function renderPdfCover(
     canvas.height = Math.ceil(viewport.height);
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
+
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     await page.render({ canvas, canvasContext: ctx, viewport }).promise;
 
     return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
@@ -46,9 +51,9 @@ export async function renderPdfCover(
  * First-page preview of a local (not yet uploaded) PDF file.
  * Returns an object URL — the caller owns revocation.
  */
-export async function renderLocalPdfCover(file: File): Promise<string | null> {
+export async function renderLocalPdfCover(file: File, bgColor = '#ffffff'): Promise<string | null> {
   try {
-    const blob = await renderPdfCover(await file.arrayBuffer(), 0);
+    const blob = await renderPdfCover(await file.arrayBuffer(), 0, COVER_WIDTH, bgColor);
     return blob ? URL.createObjectURL(blob) : null;
   } catch {
     return null;

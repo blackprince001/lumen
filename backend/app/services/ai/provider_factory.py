@@ -40,9 +40,32 @@ def create_default_provider() -> AIProvider | None:
   """Create a default AI provider from environment settings.
 
   This provides backward compatibility when no user-specific
-  settings are configured.  Uses GOOGLE_API_KEY / GENAI_MODEL
-  from env by default, falling back to any configured provider.
+  settings are configured.  Resolution order:
+
+  1. ``OPENAI_API_KEY`` → OpenAI provider
+  2. ``ANTHROPIC_API_KEY`` → Anthropic provider
+  3. ``DEEPSEEK_API_KEY`` → DeepSeek provider
+  4. ``GOOGLE_API_KEY`` → Gemini provider (legacy)
   """
+  env_providers = [
+    ("openai", settings.OPENAI_API_KEY, "gpt-4o"),
+    ("anthropic", settings.ANTHROPIC_API_KEY, "claude-sonnet-4-20250514"),
+    ("deepseek", settings.DEEPSEEK_API_KEY, "deepseek-chat"),
+  ]
+
+  for provider_type, api_key, default_model in env_providers:
+    if api_key:
+      config = ProviderConfig(
+        provider=provider_type,
+        api_key=api_key,
+        model=default_model,
+        embedding_model=settings.EMBEDDING_MODEL,
+        embedding_dimension=settings.EMBEDDING_DIMENSION,
+      )
+      provider = ai_provider_registry.create(provider_type, config)
+      if provider:
+        return provider
+
   if settings.GOOGLE_API_KEY:
     config = ProviderConfig(
       provider="gemini",

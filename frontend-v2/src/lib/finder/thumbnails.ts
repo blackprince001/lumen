@@ -16,6 +16,11 @@ const THUMB_WIDTH = 320;
 const MAX_CONCURRENT = 3;
 const CACHE_NAME = 'paper-thumbs-v1';
 
+function getThemeBg(): string {
+  if (typeof document === 'undefined') return '#ffffff';
+  return document.documentElement.classList.contains('dark') ? '#1a1a2e' : '#ffffff';
+}
+
 const inflight = new Map<string, Promise<string | null>>();
 const queue: Array<() => void> = [];
 let running = 0;
@@ -56,9 +61,9 @@ async function cachePut(key: string, blob: Blob): Promise<void> {
   }
 }
 
-async function renderPage(fileUrl: string, pageIndex: number): Promise<Blob | null> {
+async function renderPage(fileUrl: string, pageIndex: number, bgColor: string): Promise<Blob | null> {
   const pdfBlob = await fetchApi<Blob>(fileUrl, { method: 'GET', responseType: 'blob' });
-  return renderPdfCover(await pdfBlob.arrayBuffer(), pageIndex, THUMB_WIDTH);
+  return renderPdfCover(await pdfBlob.arrayBuffer(), pageIndex, THUMB_WIDTH, bgColor);
 }
 
 /**
@@ -71,7 +76,8 @@ export async function loadPaperCover(
   updatedAt?: string,
   pageIndex = 0
 ): Promise<string | null> {
-  const key = `/thumbs/p${paperId}/${pageIndex}?v=${encodeURIComponent(updatedAt ?? '')}`;
+  const bgColor = getThemeBg();
+  const key = `/thumbs/p${paperId}/${pageIndex}?bg=${encodeURIComponent(bgColor)}&v=${encodeURIComponent(updatedAt ?? '')}`;
   const existing = inflight.get(key);
   if (existing) return existing;
 
@@ -79,7 +85,7 @@ export async function loadPaperCover(
     const cached = await cacheGet(key);
     if (cached) return cached;
 
-    const blob = await withConcurrencyLimit(() => renderPage(fileUrl, pageIndex));
+    const blob = await withConcurrencyLimit(() => renderPage(fileUrl, pageIndex, bgColor));
     if (!blob) return null;
     void cachePut(key, blob);
     return URL.createObjectURL(blob);

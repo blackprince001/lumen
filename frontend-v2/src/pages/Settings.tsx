@@ -174,7 +174,7 @@ function ProfileSection() {
           </label>
           <Input value={user?.email ?? ''} type="email" disabled />
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
               Organization
@@ -251,7 +251,7 @@ function AppearanceSection() {
 
       <div>
         <p className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-3">Theme</p>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-3 sm:gap-3">
           {(['light', 'dark', 'system'] as ThemeMode[]).map((m) => (
             <ThemeCard key={m} mode={m} current={themeMode} onSelect={handleTheme} />
           ))}
@@ -286,7 +286,7 @@ function SecuritySection() {
         <p className="text-caption font-semibold uppercase tracking-widest text-(--destructive) mb-4">
           Danger zone
         </p>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-3">
           <div>
             <p className="text-body font-medium text-(--foreground)">Sign out</p>
             <p className="text-caption text-(--muted-foreground)">End this session</p>
@@ -301,7 +301,7 @@ function SecuritySection() {
             {signingOut ? 'Signing out…' : 'Sign out'}
           </Button>
         </div>
-        <div className="flex items-center justify-between opacity-60">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 opacity-60">
           <div>
             <p className="text-body font-medium text-(--foreground)">Delete account</p>
             <p className="text-caption text-(--muted-foreground)">Contact an administrator</p>
@@ -524,17 +524,36 @@ export default function Settings() {
   const Panel = PANELS[active];
 
   return (
-    <div className="max-w-content mx-auto px-6 py-8">
-      <div className="mb-7">
-        <h1>Settings</h1>
+    <div className="max-w-content mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="mb-6 sm:mb-7">
+        <h1 className="text-heading">Settings</h1>
         <p className="text-body text-(--muted-foreground) mt-1">
           Manage your account and appearance
         </p>
       </div>
 
-      <div className="flex gap-8">
-        {/* Left nav */}
-        <nav className="w-48 shrink-0 space-y-0.5">
+      <div className="flex flex-col sm:flex-row gap-6 sm:gap-8">
+        {/* Mobile: horizontal scrollable pills */}
+        <nav className="sm:hidden flex gap-1 overflow-x-auto scrollbar-none -mx-4 px-4 pb-1">
+          {SECTIONS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActive(id)}
+              className={cn(
+                'shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-caption transition-all duration-150 border whitespace-nowrap',
+                active === id
+                  ? 'bg-(--foreground) text-(--card) border-(--foreground) font-medium'
+                  : 'bg-(--card) text-(--muted-foreground) border-(--border) hover:text-(--foreground) hover:border-(--foreground)/30',
+              )}
+            >
+              <Icon size={13} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Desktop: left nav */}
+        <nav className="hidden sm:block w-48 shrink-0 space-y-0.5">
           {SECTIONS.map(({ id, label, icon: Icon }) => (
             <button
               key={id}

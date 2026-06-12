@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ExportSquare as ExternalLink, Book1 as BookOpen, Book1 as Library, Global as Globe, ArrowUp2 as ArrowUpRight, ArrowDown2 as ArrowDownLeft } from 'iconsax-reactjs';
+import { ExportSquare as ExternalLink, Book1 as BookOpen, Book1 as Library, ArrowUp2 as ArrowUpRight, ArrowDown2 as ArrowDownLeft } from 'iconsax-reactjs';
 import { Link } from 'react-router-dom';
 import { papersApi, type RelatedPaperExternal, type Paper } from '@/lib/api/papers';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
@@ -86,10 +86,10 @@ export function RelatedPapers({ paperId }: RelatedPapersProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="w-full justify-start border-none px-0 gap-4 mb-4">
           <TabsTrigger value="citations" className="px-0 pb-2 border-b-2 rounded-none">
-            Citations ({ (related?.cited_by?.length || 0) + (related?.cited_here?.length || 0) })
+            Citations ({(related?.cited_by?.length || 0) + (related?.cited_here?.length || 0)})
           </TabsTrigger>
           <TabsTrigger value="similar" className="px-0 pb-2 border-b-2 rounded-none">
-            Similar ({ (related?.related_library?.length || 0) + (related?.related_internet?.length || 0) })
+            Similar ({(related?.related_library?.length || 0) + (related?.related_internet?.length || 0)})
           </TabsTrigger>
         </TabsList>
 
@@ -140,22 +140,6 @@ export function RelatedPapers({ paperId }: RelatedPapersProps) {
                 related.related_library.map((item) => renderLibraryPaper(item))
               ) : (
                 <p className="py-6 text-center text-caption text-(--muted-foreground) opacity-50 italic">No similar papers in library</p>
-              )}
-            </div>
-          </section>
-
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <Globe size={14} className="text-(--muted-foreground)" />
-              <h3 className="text-caption font-bold uppercase tracking-wider text-(--muted-foreground)">
-                From the Web
-              </h3>
-            </div>
-            <div className="space-y-3">
-              {related?.related_internet && related.related_internet.length > 0 ? (
-                related.related_internet.map((item, idx) => renderExternalPaper(item, idx))
-              ) : (
-                <p className="py-6 text-center text-caption text-(--muted-foreground) opacity-50 italic">No recommended papers from web</p>
               )}
             </div>
           </section>

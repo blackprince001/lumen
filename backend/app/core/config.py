@@ -19,9 +19,14 @@ class Settings(BaseSettings):
   EMBEDDING_MODEL: str = "gemini-embedding-001"
   EMBEDDING_DIMENSION: int = 768
   GOOGLE_API_KEY: str = ""
+  OPENAI_API_KEY: str = ""
+  ANTHROPIC_API_KEY: str = ""
+  DEEPSEEK_API_KEY: str = ""
   SERPAPI_KEY: str = ""
   SEMANTIC_SCHOLAR_API_KEY: str = ""
   GENAI_MODEL: str = "gemini-3-flash-preview"
+  ENABLE_DEEP_RESEARCH: bool = False
+  DEEP_RESEARCH_DAILY_CAP: int = 10
   DEBUG: bool = False
   PORT: int = 8000
 
