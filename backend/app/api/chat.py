@@ -91,7 +91,10 @@ async def get_chat_history(
     return None
 
   chat_session = await get_chat_session_or_404(
-    session, cast(int, chat_session.id), with_messages=True, user_id=scoped_user_id(user)
+    session,
+    cast(int, chat_session.id),
+    with_messages=True,
+    user_id=scoped_user_id(user),
   )
   return ChatSessionSchema.model_validate(chat_session)
 
@@ -161,8 +164,12 @@ async def _get_thread_parent_or_404(
   if not parent_message:
     raise HTTPException(status_code=404, detail="Message not found")
   # Verify the paper behind this chat is visible
-  chat_session = await get_chat_session_or_404(session, cast(int, parent_message.session_id))
-  await get_visible_paper_or_404(session, cast(int, chat_session.paper_id), user_id=scoped_user_id(user))
+  chat_session = await get_chat_session_or_404(
+    session, cast(int, parent_message.session_id)
+  )
+  await get_visible_paper_or_404(
+    session, cast(int, chat_session.paper_id), user_id=scoped_user_id(user)
+  )
   return parent_message
 
 
@@ -195,6 +202,7 @@ async def send_thread_message(
       parent_message_id=message_id,
       user_message=request.message,
       references=request.references,
+      user_id=scoped_user_id(user),
     )
 
     parent_message = await chat_service.get_message_by_id(session, message_id)
@@ -230,6 +238,7 @@ async def stream_thread_message(
         parent_message_id=message_id,
         user_message=request.message,
         references=request.references,
+        user_id=scoped_user_id(user),
       ):
         data = json.dumps(chunk)
         yield f"data: {data}\n\n"
@@ -258,11 +267,17 @@ async def create_new_session(
   await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   chat_session = await chat_service.create_session(
-    db_session=session, paper_id=paper_id, name=session_data.name, user_id=scoped_user_id(user)
+    db_session=session,
+    paper_id=paper_id,
+    name=session_data.name,
+    user_id=scoped_user_id(user),
   )
 
   chat_session = await get_chat_session_or_404(
-    session, cast(int, chat_session.id), with_messages=True, user_id=scoped_user_id(user)
+    session,
+    cast(int, chat_session.id),
+    with_messages=True,
+    user_id=scoped_user_id(user),
   )
   return ChatSessionSchema.model_validate(chat_session)
 
@@ -273,7 +288,9 @@ async def list_sessions(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  sessions = await list_chat_sessions_for_paper(session, paper_id, user_id=scoped_user_id(user))
+  sessions = await list_chat_sessions_for_paper(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
   return [ChatSessionSchema.model_validate(s) for s in sessions]
 
 
@@ -314,7 +331,9 @@ async def delete_session(
   user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
-  chat_session = await get_chat_session_or_404(session, session_id, user_id=scoped_user_id(user))
+  chat_session = await get_chat_session_or_404(
+    session, session_id, user_id=scoped_user_id(user)
+  )
 
   logger.info(f"Deleting chat session {session_id} for paper {chat_session.paper_id}")
   await delete_chat_session(session, session_id, user_id=scoped_user_id(user))

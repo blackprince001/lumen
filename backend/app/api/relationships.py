@@ -78,7 +78,9 @@ async def get_citations(
   session: AsyncSession = Depends(get_db),
 ):
   """Get papers that cite this paper."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   identifier = semantic_scholar_service._get_identifier(
     doi=cast(str, paper.doi), arxiv=None
@@ -103,7 +105,9 @@ async def get_cited_by(
   session: AsyncSession = Depends(get_db),
 ):
   """Get papers cited by this paper."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   identifier = semantic_scholar_service._get_identifier(
     doi=cast(str, paper.doi), arxiv=None

@@ -236,9 +236,7 @@ async def remove_canvas_item(
 async def clear_canvas(user: CurrentUser, session: AsyncSession = Depends(get_db)):
   """Remove all items from the current user's canvas."""
   await session.execute(
-    CitationCanvasItem.__table__.delete().where(
-      CitationCanvasItem.user_id == user.id
-    )
+    CitationCanvasItem.__table__.delete().where(CitationCanvasItem.user_id == user.id)
   )
   await session.commit()
   return None

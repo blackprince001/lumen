@@ -66,7 +66,12 @@ class ExportService:
 
     return output.getvalue()
 
-  def export_json(self, papers: List[Paper], include_annotations: bool = False, user_states: dict | None = None) -> str:
+  def export_json(
+    self,
+    papers: List[Paper],
+    include_annotations: bool = False,
+    user_states: dict | None = None,
+  ) -> str:
     """Export papers to JSON format."""
     user_states = user_states or {}
     papers_data = []

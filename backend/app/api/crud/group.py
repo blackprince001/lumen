@@ -71,7 +71,9 @@ async def get_visible_group_or_404(
   return group
 
 
-async def list_groups(session: AsyncSession, *, user_id: int | None = None) -> list[Group]:
+async def list_groups(
+  session: AsyncSession, *, user_id: int | None = None
+) -> list[Group]:
   query = (
     select(Group)
     .options(
@@ -119,7 +121,9 @@ async def create_group(
   session.add(group)
   await session.commit()
 
-  return await get_group_or_404(session, cast(int, group.id), with_relations=True, user_id=user_id)
+  return await get_group_or_404(
+    session, cast(int, group.id), with_relations=True, user_id=user_id
+  )
 
 
 async def update_group(
@@ -167,7 +171,9 @@ async def update_group(
   return await get_group_or_404(session, group_id, with_relations=True, user_id=user_id)
 
 
-async def delete_group(session: AsyncSession, group_id: int, *, user_id: int | None = None) -> None:
+async def delete_group(
+  session: AsyncSession, group_id: int, *, user_id: int | None = None
+) -> None:
   query = (
     select(Group).options(selectinload(Group.children)).where(Group.id == group_id)
   )

@@ -1,7 +1,6 @@
 import re
 import xml.etree.ElementTree as ET
 from typing import List, Optional, cast
-from urllib.parse import quote_plus
 
 import httpx
 
@@ -33,9 +32,7 @@ class ArxivProvider(BaseDiscoveryProvider):
 
   name = "arxiv"
   display_name = "arXiv"
-  description = (
-    "Semantic search over 300k+ ML papers from arXiv"
-  )
+  description = "Semantic search over 300k+ ML papers from arXiv"
   base_url = "https://searchthearxiv.com"
 
   supports_search = True
@@ -90,14 +87,14 @@ class ArxivProvider(BaseDiscoveryProvider):
         # Deduplicate: remove any official results that already exist in semantic results
         seen_ids = {p.external_id for p in semantic_results}
         augmented_results = semantic_results.copy()
-        
+
         for p in official_results:
           if p.external_id not in seen_ids:
             augmented_results.append(p)
             seen_ids.add(p.external_id)
             if len(augmented_results) >= limit:
               break
-        
+
         return augmented_results
 
       return semantic_results[:limit]
@@ -109,7 +106,9 @@ class ArxivProvider(BaseDiscoveryProvider):
         query=truncated_query,
       )
       # Fallback to official search if semantic fails
-      return await self._search_official_arxiv(query=query, filters=filters, limit=limit)
+      return await self._search_official_arxiv(
+        query=query, filters=filters, limit=limit
+      )
     except Exception as e:
       logger.error(
         "Error searching SearchTheArxiv",
@@ -117,7 +116,9 @@ class ArxivProvider(BaseDiscoveryProvider):
         query=truncated_query,
       )
       # Fallback to official search if semantic fails
-      return await self._search_official_arxiv(query=query, filters=filters, limit=limit)
+      return await self._search_official_arxiv(
+        query=query, filters=filters, limit=limit
+      )
 
   async def _search_official_arxiv(
     self,
@@ -137,7 +138,7 @@ class ArxivProvider(BaseDiscoveryProvider):
     """
     # Simple keyword search in all fields
     search_query = f"all:{query}"
-    
+
     params = {
       "search_query": search_query,
       "max_results": limit,
@@ -152,21 +153,19 @@ class ArxivProvider(BaseDiscoveryProvider):
       response.raise_for_status()
 
       results = self._parse_arxiv_xml(response.text)
-      
+
       # Apply client-side filters (year, authors) if provided
       # even though some might be in the query, we apply to ensure consistency
       if filters:
         results = self._apply_filters(results, filters)
-        
+
       return results[:limit]
 
     except Exception as e:
       logger.error("Error searching official arXiv", error=str(e), query=query)
       return []
 
-  def _parse_searchthearxiv_response(
-    self, data: dict
-  ) -> List[ExternalPaperResult]:
+  def _parse_searchthearxiv_response(self, data: dict) -> List[ExternalPaperResult]:
     """Parse SearchTheArxiv JSON response into ExternalPaperResult list.
 
     Args:
@@ -193,11 +192,7 @@ class ArxivProvider(BaseDiscoveryProvider):
         if not authors:
           # Fallback: split the comma-separated authors string
           authors_str = paper.get("authors", "")
-          authors = (
-            [a.strip() for a in authors_str.split(",")]
-            if authors_str
-            else []
-          )
+          authors = [a.strip() for a in authors_str.split(",")] if authors_str else []
 
         abstract = paper.get("abstract", "").strip()
 
@@ -271,9 +266,7 @@ class ArxivProvider(BaseDiscoveryProvider):
     if filters.authors:
       author_set = {a.lower() for a in filters.authors}
       filtered = [
-        p
-        for p in filtered
-        if any(a.lower() in author_set for a in p.authors)
+        p for p in filtered if any(a.lower() in author_set for a in p.authors)
       ]
 
     return filtered

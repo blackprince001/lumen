@@ -1,13 +1,16 @@
-from pathlib import Path
-from typing import Any, cast
+"""Celery tasks for AI operations — provider-agnostic.
 
-from google.genai import types
+Uses BaseAITask.provider instead of a hardcoded Gemini client.
+"""
+
+from typing import Any, cast
 
 from app.celery_app import celery_app
 from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.annotation import Annotation
 from app.models.paper import Paper
+from app.services.ai.providers.base import EmbeddingConfig, GenerateConfig
 from app.tasks.base import BaseAITask, get_sync_session
 from app.utils.json_extractor import extract_json_from_text
 
@@ -62,7 +65,6 @@ Return a JSON array with this structure:
   {{"text": "exact excerpt", "type": "key_contribution"}}
 ]"""
 
-# Valid highlight types matching DB enum
 VALID_HIGHLIGHT_TYPES = {"method", "result", "conclusion", "key_contribution"}
 HIGHLIGHT_TYPE_ALIASES = {
   "contribution": "key_contribution",
@@ -76,21 +78,27 @@ HIGHLIGHT_TYPE_ALIASES = {
 }
 
 
-def _get_content_parts_sync(paper: Paper) -> list[types.Part]:
-  """Get content parts for a paper synchronously."""
-  if paper.file_path:
-    file_path = Path(cast(str, paper.file_path))
-    if not file_path.is_absolute():
-      file_path = Path(settings.STORAGE_PATH) / file_path
-    if file_path.exists():
-      return [
-        types.Part.from_bytes(data=file_path.read_bytes(), mime_type="application/pdf")
-      ]
+def _build_prompt_with_content(
+  prompt_template: str, paper: Paper, title: str | None = None
+) -> str:
+  """Build a prompt with paper title and content.
 
+  Includes paper content as context for the AI model.
+  """
+  paper_title = title or paper.title or "Unknown"
+  content = ""
   if paper.content_text:
-    return [types.Part.from_text(text=cast(str, paper.content_text))]
+    content = cast(str, paper.content_text)
+    max_content_length = 15000
+    if len(content) > max_content_length:
+      content = content[:max_content_length] + "..."
 
-  return []
+  system = f"Paper Context:\n{paper_title}\n\n"
+  if content:
+    system += f"Paper Content:\n{content}\n\n"
+
+  prompt = prompt_template.format(title=paper_title or "Unknown")
+  return f"{system}\n\n{prompt}"
 
 
 def _normalize_highlight_type(raw_type: str | None) -> str | None:
@@ -111,26 +119,22 @@ def generate_summary_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    client = self.client
-    if not client:
+    p = self.provider
+    if not p:
       return {
         "status": "error",
-        "error": "No AI client available",
+        "error": "No AI provider available",
         "paper_id": paper_id,
       }
 
-    content_parts = _get_content_parts_sync(paper)
-    if not content_parts:
-      return {"status": "error", "error": "No content available", "paper_id": paper_id}
+    import asyncio
 
-    prompt = SUMMARY_PROMPT.format(title=paper.title or "Unknown")
-    contents = content_parts + [types.Part.from_text(text=prompt)]
-
-    response = client.models.generate_content(
-      model=settings.GENAI_MODEL,
-      contents=contents,
+    full_prompt = _build_prompt_with_content(SUMMARY_PROMPT, paper)
+    config = GenerateConfig(
+      model=p.config.model or settings.GENAI_MODEL,
+      temperature=0.3,
     )
-    summary = response.text if hasattr(response, "text") else str(response)
+    summary = asyncio.run(p.generate(full_prompt, config))
 
     paper.ai_summary = summary
     from datetime import datetime, timezone
@@ -158,26 +162,21 @@ def extract_findings_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    client = self.client
-    if not client:
+    p = self.provider
+    if not p:
       return {
         "status": "error",
-        "error": "No AI client available",
+        "error": "No AI provider available",
         "paper_id": paper_id,
       }
 
-    content_parts = _get_content_parts_sync(paper)
-    if not content_parts:
-      return {"status": "error", "error": "No content available", "paper_id": paper_id}
+    import asyncio
 
-    prompt = FINDINGS_PROMPT.format(title=paper.title or "Unknown")
-    contents = content_parts + [types.Part.from_text(text=prompt)]
-
-    response = client.models.generate_content(
-      model=settings.GENAI_MODEL,
-      contents=contents,
+    full_prompt = _build_prompt_with_content(FINDINGS_PROMPT, paper)
+    config = GenerateConfig(
+      model=p.config.model or settings.GENAI_MODEL, temperature=0.3
     )
-    text = response.text if hasattr(response, "text") else str(response)
+    text = asyncio.run(p.generate(full_prompt, config))
 
     parsed = extract_json_from_text(text)
     if isinstance(parsed, dict):
@@ -208,26 +207,21 @@ def generate_reading_guide_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    client = self.client
-    if not client:
+    p = self.provider
+    if not p:
       return {
         "status": "error",
-        "error": "No AI client available",
+        "error": "No AI provider available",
         "paper_id": paper_id,
       }
 
-    content_parts = _get_content_parts_sync(paper)
-    if not content_parts:
-      return {"status": "error", "error": "No content available", "paper_id": paper_id}
+    import asyncio
 
-    prompt = READING_GUIDE_PROMPT.format(title=paper.title or "Unknown")
-    contents = content_parts + [types.Part.from_text(text=prompt)]
-
-    response = client.models.generate_content(
-      model=settings.GENAI_MODEL,
-      contents=contents,
+    full_prompt = _build_prompt_with_content(READING_GUIDE_PROMPT, paper)
+    config = GenerateConfig(
+      model=p.config.model or settings.GENAI_MODEL, temperature=0.3
     )
-    text = response.text if hasattr(response, "text") else str(response)
+    text = asyncio.run(p.generate(full_prompt, config))
 
     parsed = extract_json_from_text(text)
     if isinstance(parsed, dict):
@@ -258,26 +252,21 @@ def generate_highlights_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    client = self.client
-    if not client:
+    p = self.provider
+    if not p:
       return {
         "status": "error",
-        "error": "No AI client available",
+        "error": "No AI provider available",
         "paper_id": paper_id,
       }
 
-    content_parts = _get_content_parts_sync(paper)
-    if not content_parts:
-      return {"status": "error", "error": "No content available", "paper_id": paper_id}
+    import asyncio
 
-    prompt = HIGHLIGHTS_PROMPT.format(title=paper.title or "Unknown")
-    contents = content_parts + [types.Part.from_text(text=prompt)]
-
-    response = client.models.generate_content(
-      model=settings.GENAI_MODEL,
-      contents=contents,
+    full_prompt = _build_prompt_with_content(HIGHLIGHTS_PROMPT, paper)
+    config = GenerateConfig(
+      model=p.config.model or settings.GENAI_MODEL, temperature=0.3
     )
-    text = response.text if hasattr(response, "text") else str(response)
+    text = asyncio.run(p.generate(full_prompt, config))
 
     parsed = extract_json_from_text(text)
     if isinstance(parsed, list):
@@ -285,11 +274,9 @@ def generate_highlights_task(self, paper_id: int) -> dict[str, Any]:
       for item in parsed:
         if not isinstance(item, dict):
           continue
-
         h_type = _normalize_highlight_type(item.get("type"))
         if not h_type:
           continue
-
         annotation = Annotation(
           paper_id=paper_id,
           content=item.get("text", ""),
@@ -300,7 +287,6 @@ def generate_highlights_task(self, paper_id: int) -> dict[str, Any]:
         )
         session.add(annotation)
         count += 1
-
       session.commit()
       logger.info(f"Generated {count} highlights", paper_id=paper_id)
       return {"status": "success", "paper_id": paper_id, "count": count}
@@ -324,11 +310,11 @@ def generate_embedding_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    client = self.client
-    if not client:
+    p = self.provider
+    if not p:
       return {
         "status": "error",
-        "error": "No AI client available",
+        "error": "No AI provider available",
         "paper_id": paper_id,
       }
 
@@ -336,25 +322,25 @@ def generate_embedding_task(self, paper_id: int) -> dict[str, Any]:
     if not text_to_embed:
       return {"status": "error", "error": "No text to embed", "paper_id": paper_id}
 
-    # Truncate to reasonable length for embedding model to check cost/time
-    # Models have limits, e.g. 8k tokens.
     max_chars = 20000
+    import asyncio
 
-    result = client.models.embed_content(
-      model=settings.EMBEDDING_MODEL,
-      contents=text_to_embed[:max_chars],
-      config=types.EmbedContentConfig(
-        task_type="RETRIEVAL_DOCUMENT",
-        output_dimensionality=settings.EMBEDDING_DIMENSION,
-      ),
+    config = EmbeddingConfig(
+      model=p.config.embedding_model or settings.EMBEDDING_MODEL,
+      task_type="RETRIEVAL_DOCUMENT",
+      dimensions=p.config.embedding_dimension or settings.EMBEDDING_DIMENSION,
     )
+    embeddings = asyncio.run(p.embed([text_to_embed[:max_chars]], config))
 
-    if result.embeddings and len(result.embeddings) > 0:
-      embedding = list(result.embeddings[0].values)
-      paper.embedding = embedding
+    if embeddings and len(embeddings) > 0:
+      paper.embedding = embeddings[0]
       session.commit()
       logger.info("Generated embedding", paper_id=paper_id)
-      return {"status": "success", "paper_id": paper_id, "dimension": len(embedding)}
+      return {
+        "status": "success",
+        "paper_id": paper_id,
+        "dimension": len(embeddings[0]),
+      }
 
     return {"status": "error", "error": "No embedding returned", "paper_id": paper_id}
 

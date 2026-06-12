@@ -48,9 +48,13 @@ async def generate_summary(
 
 
 @router.get("/papers/{paper_id}/summary", response_model=SummaryResponse)
-async def get_summary(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def get_summary(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Get AI summary for a paper."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   if not paper.ai_summary:
     # If no summary, it might be pending or not requested
@@ -75,7 +79,9 @@ async def update_summary(
   session: AsyncSession = Depends(get_db),
 ):
   """Update AI summary manually."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   paper.ai_summary = summary
   await session.commit()
@@ -103,9 +109,13 @@ async def extract_findings(
 
 
 @router.get("/papers/{paper_id}/findings", response_model=FindingsResponse)
-async def get_findings(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def get_findings(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Get key findings for a paper."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   findings = (
     paper.key_findings
@@ -126,7 +136,9 @@ async def update_findings(
   session: AsyncSession = Depends(get_db),
 ):
   """Update key findings manually."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   paper.key_findings = findings
   await session.commit()
@@ -152,9 +164,13 @@ async def generate_reading_guide(
 
 
 @router.get("/papers/{paper_id}/reading-guide", response_model=ReadingGuideResponse)
-async def get_reading_guide(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def get_reading_guide(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Get reading guide for a paper."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   guide = (
     paper.reading_guide
@@ -173,7 +189,9 @@ async def update_reading_guide(
   session: AsyncSession = Depends(get_db),
 ):
   """Update reading guide manually."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   paper.reading_guide = guide
   await session.commit()

@@ -9,7 +9,9 @@ from app.schemas.reading_progress import ReadingStatistics, ReadingStreak
 
 
 class ReadingTrackerService:
-  async def calculate_statistics(self, session: AsyncSession, user_id: int | None = None) -> ReadingStatistics:
+  async def calculate_statistics(
+    self, session: AsyncSession, user_id: int | None = None
+  ) -> ReadingStatistics:
     now = datetime.now(timezone.utc)
     week_start = now - timedelta(days=now.weekday())
     month_start = now.replace(day=1)
@@ -22,37 +24,53 @@ class ReadingTrackerService:
 
     papers_read_this_week = (
       await session.scalar(
-        _state_filter(select(func.count()).select_from(UserPaperState).where(
-          UserPaperState.reading_status == "read",
-          UserPaperState.status_updated_at >= week_start,
-        ))
+        _state_filter(
+          select(func.count())
+          .select_from(UserPaperState)
+          .where(
+            UserPaperState.reading_status == "read",
+            UserPaperState.status_updated_at >= week_start,
+          )
+        )
       )
       or 0
     )
 
     papers_read_this_month = (
       await session.scalar(
-        _state_filter(select(func.count()).select_from(UserPaperState).where(
-          UserPaperState.reading_status == "read",
-          UserPaperState.status_updated_at >= month_start,
-        ))
+        _state_filter(
+          select(func.count())
+          .select_from(UserPaperState)
+          .where(
+            UserPaperState.reading_status == "read",
+            UserPaperState.status_updated_at >= month_start,
+          )
+        )
       )
       or 0
     )
 
     papers_read_this_year = (
       await session.scalar(
-        _state_filter(select(func.count()).select_from(UserPaperState).where(
-          UserPaperState.reading_status == "read",
-          UserPaperState.status_updated_at >= year_start,
-        ))
+        _state_filter(
+          select(func.count())
+          .select_from(UserPaperState)
+          .where(
+            UserPaperState.reading_status == "read",
+            UserPaperState.status_updated_at >= year_start,
+          )
+        )
       )
       or 0
     )
 
     total_reading_time = (
       await session.scalar(
-        _state_filter(select(func.sum(UserPaperState.reading_time_minutes)).select_from(UserPaperState))
+        _state_filter(
+          select(func.sum(UserPaperState.reading_time_minutes)).select_from(
+            UserPaperState
+          )
+        )
       )
       or 0
     )
@@ -63,7 +81,9 @@ class ReadingTrackerService:
       )
       or 1
     )
-    average_reading_time = total_reading_time / total_papers if total_papers > 0 else 0.0
+    average_reading_time = (
+      total_reading_time / total_papers if total_papers > 0 else 0.0
+    )
 
     streak_data = await self._calculate_streak(session, user_id=user_id)
 
@@ -85,7 +105,9 @@ class ReadingTrackerService:
         .where(UserPaperState.priority.isnot(None))
       )
     )
-    priority_distribution = {priority: count for priority, count in priority_dist.fetchall()}
+    priority_distribution = {
+      priority: count for priority, count in priority_dist.fetchall()
+    }
 
     return ReadingStatistics(
       papers_read_this_week=papers_read_this_week,
@@ -98,7 +120,9 @@ class ReadingTrackerService:
       priority_distribution=priority_distribution,
     )
 
-  async def _calculate_streak(self, session: AsyncSession, user_id: int | None = None) -> ReadingStreak:
+  async def _calculate_streak(
+    self, session: AsyncSession, user_id: int | None = None
+  ) -> ReadingStreak:
     q = (
       select(func.date(ReadingSession.start_time).label("date"))
       .distinct()
@@ -167,7 +191,9 @@ class ReadingTrackerService:
       else None,
     )
 
-  async def get_reading_streak(self, session: AsyncSession, user_id: int | None = None) -> ReadingStreak:
+  async def get_reading_streak(
+    self, session: AsyncSession, user_id: int | None = None
+  ) -> ReadingStreak:
     return await self._calculate_streak(session, user_id=user_id)
 
   async def aggregate_reading_time(self, session: AsyncSession, paper_id: int) -> int:

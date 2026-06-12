@@ -23,6 +23,7 @@ from app.api.search import router as search_router
 from app.api.statistics import router as statistics_router
 from app.api.tags import router as tags_router
 from app.api.tasks import router as tasks_router
+from app.api.user_ai_settings import router as user_ai_settings_router
 from app.api.users import router as users_router
 from app.core.config import settings
 from app.core.database import init_db
@@ -53,15 +54,15 @@ async def seed_admin_user() -> None:
   admin_email = f"{username}@admin.local"
 
   if len(password) < 8:
-    logger.warning("Admin password is less than 8 characters — consider using a stronger password")
+    logger.warning(
+      "Admin password is less than 8 characters — consider using a stronger password"
+    )
 
   password_hash = hash_password(password)
 
   async with AsyncSessionLocal() as session:
     try:
-      result = await session.execute(
-        select(User).where(User.email == admin_email)
-      )
+      result = await session.execute(select(User).where(User.email == admin_email))
       user = result.scalar_one_or_none()
 
       if user:
@@ -124,25 +125,70 @@ app.include_router(auth_router, prefix="/api/v1", tags=["auth"])
 _auth_dep = [Depends(get_current_user)]
 _admin_dep = [Depends(require_admin)]
 
-app.include_router(users_router, prefix="/api/v1", tags=["users"], dependencies=_admin_dep)
-app.include_router(ingest_router, prefix="/api/v1", tags=["ingest"], dependencies=_auth_dep)
-app.include_router(relationships_router, prefix="/api/v1", tags=["relationships"], dependencies=_auth_dep)
-app.include_router(citation_canvas_router, prefix="/api/v1", tags=["citation-canvas"], dependencies=_auth_dep)
-app.include_router(papers_router, prefix="/api/v1", tags=["papers"], dependencies=_auth_dep)
-app.include_router(annotations_router, prefix="/api/v1", tags=["annotations"], dependencies=_auth_dep)
-app.include_router(groups_router, prefix="/api/v1", tags=["groups"], dependencies=_auth_dep)
-app.include_router(search_router, prefix="/api/v1", tags=["search"], dependencies=_auth_dep)
-app.include_router(chat_router, prefix="/api/v1", tags=["chat"], dependencies=_auth_dep)
-app.include_router(multi_chat_router, prefix="/api/v1", tags=["multi-chat"], dependencies=_auth_dep)
-app.include_router(tags_router, prefix="/api/v1", tags=["tags"], dependencies=_auth_dep)
-app.include_router(statistics_router, prefix="/api/v1", tags=["statistics"], dependencies=_auth_dep)
-app.include_router(export_router, prefix="/api/v1", tags=["export"], dependencies=_auth_dep)
-app.include_router(duplicates_router, prefix="/api/v1", tags=["duplicates"], dependencies=_auth_dep)
-app.include_router(ai_features_router, prefix="/api/v1", tags=["ai-features"], dependencies=_auth_dep)
-app.include_router(discovery_router, prefix="/api/v1/discovery", tags=["discovery"], dependencies=_auth_dep)
-app.include_router(tasks_router, prefix="/api/v1/tasks", tags=["tasks"], dependencies=_auth_dep)
 app.include_router(
-  huggingface_router, prefix="/api/v1/huggingface", tags=["huggingface"], dependencies=_auth_dep
+  users_router, prefix="/api/v1", tags=["users"], dependencies=_admin_dep
+)
+app.include_router(
+  ingest_router, prefix="/api/v1", tags=["ingest"], dependencies=_auth_dep
+)
+app.include_router(
+  relationships_router, prefix="/api/v1", tags=["relationships"], dependencies=_auth_dep
+)
+app.include_router(
+  citation_canvas_router,
+  prefix="/api/v1",
+  tags=["citation-canvas"],
+  dependencies=_auth_dep,
+)
+app.include_router(
+  papers_router, prefix="/api/v1", tags=["papers"], dependencies=_auth_dep
+)
+app.include_router(
+  annotations_router, prefix="/api/v1", tags=["annotations"], dependencies=_auth_dep
+)
+app.include_router(
+  groups_router, prefix="/api/v1", tags=["groups"], dependencies=_auth_dep
+)
+app.include_router(
+  search_router, prefix="/api/v1", tags=["search"], dependencies=_auth_dep
+)
+app.include_router(chat_router, prefix="/api/v1", tags=["chat"], dependencies=_auth_dep)
+app.include_router(
+  multi_chat_router, prefix="/api/v1", tags=["multi-chat"], dependencies=_auth_dep
+)
+app.include_router(tags_router, prefix="/api/v1", tags=["tags"], dependencies=_auth_dep)
+app.include_router(
+  user_ai_settings_router,
+  prefix="/api/v1",
+  tags=["ai-settings"],
+  dependencies=_auth_dep,
+)
+app.include_router(
+  statistics_router, prefix="/api/v1", tags=["statistics"], dependencies=_auth_dep
+)
+app.include_router(
+  export_router, prefix="/api/v1", tags=["export"], dependencies=_auth_dep
+)
+app.include_router(
+  duplicates_router, prefix="/api/v1", tags=["duplicates"], dependencies=_auth_dep
+)
+app.include_router(
+  ai_features_router, prefix="/api/v1", tags=["ai-features"], dependencies=_auth_dep
+)
+app.include_router(
+  discovery_router,
+  prefix="/api/v1/discovery",
+  tags=["discovery"],
+  dependencies=_auth_dep,
+)
+app.include_router(
+  tasks_router, prefix="/api/v1/tasks", tags=["tasks"], dependencies=_auth_dep
+)
+app.include_router(
+  huggingface_router,
+  prefix="/api/v1/huggingface",
+  tags=["huggingface"],
+  dependencies=_auth_dep,
 )
 
 # PDF files are served via the authenticated GET /papers/{id}/file endpoint

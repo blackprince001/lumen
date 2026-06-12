@@ -66,12 +66,6 @@ from app.api.crud.saved_search import (
   list_saved_searches,
 )
 
-# UserPaperState
-from app.api.crud.user_paper_state import (
-  batch_get_states,
-  get_or_create_state,
-)
-
 # Tag
 from app.api.crud.tag import (
   create_tag,
@@ -79,6 +73,12 @@ from app.api.crud.tag import (
   get_tag_or_404,
   list_tags,
   update_tag,
+)
+
+# UserPaperState
+from app.api.crud.user_paper_state import (
+  batch_get_states,
+  get_or_create_state,
 )
 from app.api.crud.utils import ensure_loaded, sanitize_metadata
 

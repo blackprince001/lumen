@@ -78,6 +78,9 @@ export type {
   HFDailyPapersResponse,
 } from './huggingface';
 
+export { userAiSettingsApi } from './userAiSettings';
+export type { UserAiSettings, UserAiSettingsUpdate, ProviderInfo } from './userAiSettings';
+
 export { discoveryApi } from './discovery';
 export type {
   DiscoverySearchFilters,

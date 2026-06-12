@@ -48,9 +48,9 @@ from app.schemas.discovery import (
 from app.schemas.discovery import (
   DiscoverySession as DiscoverySessionSchema,
 )
+from app.services.access import apply_visible_papers_filter
 from app.services.discovery import SearchFilters, discovery_service
 from app.services.discovery.ai_search_service import ai_search_service
-from app.services.access import apply_visible_papers_filter
 from app.services.ingestion import ingestion_service
 
 logger = get_logger(__name__)
@@ -187,13 +187,13 @@ async def ai_search_papers(
   # Search each source with appropriate query routing
   source_results = []
   all_papers = []
-  
+
   # Search all providers in parallel with their respective queries
   async def search_single_source(source_name: str):
     provider_query = search_query
     if source_name in ["arxiv", "semantic_scholar"]:
       provider_query = request.query
-      
+
     try:
       return await asyncio.wait_for(
         discovery_service.search_source(
@@ -355,8 +355,6 @@ def _sse_event(event_type: str, data: dict) -> str:
   return f"event: {event_type}\ndata: {json_data}\n\n"
 
 
-
-
 def _redis_client() -> redis_sync.Redis:
   return redis_sync.Redis(
     host=settings.REDIS_HOST,
@@ -391,39 +389,64 @@ async def ai_search_stream(
       sources = request.sources or ["arxiv", "semantic_scholar"]
       r = _redis_client()
 
-      yield _sse_event("status", {"stage": "starting", "message": "Starting search...", "progress": 0})
+      yield _sse_event(
+        "status", {"stage": "starting", "message": "Starting search...", "progress": 0}
+      )
 
       # Query understanding runs in-request — it's fast (~1s) and needed to
       # route queries correctly to providers before we enqueue tasks.
       search_query = request.query
       try:
-        yield _sse_event("status", {"stage": "understanding", "message": "Analyzing query...", "progress": 5})
-        qu = await asyncio.wait_for(ai_search_service.understand_query(request.query), timeout=10.0)
+        yield _sse_event(
+          "status",
+          {"stage": "understanding", "message": "Analyzing query...", "progress": 5},
+        )
+        qu = await asyncio.wait_for(
+          ai_search_service.understand_query(request.query), timeout=10.0
+        )
         if qu:
           if qu.get("boolean_query"):
             search_query = qu["boolean_query"]
-          yield _sse_event("query_understanding", {
-            "interpreted_query": qu.get("interpreted_query", request.query),
-            "boolean_query": qu.get("boolean_query"),
-            "key_concepts": qu.get("key_concepts", []),
-            "search_terms": qu.get("search_terms", []),
-            "domain_hints": qu.get("domain_hints", []),
-            "query_type": qu.get("query_type", "exploratory"),
-          })
+          yield _sse_event(
+            "query_understanding",
+            {
+              "interpreted_query": qu.get("interpreted_query", request.query),
+              "boolean_query": qu.get("boolean_query"),
+              "key_concepts": qu.get("key_concepts", []),
+              "search_terms": qu.get("search_terms", []),
+              "domain_hints": qu.get("domain_hints", []),
+              "query_type": qu.get("query_type", "exploratory"),
+            },
+          )
       except Exception as e:
         logger.warning("Query understanding failed", error=str(e))
 
       # Build filters dict for serialization into Celery task
       filters_dict = None
       if request.filters:
-        filters_dict = {k: v for k, v in request.filters.model_dump().items() if v is not None}
+        filters_dict = {
+          k: v for k, v in request.filters.model_dump().items() if v is not None
+        }
 
       # Enqueue one search task per source
       for source_name in sources:
-        provider_query = request.query if source_name in ("arxiv", "semantic_scholar") else search_query
-        search_source_task.delay(search_id, source_name, provider_query, filters_dict, request.limit or 20)
+        provider_query = (
+          request.query
+          if source_name in ("arxiv", "semantic_scholar")
+          else search_query
+        )
+        search_source_task.delay(
+          search_id, source_name, provider_query, filters_dict, request.limit or 20
+        )
 
-      yield _sse_event("status", {"stage": "searching", "message": f"Searching {len(sources)} sources...", "progress": 10})
+      yield _sse_event(
+        "status",
+        {
+          "stage": "searching",
+          "message": f"Searching {len(sources)} sources...",
+          "progress": 10,
+        },
+      )
 
       # Poll Redis progress list until all sources report back, then AI completes
       expected_source_events = set(sources)
@@ -464,28 +487,45 @@ async def ai_search_stream(
           expected_source_events.discard(source_name)
 
           if "error" in marker:
-            yield _sse_event("source_results", {"source": source_name, "papers": [], "error": marker["error"]})
+            yield _sse_event(
+              "source_results",
+              {"source": source_name, "papers": [], "error": marker["error"]},
+            )
           else:
-            papers_data = json.loads(r.get(f"discovery:{search_id}:source:{source_name}") or "[]")
+            papers_data = json.loads(
+              r.get(f"discovery:{search_id}:source:{source_name}") or "[]"
+            )
             received_sources[source_name] = papers_data
-            yield _sse_event("source_results", {
-              "source": source_name,
-              "papers": papers_data,
-              "paper_count": len(papers_data),
-            })
+            yield _sse_event(
+              "source_results",
+              {
+                "source": source_name,
+                "papers": papers_data,
+                "paper_count": len(papers_data),
+              },
+            )
 
           # Once all sources are done, enqueue AI enhancement
           if not expected_source_events and not ai_task_enqueued:
             all_papers = [p for papers in received_sources.values() for p in papers]
             if all_papers and expected_ai:
               ai_enhance_task.delay(
-                search_id, request.query, all_papers,
+                search_id,
+                request.query,
+                all_papers,
                 request.include_overview or False,
                 request.include_clustering or False,
                 request.include_relevance or False,
               )
               ai_task_enqueued = True
-              yield _sse_event("status", {"stage": "enhancing", "message": "Generating AI insights...", "progress": 50})
+              yield _sse_event(
+                "status",
+                {
+                  "stage": "enhancing",
+                  "message": "Generating AI insights...",
+                  "progress": 50,
+                },
+              )
             else:
               # No papers or no AI requested — we're done
               break
@@ -495,20 +535,36 @@ async def ai_search_stream(
           result_raw = r.get(f"discovery:{search_id}:ai:{event_type}")
           if result_raw:
             result = json.loads(result_raw)
-            label = {"overview": "Building overview...", "clustering": "Clustering topics...", "relevance": "Ranking relevance..."}
-            yield _sse_event("status", {"stage": event_type, "message": label.get(event_type, event_type), "progress": 50 + len(ai_keys - expected_ai) * 15})
+            label = {
+              "overview": "Building overview...",
+              "clustering": "Clustering topics...",
+              "relevance": "Ranking relevance...",
+            }
+            yield _sse_event(
+              "status",
+              {
+                "stage": event_type,
+                "message": label.get(event_type, event_type),
+                "progress": 50 + len(ai_keys - expected_ai) * 15,
+              },
+            )
             yield _sse_event(event_type, result)
 
         elif event_type == "complete":
           break
 
       all_papers = [p for papers in received_sources.values() for p in papers]
-      yield _sse_event("status", {"stage": "complete", "message": "Search complete", "progress": 100})
-      yield _sse_event("complete", {
-        "query": request.query,
-        "total_results": len(all_papers),
-        "sources_searched": list(received_sources.keys()),
-      })
+      yield _sse_event(
+        "status", {"stage": "complete", "message": "Search complete", "progress": 100}
+      )
+      yield _sse_event(
+        "complete",
+        {
+          "query": request.query,
+          "total_results": len(all_papers),
+          "sources_searched": list(received_sources.keys()),
+        },
+      )
 
     except Exception as e:
       logger.error("Stream error", error=str(e))
@@ -523,6 +579,7 @@ async def ai_search_stream(
       "X-Accel-Buffering": "no",
     },
   )
+
 
 @router.get("/paper/{source}/{external_id}")
 async def get_paper_details(
@@ -988,7 +1045,8 @@ async def get_discovery_session(
 ):
   result = await session.execute(
     select(DiscoverySession).where(
-      DiscoverySession.id == session_id, DiscoverySession.user_id == scoped_user_id(user)
+      DiscoverySession.id == session_id,
+      DiscoverySession.user_id == scoped_user_id(user),
     )
   )
   discovery_session = result.scalar_one_or_none()
@@ -1040,7 +1098,8 @@ async def delete_discovery_session(
 ):
   result = await session.execute(
     select(DiscoverySession).where(
-      DiscoverySession.id == session_id, DiscoverySession.user_id == scoped_user_id(user)
+      DiscoverySession.id == session_id,
+      DiscoverySession.user_id == scoped_user_id(user),
     )
   )
   discovery_session = result.scalar_one_or_none()
@@ -1062,7 +1121,8 @@ async def update_discovery_session(
 ):
   result = await session.execute(
     select(DiscoverySession).where(
-      DiscoverySession.id == session_id, DiscoverySession.user_id == scoped_user_id(user)
+      DiscoverySession.id == session_id,
+      DiscoverySession.user_id == scoped_user_id(user),
     )
   )
   discovery_session = result.scalar_one_or_none()

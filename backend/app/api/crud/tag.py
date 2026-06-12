@@ -7,7 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.tag import Tag
 
 
-async def get_tag_or_404(session: AsyncSession, tag_id: int, *, user_id: int | None = None) -> Tag:
+async def get_tag_or_404(
+  session: AsyncSession, tag_id: int, *, user_id: int | None = None
+) -> Tag:
   query = select(Tag).where(Tag.id == tag_id)
   if user_id is not None:
     query = query.where(Tag.user_id == user_id)
@@ -53,7 +55,9 @@ async def list_tags(
   return tags, total
 
 
-async def create_tag(session: AsyncSession, name: str, *, user_id: int | None = None) -> Tag:
+async def create_tag(
+  session: AsyncSession, name: str, *, user_id: int | None = None
+) -> Tag:
   existing = await session.execute(
     select(Tag).where(Tag.name == name, Tag.user_id == user_id)
   )
@@ -68,7 +72,9 @@ async def create_tag(session: AsyncSession, name: str, *, user_id: int | None = 
   return tag
 
 
-async def update_tag(session: AsyncSession, tag_id: int, name: str, *, user_id: int | None = None) -> Tag:
+async def update_tag(
+  session: AsyncSession, tag_id: int, name: str, *, user_id: int | None = None
+) -> Tag:
   tag = await get_tag_or_404(session, tag_id, user_id=user_id)
 
   existing = await session.execute(
@@ -84,7 +90,9 @@ async def update_tag(session: AsyncSession, tag_id: int, name: str, *, user_id: 
   return tag
 
 
-async def delete_tag(session: AsyncSession, tag_id: int, *, user_id: int | None = None) -> None:
+async def delete_tag(
+  session: AsyncSession, tag_id: int, *, user_id: int | None = None
+) -> None:
   tag = await get_tag_or_404(session, tag_id, user_id=user_id)
   await session.delete(tag)
   await session.commit()

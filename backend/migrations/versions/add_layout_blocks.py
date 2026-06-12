@@ -23,7 +23,8 @@ def upgrade() -> None:
   """Add PDF layout block storage to papers."""
   op.add_column("papers", sa.Column("layout_blocks", sa.JSON(), nullable=True))
   op.add_column(
-    "papers", sa.Column("layout_extracted_at", sa.DateTime(timezone=True), nullable=True)
+    "papers",
+    sa.Column("layout_extracted_at", sa.DateTime(timezone=True), nullable=True),
   )
 
 

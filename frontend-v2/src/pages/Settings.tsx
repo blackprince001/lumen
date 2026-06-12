@@ -1,13 +1,27 @@
 import { useEffect, useState } from 'react';
-import { User, Brush as Palette, Moon, Sun, Monitor, ArrowRight2 as ChevronRight, Shield, Logout as LogOut, Trash as Trash2 } from 'iconsax-reactjs';
+import {
+  User,
+  Brush as Palette,
+  Moon,
+  Sun,
+  Monitor,
+  ArrowRight2 as ChevronRight,
+  Shield,
+  Logout as LogOut,
+  Trash as Trash2,
+  Cpu,
+} from 'iconsax-reactjs';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { userAiSettingsApi, type ProviderInfo, type UserAiSettings } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const SECTIONS = [
   { id: 'profile',    label: 'Profile',    icon: User    },
+  { id: 'ai',         label: 'AI',         icon: Cpu     },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'security',   label: 'Security',   icon: Shield  },
 ] as const;
@@ -301,8 +315,204 @@ function SecuritySection() {
   );
 }
 
+// ── AI section ─────────────────────────────────────────────────────────────────
+
+function AiSettingsSection() {
+  const [settings, setSettings] = useState<UserAiSettings | null>(null);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  // Form fields
+  const [provider, setProvider] = useState('');
+  const [apiKey, setApiKey] = useState('');
+  const [baseUrl, setBaseUrl] = useState('');
+  const [model, setModel] = useState('');
+  const [embeddingModel, setEmbeddingModel] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [sett, provs] = await Promise.all([
+          userAiSettingsApi.get(),
+          userAiSettingsApi.listProviders(),
+        ]);
+        setSettings(sett);
+        setProviders(provs);
+        setProvider(sett.provider ?? '');
+        setBaseUrl(sett.base_url ?? '');
+        setModel(sett.model ?? '');
+        setEmbeddingModel(sett.embedding_model ?? '');
+      } catch {
+        // noop — no settings yet is fine
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const selectedProvider = providers.find((p) => p.type === provider);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setStatus(null);
+    try {
+      const updated = await userAiSettingsApi.upsert({
+        provider: provider || null,
+        api_key: apiKey || null,
+        base_url: baseUrl || null,
+        model: model || null,
+        embedding_model: embeddingModel || null,
+      });
+      setSettings(updated);
+      setStatus({ kind: 'ok', text: 'AI settings saved' });
+    } catch (e) {
+      setStatus({ kind: 'err', text: e instanceof Error ? e.message : 'Save failed' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    setStatus(null);
+    try {
+      await userAiSettingsApi.delete();
+      setSettings(null);
+      setProvider('');
+      setApiKey('');
+      setBaseUrl('');
+      setModel('');
+      setEmbeddingModel('');
+      setStatus({ kind: 'ok', text: 'AI settings reset to defaults' });
+    } catch (e) {
+      setStatus({ kind: 'err', text: e instanceof Error ? e.message : 'Reset failed' });
+    }
+  };
+
+  if (loading) {
+    return <p className="text-code text-(--muted-foreground)">Loading…</p>;
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-subheading font-semibold text-(--foreground) mb-1">AI Provider</h2>
+        <p className="text-code text-(--muted-foreground)">
+          Configure which AI provider powers chat, discovery, and other AI features
+        </p>
+      </div>
+
+      {/* Provider */}
+      <div>
+        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+          Provider
+        </label>
+        <Select
+          value={provider}
+          onChange={(e) => setProvider(e.target.value)}
+          placeholder="Select a provider"
+        >
+          <option value="">None (use server default)</option>
+          {providers.map((p) => (
+            <option key={p.type} value={p.type}>
+              {p.display_name}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      {/* API key */}
+      <div>
+        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+          API key
+        </label>
+        <Input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder={settings?.api_key ? '•••••••• (stored)' : 'Enter API key'}
+        />
+        <p className="text-caption text-(--muted-foreground) mt-1">
+          {settings?.api_key
+            ? 'Replace the value above to change the stored key'
+            : 'Your key is encrypted at rest'}
+        </p>
+      </div>
+
+      {/* Base URL — shown only for openai-compatible */}
+      <div>
+        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+          Base URL
+        </label>
+        <Input
+          value={baseUrl}
+          onChange={(e) => setBaseUrl(e.target.value)}
+          placeholder={selectedProvider?.display_name ?? 'https://api.openai.com/v1'}
+        />
+        <p className="text-caption text-(--muted-foreground) mt-1">
+          Override the default API endpoint (optional)
+        </p>
+      </div>
+
+      {/* Model */}
+      <div>
+        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+          Model
+        </label>
+        <Input
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          placeholder={
+            provider === 'gemini' ? 'gemini-2.0-flash' :
+            provider === 'anthropic' ? 'claude-sonnet-4-20250514' :
+            provider === 'deepseek' ? 'deepseek-chat' :
+            'gpt-4o'
+          }
+        />
+      </div>
+
+      {/* Embedding model */}
+      <div>
+        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+          Embedding model
+        </label>
+        <Input
+          value={embeddingModel}
+          onChange={(e) => setEmbeddingModel(e.target.value)}
+          placeholder={
+            provider === 'gemini' ? 'text-embedding-004' :
+            'text-embedding-3-small'
+          }
+        />
+      </div>
+
+      {status && (
+        <p
+          className={cn(
+            'text-caption',
+            status.kind === 'ok' ? 'text-(--success-green)' : 'text-(--destructive)',
+          )}
+        >
+          {status.text}
+        </p>
+      )}
+
+      <div className="flex items-center gap-3">
+        <Button variant="primary" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </Button>
+        <Button variant="ghost" onClick={handleReset}>
+          Reset to defaults
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 const PANELS: Record<SectionId, React.ComponentType> = {
   profile:    ProfileSection,
+  ai:         AiSettingsSection,
   appearance: AppearanceSection,
   security:   SecuritySection,
 };

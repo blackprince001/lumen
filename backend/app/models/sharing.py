@@ -15,8 +15,12 @@ share_permission_enum = Enum(
 class UserPaperState(Base):
   __tablename__ = "user_paper_state"
 
-  user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-  paper_id = Column(Integer, ForeignKey("papers.id", ondelete="CASCADE"), primary_key=True)
+  user_id = Column(
+    Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+  )
+  paper_id = Column(
+    Integer, ForeignKey("papers.id", ondelete="CASCADE"), primary_key=True
+  )
   reading_status = Column(
     Enum("not_started", "in_progress", "read", "archived", name="readingstatus"),
     nullable=False,
@@ -50,12 +54,18 @@ class UserPaperState(Base):
 class PaperShare(Base):
   __tablename__ = "paper_shares"
   __table_args__ = (
-    UniqueConstraint("paper_id", "recipient_id", name="uq_paper_shares_paper_recipient"),
+    UniqueConstraint(
+      "paper_id", "recipient_id", name="uq_paper_shares_paper_recipient"
+    ),
   )
 
   id = Column(Integer, primary_key=True, index=True)
-  paper_id = Column(Integer, ForeignKey("papers.id", ondelete="CASCADE"), nullable=False)
-  recipient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+  paper_id = Column(
+    Integer, ForeignKey("papers.id", ondelete="CASCADE"), nullable=False
+  )
+  recipient_id = Column(
+    Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+  )
   shared_by_id = Column(
     Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
   )
@@ -70,19 +80,29 @@ class PaperShare(Base):
   )
 
   paper = relationship("Paper", back_populates="shares")
-  recipient = relationship("User", foreign_keys=[recipient_id], back_populates="paper_shares")
-  shared_by = relationship("User", foreign_keys=[shared_by_id], back_populates="shared_papers")
+  recipient = relationship(
+    "User", foreign_keys=[recipient_id], back_populates="paper_shares"
+  )
+  shared_by = relationship(
+    "User", foreign_keys=[shared_by_id], back_populates="shared_papers"
+  )
 
 
 class GroupShare(Base):
   __tablename__ = "group_shares"
   __table_args__ = (
-    UniqueConstraint("group_id", "recipient_id", name="uq_group_shares_group_recipient"),
+    UniqueConstraint(
+      "group_id", "recipient_id", name="uq_group_shares_group_recipient"
+    ),
   )
 
   id = Column(Integer, primary_key=True, index=True)
-  group_id = Column(Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False)
-  recipient_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+  group_id = Column(
+    Integer, ForeignKey("groups.id", ondelete="CASCADE"), nullable=False
+  )
+  recipient_id = Column(
+    Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+  )
   shared_by_id = Column(
     Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
   )
@@ -97,5 +117,9 @@ class GroupShare(Base):
   )
 
   group = relationship("Group", back_populates="shares")
-  recipient = relationship("User", foreign_keys=[recipient_id], back_populates="group_shares")
-  shared_by = relationship("User", foreign_keys=[shared_by_id], back_populates="shared_groups")
+  recipient = relationship(
+    "User", foreign_keys=[recipient_id], back_populates="group_shares"
+  )
+  shared_by = relationship(
+    "User", foreign_keys=[shared_by_id], back_populates="shared_groups"
+  )

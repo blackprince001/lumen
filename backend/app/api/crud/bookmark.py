@@ -37,7 +37,9 @@ async def get_bookmark_or_404(
       )
       paper_owner_id = paper_result.scalar_one_or_none()
       if paper_owner_id != user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this bookmark")
+        raise HTTPException(
+          status_code=403, detail="Not authorized to delete this bookmark"
+        )
 
   return bookmark
 
@@ -73,7 +75,9 @@ async def create_bookmark(
   if user_id is not None and paper.uploaded_by_id != user_id:
     perm = await get_effective_paper_permission(session, user_id, paper)
     if perm not in ("owner", "editor"):
-      raise HTTPException(status_code=403, detail="Editor permission required to bookmark")
+      raise HTTPException(
+        status_code=403, detail="Editor permission required to bookmark"
+      )
 
   bookmark = Bookmark(
     paper_id=paper_id,

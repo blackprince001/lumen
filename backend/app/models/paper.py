@@ -70,7 +70,9 @@ class Paper(Base):
       return None
     return f"/papers/{self.id}/file"
 
-  uploaded_by = relationship("User", back_populates="papers", foreign_keys=[uploaded_by_id])
+  uploaded_by = relationship(
+    "User", back_populates="papers", foreign_keys=[uploaded_by_id]
+  )
   annotations = relationship(
     "Annotation", back_populates="paper", cascade="all, delete-orphan"
   )
@@ -84,7 +86,9 @@ class Paper(Base):
   user_states = relationship(
     "UserPaperState", back_populates="paper", cascade="all, delete-orphan"
   )
-  shares = relationship("PaperShare", back_populates="paper", cascade="all, delete-orphan")
+  shares = relationship(
+    "PaperShare", back_populates="paper", cascade="all, delete-orphan"
+  )
   bookmarks = relationship(
     "Bookmark", back_populates="paper", cascade="all, delete-orphan"
   )

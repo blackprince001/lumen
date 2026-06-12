@@ -96,12 +96,16 @@ router = APIRouter()
 
 @router.post("/search", response_model=SearchResponse)
 async def semantic_search(
-  search_request: SearchRequest, user: CurrentUser, session: AsyncSession = Depends(get_db)
+  search_request: SearchRequest,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   if not search_request.query or not search_request.query.strip():
     raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-  query_embedding = embedding_service.generate_query_embedding(search_request.query)
+  query_embedding = await embedding_service.generate_query_embedding(
+    search_request.query
+  )
   similarity_threshold = search_request.threshold or 0.0
 
   vector_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
@@ -172,7 +176,12 @@ async def semantic_search(
 
   results = [
     SearchResult(
-      paper=_enrich_paper(paper, user_states.get(cast(int, paper.id)), user_id=uid, share=user_shares.get(cast(int, paper.id))),
+      paper=_enrich_paper(
+        paper,
+        user_states.get(cast(int, paper.id)),
+        user_id=uid,
+        share=user_shares.get(cast(int, paper.id)),
+      ),
       similarity=_sanitize_similarity(similarity_scores.get(paper.id, 0.0)),
     )
     for paper in filtered_papers
@@ -185,7 +194,9 @@ async def semantic_search(
 
 @router.post("/search/fulltext", response_model=SearchResponse)
 async def fulltext_search(
-  search_request: SearchRequest, user: CurrentUser, session: AsyncSession = Depends(get_db)
+  search_request: SearchRequest,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   if not search_request.query or not search_request.query.strip():
     raise HTTPException(status_code=400, detail="Query cannot be empty")
@@ -201,7 +212,12 @@ async def fulltext_search(
 
   results = [
     SearchResult(
-      paper=_enrich_paper(paper, ft_states.get(cast(int, paper.id)), user_id=uid, share=ft_shares.get(cast(int, paper.id))),
+      paper=_enrich_paper(
+        paper,
+        ft_states.get(cast(int, paper.id)),
+        user_id=uid,
+        share=ft_shares.get(cast(int, paper.id)),
+      ),
       similarity=1.0,
     )
     for paper in papers
@@ -212,12 +228,17 @@ async def fulltext_search(
 
 @router.post("/search/annotations")
 async def search_annotations(
-  query: str, user: CurrentUser, limit: int = 10, session: AsyncSession = Depends(get_db)
+  query: str,
+  user: CurrentUser,
+  limit: int = 10,
+  session: AsyncSession = Depends(get_db),
 ):
   if not query or not query.strip():
     raise HTTPException(status_code=400, detail="Query cannot be empty")
 
-  annotations = await search_service.search_annotations(session, query, limit, user_id=scoped_user_id(user))
+  annotations = await search_service.search_annotations(
+    session, query, limit, user_id=scoped_user_id(user)
+  )
 
   return {
     "annotations": [
@@ -234,14 +255,18 @@ async def search_annotations(
 
 
 @router.get("/saved-searches", response_model=list[SavedSearchResponse])
-async def list_saved_searches_endpoint(user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def list_saved_searches_endpoint(
+  user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   searches = await list_saved_searches(session, user_id=scoped_user_id(user))
   return [SavedSearchResponse.model_validate(s) for s in searches]
 
 
 @router.post("/saved-searches", response_model=SavedSearchResponse, status_code=201)
 async def create_saved_search_endpoint(
-  search_create: SavedSearchCreate, user: CurrentUser, session: AsyncSession = Depends(get_db)
+  search_create: SavedSearchCreate,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   saved_search = await create_saved_search(
     session,

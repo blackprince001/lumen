@@ -8,12 +8,12 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.crud.group import get_visible_group_or_404
 from app.api.crud.multi_chat_session import (
   delete_multi_chat_session,
   get_multi_chat_session_or_404,
   list_multi_chat_sessions_for_group,
 )
-from app.api.crud.group import get_visible_group_or_404
 from app.core.logger import get_logger
 from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.multi_chat import MultiChatMessage, MultiChatSession
@@ -105,7 +105,9 @@ async def get_group_chat_history(
   session: AsyncSession = Depends(get_db),
 ):
   await get_visible_group_or_404(session, group_id, user_id=scoped_user_id(user))
-  latest = await multi_chat_service.get_latest_session(session, group_id, user_id=scoped_user_id(user))
+  latest = await multi_chat_service.get_latest_session(
+    session, group_id, user_id=scoped_user_id(user)
+  )
   if not latest:
     return None
   return _serialize_session(latest)
@@ -120,7 +122,9 @@ async def list_group_sessions(
   session: AsyncSession = Depends(get_db),
 ):
   await get_visible_group_or_404(session, group_id, user_id=scoped_user_id(user))
-  sessions = await list_multi_chat_sessions_for_group(session, group_id, user_id=scoped_user_id(user))
+  sessions = await list_multi_chat_sessions_for_group(
+    session, group_id, user_id=scoped_user_id(user)
+  )
   return [_serialize_session(s) for s in sessions]
 
 
@@ -150,7 +154,11 @@ async def create_group_session(
 
   try:
     chat_session = await multi_chat_service.create_session(
-      session, paper_ids, group_id=group_id, name=session_data.name, user_id=scoped_user_id(user)
+      session,
+      paper_ids,
+      group_id=group_id,
+      name=session_data.name,
+      user_id=scoped_user_id(user),
     )
     # Reload with relationships
     loaded = await multi_chat_service.get_session(session, cast(int, chat_session.id))
@@ -203,7 +211,11 @@ async def get_multi_session(
   session: AsyncSession = Depends(get_db),
 ):
   chat_session = await get_multi_chat_session_or_404(
-    session, session_id, with_messages=True, with_papers=True, user_id=scoped_user_id(user)
+    session,
+    session_id,
+    with_messages=True,
+    with_papers=True,
+    user_id=scoped_user_id(user),
   )
   return _serialize_session(chat_session)
 
@@ -218,7 +230,11 @@ async def update_multi_session(
   session: AsyncSession = Depends(get_db),
 ):
   chat_session = await get_multi_chat_session_or_404(
-    session, session_id, with_messages=True, with_papers=True, user_id=scoped_user_id(user)
+    session,
+    session_id,
+    with_messages=True,
+    with_papers=True,
+    user_id=scoped_user_id(user),
   )
   chat_session.name = session_update.name
   await session.commit()

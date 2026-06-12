@@ -148,7 +148,9 @@ async def update_paper(
   group_ids: list[int] | None = None,
   tag_ids: list[int] | None = None,
 ) -> Paper:
-  paper = await get_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
+  paper = await get_paper_or_404(
+    session, paper_id, with_relations=True, user_id=user_id
+  )
 
   if title is not None:
     paper.title = title
@@ -174,7 +176,9 @@ async def update_paper(
   return paper
 
 
-async def delete_paper(session: AsyncSession, paper_id: int, *, user_id: int | None = None) -> None:
+async def delete_paper(
+  session: AsyncSession, paper_id: int, *, user_id: int | None = None
+) -> None:
   from pathlib import Path
 
   paper = await get_paper_or_404(session, paper_id, user_id=user_id)
@@ -191,7 +195,9 @@ async def delete_paper(session: AsyncSession, paper_id: int, *, user_id: int | N
   await session.commit()
 
 
-async def delete_papers_bulk(session: AsyncSession, paper_ids: list[int], *, user_id: int | None = None) -> None:
+async def delete_papers_bulk(
+  session: AsyncSession, paper_ids: list[int], *, user_id: int | None = None
+) -> None:
   from pathlib import Path
 
   if not paper_ids:
@@ -225,7 +231,9 @@ async def delete_papers_bulk(session: AsyncSession, paper_ids: list[int], *, use
   await session.commit()
 
 
-async def increment_view_count(session: AsyncSession, paper_id: int, *, user_id: int | None = None) -> Paper:
+async def increment_view_count(
+  session: AsyncSession, paper_id: int, *, user_id: int | None = None
+) -> Paper:
   paper = await get_visible_paper_or_404(
     session, paper_id, with_relations=True, user_id=user_id
   )
@@ -248,7 +256,9 @@ async def update_reading_status(
       detail=f"Invalid reading status. Must be one of: {', '.join(valid_statuses)}",
     )
 
-  paper = await get_visible_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
+  paper = await get_visible_paper_or_404(
+    session, paper_id, with_relations=True, user_id=user_id
+  )
   if user_id is not None:
     state = await get_or_create_state(session, user_id, paper_id)
     state.reading_status = reading_status
@@ -275,7 +285,9 @@ async def update_priority(
       detail=f"Invalid priority. Must be one of: {', '.join(valid_priorities)}",
     )
 
-  paper = await get_visible_paper_or_404(session, paper_id, with_relations=True, user_id=user_id)
+  paper = await get_visible_paper_or_404(
+    session, paper_id, with_relations=True, user_id=user_id
+  )
   if user_id is not None:
     state = await get_or_create_state(session, user_id, paper_id)
     state.priority = priority

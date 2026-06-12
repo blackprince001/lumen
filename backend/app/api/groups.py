@@ -46,7 +46,9 @@ def _serialize_group_share(share: GroupShare) -> ShareRecipient:
 
 
 def _collect_group_paper_ids(group: Group) -> set[int]:
-  paper_ids = {cast(int, paper.id) for paper in group.papers or [] if paper.id is not None}
+  paper_ids = {
+    cast(int, paper.id) for paper in group.papers or [] if paper.id is not None
+  }
   for child in group.children or []:
     paper_ids.update(_collect_group_paper_ids(child))
   return paper_ids
@@ -59,8 +61,7 @@ def _group_to_schema(group: Group, user_states: dict[int, object]) -> GroupSchem
     for paper in group.papers or []
   ]
   data["children"] = [
-    _group_to_schema(child, user_states)
-    for child in group.children or []
+    _group_to_schema(child, user_states) for child in group.children or []
   ]
   return GroupSchema(**data)
 
@@ -73,16 +74,24 @@ async def _get_owned_group_or_403(
   if not group:
     raise HTTPException(status_code=404, detail="Group not found")
   if group.user_id != user.id:
-    raise HTTPException(status_code=403, detail="Only the group owner can manage shares")
+    raise HTTPException(
+      status_code=403, detail="Only the group owner can manage shares"
+    )
   return group
 
 
 @router.get("/groups", response_model=List[GroupSchema])
-async def list_groups_endpoint(user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def list_groups_endpoint(
+  user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   user_id = scoped_user_id(user)
   groups = await list_groups(session, user_id=user_id)
-  paper_ids = sorted({paper_id for group in groups for paper_id in _collect_group_paper_ids(group)})
-  user_states = await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  paper_ids = sorted(
+    {paper_id for group in groups for paper_id in _collect_group_paper_ids(group)}
+  )
+  user_states = (
+    await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  )
   return [_group_to_schema(group, user_states) for group in groups]
 
 
@@ -91,24 +100,37 @@ async def create_group_endpoint(
   group_in: GroupCreate, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   user_id = scoped_user_id(user)
-  group = await create_group(session, group_in.name, group_in.parent_id, user_id=user_id)
+  group = await create_group(
+    session, group_in.name, group_in.parent_id, user_id=user_id
+  )
   paper_ids = sorted(_collect_group_paper_ids(group))
-  user_states = await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  user_states = (
+    await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  )
   return _group_to_schema(group, user_states)
 
 
 @router.get("/groups/{group_id}", response_model=GroupSchema)
-async def get_group_endpoint(group_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def get_group_endpoint(
+  group_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   user_id = scoped_user_id(user)
-  group = await get_visible_group_or_404(session, group_id, with_relations=True, user_id=user_id)
+  group = await get_visible_group_or_404(
+    session, group_id, with_relations=True, user_id=user_id
+  )
   paper_ids = sorted(_collect_group_paper_ids(group))
-  user_states = await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  user_states = (
+    await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  )
   return _group_to_schema(group, user_states)
 
 
 @router.patch("/groups/{group_id}", response_model=GroupSchema)
 async def update_group_endpoint(
-  group_id: int, group_update: GroupUpdate, user: CurrentUser, session: AsyncSession = Depends(get_db)
+  group_id: int,
+  group_update: GroupUpdate,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   user_id = scoped_user_id(user)
   group = await update_group(
@@ -119,12 +141,16 @@ async def update_group_endpoint(
     user_id=user_id,
   )
   paper_ids = sorted(_collect_group_paper_ids(group))
-  user_states = await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  user_states = (
+    await batch_get_states(session, user_id, paper_ids) if user_id is not None else {}
+  )
   return _group_to_schema(group, user_states)
 
 
 @router.delete("/groups/{group_id}", status_code=204)
-async def delete_group_endpoint(group_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def delete_group_endpoint(
+  group_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   await delete_group(session, group_id, user_id=scoped_user_id(user))
   return None
 
@@ -155,7 +181,9 @@ async def share_group(
 
   emails = _normalize_emails(payload.emails)
   if not emails:
-    raise HTTPException(status_code=400, detail="At least one recipient email is required")
+    raise HTTPException(
+      status_code=400, detail="At least one recipient email is required"
+    )
 
   users_result = await session.execute(select(User).where(User.email.in_(emails)))
   recipients = list(users_result.scalars().all())
@@ -174,10 +202,14 @@ async def share_group(
   if recipient_ids:
     existing_result = await session.execute(
       select(GroupShare)
-      .where(GroupShare.group_id == group_id, GroupShare.recipient_id.in_(recipient_ids))
+      .where(
+        GroupShare.group_id == group_id, GroupShare.recipient_id.in_(recipient_ids)
+      )
       .options(selectinload(GroupShare.recipient))
     )
-    existing_by_rid = {cast(int, s.recipient_id): s for s in existing_result.scalars().all()}
+    existing_by_rid = {
+      cast(int, s.recipient_id): s for s in existing_result.scalars().all()
+    }
 
   for r in recipients:
     rid = cast(int, r.id)
@@ -186,8 +218,10 @@ async def share_group(
     share = existing_by_rid.get(rid)
     if share is None:
       share = GroupShare(
-        group_id=group_id, recipient_id=rid,
-        shared_by_id=user.id, permission=payload.permission,
+        group_id=group_id,
+        recipient_id=rid,
+        shared_by_id=user.id,
+        permission=payload.permission,
       )
       share.recipient = r
       session.add(share)
@@ -201,7 +235,8 @@ async def share_group(
   if shares:
     ids = [cast(int, s.id) for s in shares if s.id is not None]
     refreshed = await session.execute(
-      select(GroupShare).where(GroupShare.id.in_(ids))
+      select(GroupShare)
+      .where(GroupShare.id.in_(ids))
       .options(selectinload(GroupShare.recipient))
       .order_by(GroupShare.created_at.asc(), GroupShare.id.asc())
     )
@@ -210,7 +245,7 @@ async def share_group(
   from app.tasks.email_tasks import send_share_email
 
   for share in shares:
-    if share.recipient and getattr(share.recipient, 'email', None):
+    if share.recipient and getattr(share.recipient, "email", None):
       send_share_email.delay(
         str(share.recipient.email),
         str(user.display_name),
@@ -241,10 +276,15 @@ async def list_group_shares(
   return ShareListResponse(shares=[_serialize_group_share(s) for s in shares])
 
 
-@router.patch("/groups/{group_id}/share/{target_user_id}", response_model=ShareRecipient)
+@router.patch(
+  "/groups/{group_id}/share/{target_user_id}", response_model=ShareRecipient
+)
 async def update_group_share(
-  group_id: int, target_user_id: int, payload: ShareUpdate,
-  user: CurrentUser, session: AsyncSession = Depends(get_db),
+  group_id: int,
+  target_user_id: int,
+  payload: ShareUpdate,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   await _get_owned_group_or_403(session, group_id, user)
   result = await session.execute(
@@ -267,8 +307,9 @@ async def leave_group_share(
   group_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   result = await session.execute(
-    select(GroupShare)
-    .where(GroupShare.group_id == group_id, GroupShare.recipient_id == user.id)
+    select(GroupShare).where(
+      GroupShare.group_id == group_id, GroupShare.recipient_id == user.id
+    )
   )
   share = result.scalar_one_or_none()
   if not share:
@@ -280,13 +321,16 @@ async def leave_group_share(
 
 @router.delete("/groups/{group_id}/share/{target_user_id}", status_code=204)
 async def revoke_group_share(
-  group_id: int, target_user_id: int,
-  user: CurrentUser, session: AsyncSession = Depends(get_db),
+  group_id: int,
+  target_user_id: int,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   await _get_owned_group_or_403(session, group_id, user)
   result = await session.execute(
-    select(GroupShare)
-    .where(GroupShare.group_id == group_id, GroupShare.recipient_id == target_user_id)
+    select(GroupShare).where(
+      GroupShare.group_id == group_id, GroupShare.recipient_id == target_user_id
+    )
   )
   share = result.scalar_one_or_none()
   if not share:

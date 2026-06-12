@@ -105,7 +105,12 @@ class SearchService:
     return list(annotations_result.scalars().all())
 
   def apply_filters(
-    self, query: Select, search_request: SearchRequest, session: AsyncSession, *, user_id: int | None = None
+    self,
+    query: Select,
+    search_request: SearchRequest,
+    session: AsyncSession,
+    *,
+    user_id: int | None = None,
   ):
     """Apply advanced filters to search query."""
     # Date range filters
@@ -168,13 +173,19 @@ class SearchService:
         (UserPaperState.paper_id == Paper.id) & (UserPaperState.user_id == user_id),
       )
       if search_request.reading_status:
-        query = query.where(UserPaperState.reading_status == search_request.reading_status)
+        query = query.where(
+          UserPaperState.reading_status == search_request.reading_status
+        )
       if search_request.priority:
         query = query.where(UserPaperState.priority == search_request.priority)
       if search_request.reading_time_min is not None:
-        query = query.where(UserPaperState.reading_time_minutes >= search_request.reading_time_min)
+        query = query.where(
+          UserPaperState.reading_time_minutes >= search_request.reading_time_min
+        )
       if search_request.reading_time_max is not None:
-        query = query.where(UserPaperState.reading_time_minutes <= search_request.reading_time_max)
+        query = query.where(
+          UserPaperState.reading_time_minutes <= search_request.reading_time_max
+        )
 
     # Group filter
     if search_request.group_ids:

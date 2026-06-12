@@ -53,7 +53,9 @@ async def list_annotations_endpoint(
   paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """List all annotations for a paper."""
-  annotations = await list_annotations_for_paper(session, paper_id, user_id=scoped_user_id(user))
+  annotations = await list_annotations_for_paper(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
   result = []
   for a in annotations:
     schema = AnnotationSchema.model_validate(a)
@@ -68,7 +70,9 @@ async def get_annotation_endpoint(
   annotation_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Get a single annotation by ID."""
-  annotation = await get_annotation_or_404(session, annotation_id, user_id=scoped_user_id(user))
+  annotation = await get_annotation_or_404(
+    session, annotation_id, user_id=scoped_user_id(user)
+  )
   return AnnotationSchema.model_validate(annotation)
 
 

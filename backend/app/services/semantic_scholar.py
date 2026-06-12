@@ -148,4 +148,6 @@ class SemanticScholarService:
       return []
 
 
-semantic_scholar_service = SemanticScholarService(api_key=settings.SEMANTIC_SCHOLAR_API_KEY)
+semantic_scholar_service = SemanticScholarService(
+  api_key=settings.SEMANTIC_SCHOLAR_API_KEY
+)

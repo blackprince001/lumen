@@ -4,7 +4,6 @@ from typing import Optional
 from fastapi import APIRouter, Query
 
 from app.core.logger import get_logger
-from app.dependencies import CurrentUser
 from app.schemas.huggingface import HFDailyPapersResponse
 from app.services.huggingface_service import huggingface_service
 

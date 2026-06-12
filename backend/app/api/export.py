@@ -63,7 +63,9 @@ async def export_papers(
       headers={"Content-Disposition": 'attachment; filename="papers.csv"'},
     )
   elif request.format == "json":
-    content = export_service.export_json(papers, request.include_annotations, user_states=user_states)
+    content = export_service.export_json(
+      papers, request.include_annotations, user_states=user_states
+    )
     return Response(
       content=content,
       media_type="application/json",

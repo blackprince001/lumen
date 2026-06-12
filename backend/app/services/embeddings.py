@@ -1,12 +1,21 @@
+"""Provider-agnostic embedding service.
+
+Resolves the user's configured AI provider and uses it to
+generate embeddings for text content.
+"""
+
 from typing import Any
 
-from google import genai
-from google.genai import errors as genai_errors
-from google.genai import types
 from pgvector.sqlalchemy import Vector
 
 from app.core.config import settings
 from app.core.logger import get_logger
+from app.services.ai.helpers import get_provider_for_user
+from app.services.ai.providers.base import (
+  AIProvider,
+  AIProviderError,
+  EmbeddingConfig,
+)
 
 logger = get_logger(__name__)
 
@@ -15,69 +24,69 @@ TASK_TYPE_QUERY = "RETRIEVAL_QUERY"
 
 
 class EmbeddingService:
+  """Generates vector embeddings using the configured AI provider."""
+
   def __init__(self) -> None:
-    self.client: genai.Client | None = None
-    self._last_api_key: str | None = None
-    self._initialize_client()
+    self._provider: AIProvider | None = None
 
-  def _initialize_client(self) -> None:
-    current_key = settings.GOOGLE_API_KEY
-    if not current_key:
-      self.client = None
-      self._last_api_key = None
-      return
+  async def _get_provider(self) -> AIProvider | None:
+    """Get or create the AI provider for embeddings.
 
-    if self.client is None or self._last_api_key != current_key:
-      self.client = genai.Client(api_key=current_key)
-      self._last_api_key = current_key
+    Uses the default provider (from env settings) since embeddings
+    are typically generated in system context (Celery tasks, paper ingest).
+    """
+    if self._provider is not None:
+      return self._provider
+    self._provider = await get_provider_for_user()
+    return self._provider
 
-  def _get_client(self) -> genai.Client | None:
-    self._initialize_client()
-    return self.client
+  def set_provider(self, provider: AIProvider) -> None:
+    self._provider = provider
 
   def _get_zero_embedding(self) -> list[float]:
     return [0.0] * settings.EMBEDDING_DIMENSION
 
-  def _create_embed_config(self, task_type: str) -> types.EmbedContentConfig:
-    return types.EmbedContentConfig(
-      task_type=task_type,
-      output_dimensionality=settings.EMBEDDING_DIMENSION,
-    )
+  def _get_embedding_model(self) -> str:
+    return settings.EMBEDDING_MODEL
 
-  def generate_embedding(
+  def _get_embedding_dimension(self) -> int:
+    return settings.EMBEDDING_DIMENSION
+
+  async def generate_embedding(
     self, text: str, task_type: str = TASK_TYPE_DOCUMENT
   ) -> list[float]:
     if not text or not text.strip():
       return self._get_zero_embedding()
 
-    client = self._get_client()
-    if not client:
-      logger.warning("No Google API client available")
+    provider = await self._get_provider()
+    if not provider:
+      logger.warning("No AI provider available for embedding")
       return self._get_zero_embedding()
 
     try:
-      result = client.models.embed_content(
-        model=settings.EMBEDDING_MODEL,
-        contents=text,
-        config=self._create_embed_config(task_type),
+      config = EmbeddingConfig(
+        model=provider.config.embedding_model or self._get_embedding_model(),
+        task_type=task_type,
+        dimensions=self._get_embedding_dimension(),
       )
-      if result.embeddings and len(result.embeddings) > 0:
-        return list(result.embeddings[0].values)
+      embeddings = await provider.embed([text], config)
+      if embeddings and len(embeddings) > 0:
+        return embeddings[0]
       return self._get_zero_embedding()
-    except genai_errors.APIError as e:
+    except AIProviderError as e:
       logger.error("Error generating embedding", error=str(e))
+      return self._get_zero_embedding()
+    except Exception as e:
+      logger.error("Unexpected error generating embedding", error=str(e))
       return self._get_zero_embedding()
 
   async def generate_embedding_async(
     self, text: str, task_type: str = TASK_TYPE_DOCUMENT
   ) -> list[float]:
-    """Generate embedding without blocking the event loop."""
-    import asyncio
+    return await self.generate_embedding(text, task_type)
 
-    return await asyncio.to_thread(self.generate_embedding, text, task_type)
-
-  def generate_query_embedding(self, text: str) -> list[float]:
-    return self.generate_embedding(text, task_type=TASK_TYPE_QUERY)
+  async def generate_query_embedding(self, text: str) -> list[float]:
+    return await self.generate_embedding(text, task_type=TASK_TYPE_QUERY)
 
   def _filter_empty_texts(self, texts: list[str]) -> tuple[list[int], list[str]]:
     indices: list[int] = []
@@ -98,15 +107,15 @@ class EmbeddingService:
       results[idx] = list(embedding.values)
     return results
 
-  def generate_embeddings_batch(
+  async def generate_embeddings_batch(
     self, texts: list[str], task_type: str = TASK_TYPE_DOCUMENT
   ) -> list[list[float]]:
     if not texts:
       return []
 
-    client = self._get_client()
-    if not client:
-      logger.warning("No Google API client available for batch embedding")
+    provider = await self._get_provider()
+    if not provider:
+      logger.warning("No AI provider available for batch embedding")
       return [self._get_zero_embedding() for _ in texts]
 
     indices, filtered_texts = self._filter_empty_texts(texts)
@@ -114,21 +123,32 @@ class EmbeddingService:
       return [self._get_zero_embedding() for _ in texts]
 
     try:
-      result = client.models.embed_content(
-        model=settings.EMBEDDING_MODEL,
-        contents=filtered_texts,
-        config=self._create_embed_config(task_type),
+      config = EmbeddingConfig(
+        model=provider.config.embedding_model or self._get_embedding_model(),
+        task_type=task_type,
+        dimensions=self._get_embedding_dimension(),
       )
-      return self._build_batch_results(texts, indices, result.embeddings)
-    except genai_errors.APIError as e:
+      embeddings = await provider.embed(filtered_texts, config)
+      if not embeddings:
+        return [self._get_zero_embedding() for _ in texts]
+
+      results: list[list[float]] = [self._get_zero_embedding() for _ in texts]
+      for idx, emb in zip(indices, embeddings, strict=True):
+        results[idx] = emb
+      return results
+    except AIProviderError as e:
       logger.error("Error generating batch embeddings", error=str(e))
+      return [self._get_zero_embedding() for _ in texts]
+    except Exception as e:
+      logger.error("Unexpected error generating batch embeddings", error=str(e))
       return [self._get_zero_embedding() for _ in texts]
 
   def get_embedding_dimension(self) -> int:
     return settings.EMBEDDING_DIMENSION
 
-  def text_to_vector(self, text: str) -> Vector:
-    return Vector(self.generate_embedding(text))
+  async def text_to_vector(self, text: str) -> Vector:
+    embedding = await self.generate_embedding(text)
+    return Vector(embedding)
 
 
 embedding_service = EmbeddingService()

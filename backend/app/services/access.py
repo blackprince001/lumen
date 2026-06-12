@@ -24,13 +24,12 @@ def visible_papers_clause(user_id: int):
   )
   shared_tree = base.cte(name="paper_shared_tree", recursive=True)
   shared_tree = shared_tree.union_all(
-    select(GroupModel.id.label("id")).where(
-      GroupModel.parent_id == shared_tree.c.id
-    )
+    select(GroupModel.id.label("id")).where(GroupModel.parent_id == shared_tree.c.id)
   )
   via_group = Paper.id.in_(
-    select(paper_group_association.c.paper_id)
-    .where(paper_group_association.c.group_id.in_(select(shared_tree.c.id)))
+    select(paper_group_association.c.paper_id).where(
+      paper_group_association.c.group_id.in_(select(shared_tree.c.id))
+    )
   )
   return or_(owned, direct, via_group)
 
@@ -44,9 +43,7 @@ def visible_groups_clause(user_id: int):
   )
   shared_tree = base.cte(name="shared_tree", recursive=True)
   shared_tree = shared_tree.union_all(
-    select(GroupModel.id.label("id")).where(
-      GroupModel.parent_id == shared_tree.c.id
-    )
+    select(GroupModel.id.label("id")).where(GroupModel.parent_id == shared_tree.c.id)
   )
   return or_(
     Group.user_id == user_id,

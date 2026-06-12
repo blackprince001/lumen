@@ -168,7 +168,9 @@ async def _get_owned_paper_or_403(
 ) -> Paper:
   paper = await get_paper_or_404(session, paper_id)
   if paper.uploaded_by_id != user.id:
-    raise HTTPException(status_code=403, detail="Only the paper owner can manage shares")
+    raise HTTPException(
+      status_code=403, detail="Only the paper owner can manage shares"
+    )
   return paper
 
 
@@ -328,7 +330,9 @@ async def _single_paper_schema(
 
 
 @router.get("/papers/{paper_id}", response_model=PaperSchema)
-async def get_paper_endpoint(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def get_paper_endpoint(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Get a single paper by ID."""
   uid = scoped_user_id(user)
   paper = await increment_view_count(session, paper_id, user_id=uid)
@@ -340,7 +344,9 @@ async def get_paper_file(
   paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Stream an accessible paper PDF through an authenticated route."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
   file_path = content_provider.get_local_file_path(paper)
   if not file_path:
     raise HTTPException(status_code=404, detail="PDF file not found")
@@ -361,7 +367,9 @@ async def get_paper_layout(
   On-demand extraction doubles as the backfill path for papers ingested
   before layout extraction joined the processing chain.
   """
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   if paper.layout_blocks is None:
     file_path = content_provider.get_local_file_path(paper)
@@ -380,7 +388,10 @@ async def get_paper_layout(
 
 @router.patch("/papers/{paper_id}", response_model=PaperSchema)
 async def update_paper_endpoint(
-  paper_id: int, paper_update: PaperUpdate, user: CurrentUser, session: AsyncSession = Depends(get_db)
+  paper_id: int,
+  paper_update: PaperUpdate,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   """Update a paper."""
   uid = scoped_user_id(user)
@@ -398,7 +409,9 @@ async def update_paper_endpoint(
 
 
 @router.delete("/papers/{paper_id}", status_code=204)
-async def delete_paper_endpoint(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def delete_paper_endpoint(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Delete a paper."""
   await delete_paper(session, paper_id, user_id=scoped_user_id(user))
   return None
@@ -423,7 +436,9 @@ async def get_paper_reference(
   session: AsyncSession = Depends(get_db),
 ):
   """Get formatted reference for a paper."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   formatter = {
     "apa": reference_formatter.format_apa,
@@ -438,7 +453,9 @@ async def get_paper_reference(
 
 
 @router.get("/papers/{paper_id}/related", response_model=RelatedPapersResponse)
-async def get_related_papers(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def get_related_papers(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Get related papers from library and external sources."""
   paper = await get_visible_paper_or_404(
     session, paper_id, with_relations=True, user_id=scoped_user_id(user)
@@ -483,7 +500,12 @@ async def get_related_papers(paper_id: int, user: CurrentUser, session: AsyncSes
         lib_states = await _fetch_user_states(session, scoped_user_id(user), lib_ids)
         lib_shares = await _fetch_share_info(session, scoped_user_id(user), lib_ids)
         related_library = [
-          _paper_to_schema(lib_papers[pid], lib_states.get(pid), user_id=scoped_user_id(user), share=lib_shares.get(pid))
+          _paper_to_schema(
+            lib_papers[pid],
+            lib_states.get(pid),
+            user_id=scoped_user_id(user),
+            share=lib_shares.get(pid),
+          )
           for pid in lib_ids
           if pid in lib_papers
         ]
@@ -547,7 +569,9 @@ async def regenerate_paper_metadata(
 
   file_path = content_provider.get_local_file_path(paper)
   if not file_path:
-    raise HTTPException(status_code=404, detail=f"PDF file not found at {paper.file_path}")
+    raise HTTPException(
+      status_code=404, detail=f"PDF file not found at {paper.file_path}"
+    )
 
   try:
     with open(file_path, "rb") as f:
@@ -584,7 +608,9 @@ async def regenerate_paper_metadata(
 
 @router.post("/papers/regenerate-metadata-bulk", response_model=BulkRegenerateResponse)
 async def regenerate_paper_metadata_bulk(
-  request: BulkRegenerateRequest, user: CurrentUser, session: AsyncSession = Depends(get_db)
+  request: BulkRegenerateRequest,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   """Regenerate metadata for multiple papers."""
   successful = []
@@ -643,14 +669,18 @@ async def extract_paper_citations(
   paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """Extract and store citations from a paper's PDF."""
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   if not paper.file_path:
     raise HTTPException(status_code=400, detail="Paper has no associated PDF file")
 
   file_path = content_provider.get_local_file_path(paper)
   if not file_path:
-    raise HTTPException(status_code=404, detail=f"PDF file not found at {paper.file_path}")
+    raise HTTPException(
+      status_code=404, detail=f"PDF file not found at {paper.file_path}"
+    )
 
   try:
     with open(file_path, "rb") as f:
@@ -678,7 +708,9 @@ async def update_reading_status_endpoint(
 ):
   """Update reading status for a paper."""
   uid = scoped_user_id(user)
-  paper = await update_reading_status(session, paper_id, status_update.reading_status, user_id=uid)
+  paper = await update_reading_status(
+    session, paper_id, status_update.reading_status, user_id=uid
+  )
   return await _single_paper_schema(session, paper, uid)
 
 
@@ -691,12 +723,16 @@ async def update_priority_endpoint(
 ):
   """Update priority for a paper."""
   uid = scoped_user_id(user)
-  paper = await update_priority(session, paper_id, priority_update.priority, user_id=uid)
+  paper = await update_priority(
+    session, paper_id, priority_update.priority, user_id=uid
+  )
   return await _single_paper_schema(session, paper, uid)
 
 
 @router.get("/papers/{paper_id}/reading-progress", response_model=PaperReadingProgress)
-async def get_reading_progress(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def get_reading_progress(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Get reading progress for a paper."""
   uid = scoped_user_id(user)
   await get_visible_paper_or_404(session, paper_id, user_id=uid)
@@ -717,7 +753,9 @@ async def get_reading_progress(paper_id: int, user: CurrentUser, session: AsyncS
 @router.post(
   "/papers/{paper_id}/reading-session/start", response_model=ReadingSessionResponse
 )
-async def start_reading_session(paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)):
+async def start_reading_session(
+  paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+):
   """Start a reading session for a paper."""
   uid = scoped_user_id(user)
   await get_visible_paper_or_404(session, paper_id, user_id=uid)
@@ -805,7 +843,9 @@ async def list_bookmarks_endpoint(
   paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
   """List all bookmarks for a paper."""
-  bookmarks = await list_bookmarks_for_paper(session, paper_id, user_id=scoped_user_id(user))
+  bookmarks = await list_bookmarks_for_paper(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
   return [BookmarkResponse.model_validate(b) for b in bookmarks]
 
 
@@ -820,14 +860,21 @@ async def create_bookmark_endpoint(
 ):
   """Create a bookmark for a paper."""
   bookmark = await create_bookmark(
-    session, paper_id, bookmark_create.page_number, bookmark_create.note, user_id=scoped_user_id(user)
+    session,
+    paper_id,
+    bookmark_create.page_number,
+    bookmark_create.note,
+    user_id=scoped_user_id(user),
   )
   return BookmarkResponse.model_validate(bookmark)
 
 
 @router.delete("/papers/{paper_id}/bookmarks/{bookmark_id}", status_code=204)
 async def delete_bookmark_endpoint(
-  paper_id: int, bookmark_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
+  paper_id: int,
+  bookmark_id: int,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
 ):
   """Delete a bookmark."""
   await delete_bookmark(session, bookmark_id, paper_id, user_id=scoped_user_id(user))
@@ -892,18 +939,24 @@ async def share_paper(
 
   emails = _normalize_emails(payload.emails)
   if not emails:
-    raise HTTPException(status_code=400, detail="At least one recipient email is required")
+    raise HTTPException(
+      status_code=400, detail="At least one recipient email is required"
+    )
 
   users_result = await session.execute(select(User).where(User.email.in_(emails)))
   recipients = list(users_result.scalars().all())
-  recipients_by_email = {cast(str, recipient.email).lower(): recipient for recipient in recipients}
+  recipients_by_email = {
+    cast(str, recipient.email).lower(): recipient for recipient in recipients
+  }
 
   missing_emails = [email for email in emails if email not in recipients_by_email]
   skipped_emails: list[str] = []
   shares: list[PaperShare] = []
 
   recipient_ids = [
-    cast(int, recipient.id) for recipient in recipients if cast(int, recipient.id) != user.id
+    cast(int, recipient.id)
+    for recipient in recipients
+    if cast(int, recipient.id) != user.id
   ]
   for recipient in recipients:
     if recipient.id == user.id:
@@ -956,7 +1009,7 @@ async def share_paper(
   from app.tasks.email_tasks import send_share_email
 
   for share in shares:
-    if share.recipient and getattr(share.recipient, 'email', None):
+    if share.recipient and getattr(share.recipient, "email", None):
       send_share_email.delay(
         str(share.recipient.email),
         str(user.display_name),
@@ -989,7 +1042,9 @@ async def list_paper_shares(
   return ShareListResponse(shares=[_serialize_share(share) for share in shares])
 
 
-@router.patch("/papers/{paper_id}/share/{target_user_id}", response_model=ShareRecipient)
+@router.patch(
+  "/papers/{paper_id}/share/{target_user_id}", response_model=ShareRecipient
+)
 async def update_paper_share(
   paper_id: int,
   target_user_id: int,

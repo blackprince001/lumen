@@ -38,9 +38,7 @@ def upgrade() -> None:
     sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     sa.UniqueConstraint("user_id", "paper_id", name="uq_canvas_user_paper"),
   )
-  op.create_index(
-    "idx_canvas_user_id", "citation_canvas_items", ["user_id"]
-  )
+  op.create_index("idx_canvas_user_id", "citation_canvas_items", ["user_id"])
 
 
 def downgrade() -> None:
