@@ -10,11 +10,15 @@
     "cssVariables": true,
     "prefix": ""
   },
+  "iconLibrary": "radix",
   "aliases": {
     "components": "@/components",
-    "ui": "@/components/shadcn",
     "utils": "@/lib/utils",
+    "ui": "@/components/shadcn",
     "lib": "@/lib",
     "hooks": "@/hooks"
+  },
+  "registries": {
+    "@extend": "https://ui.extend.ai/r/{name}.json"
   }
 }
