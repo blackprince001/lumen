@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
-import 'react-pdf/dist/esm/Page/TextLayer.css';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
 import { PDFToolbar } from './PDFToolbar';
 import { PDFTOC, type TOCItem } from './PDFTOC';
 import { FloatingAnnotationForm } from './FloatingAnnotationForm';
@@ -16,12 +16,16 @@ import { cn } from '@/lib/utils';
 import { fetchApi } from '@/lib/api/client';
 import { toastError } from '@/lib/utils/toast';
 
-// Set worker to a reliable CDN fallback to resolve rendering issues in different environments
-pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.8.69/build/pdf.worker.min.mjs`;
+// Self-hosted worker and assets, version-locked to the installed pdfjs-dist.
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 const PDF_OPTIONS = {
-  cMapUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/cmaps/',
-  standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/',
+  cMapPacked: true,
+  cMapUrl: '/pdfjs/cmaps/',
+  standardFontDataUrl: '/pdfjs/standard_fonts/',
 };
 
 interface PDFViewerProps {
