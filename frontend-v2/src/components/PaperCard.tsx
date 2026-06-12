@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ExportSquare as ExternalLink, Trash as Trash2, People } from 'iconsax-reactjs';
+import { Trash as Trash2, People } from 'iconsax-reactjs';
 import { cn } from '@/lib/utils';
 import { getPaperTheme } from '@/lib/paper-themes';
 import { paperAuthors, paperYear } from '@/lib/paper-display';
@@ -174,23 +174,6 @@ export function PaperCard({
             </div>
           )}
 
-          {/* Footer: source link */}
-          {paper.url && (
-            <div className="flex items-center justify-end mt-3 pt-2 border-t" style={{ borderColor: theme.border }}>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  window.open(paper.url, '_blank', 'noopener,noreferrer');
-                }}
-                className="inline-flex items-center gap-1 text-caption opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-                style={{ color: theme.text }}
-              >
-                Source <ExternalLink size={10} />
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

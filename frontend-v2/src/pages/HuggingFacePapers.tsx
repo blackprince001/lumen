@@ -263,25 +263,17 @@ export default function HuggingFacePapers() {
 
       {/* Loading */}
       {isLoading && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-3">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-2xl border border-(--border) overflow-hidden">
-              {/* Header skeleton */}
-              <div className="h-16 bg-(--muted)" />
-              {/* Inset content skeleton */}
-              <div className="rounded-t-xl border-t border-(--border) bg-(--card) p-4 space-y-3">
-                <Skeleton className="h-3 w-40" />
-                <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-2/3" />
-                <div className="flex gap-1.5 pt-1">
-                  <Skeleton className="h-5 w-16 rounded" />
-                  <Skeleton className="h-5 w-14 rounded" />
-                </div>
-                <div className="flex items-center justify-between pt-3 border-t border-(--border)">
-                  <Skeleton className="h-3 w-20" />
-                  <Skeleton className="h-3 w-24" />
+              <div className="flex gap-3.5 p-4">
+                <Skeleton className="w-20 shrink-0 aspect-[0.7727] rounded-lg" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-2/3" />
                 </div>
               </div>
             </div>
@@ -313,7 +305,7 @@ export default function HuggingFacePapers() {
           </div>
 
           {data.papers.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-3">
               {data.papers.map((paper, i) => <HFPaperCard key={paper.paper.id} paper={paper} index={i} />)}
             </div>
           ) : (

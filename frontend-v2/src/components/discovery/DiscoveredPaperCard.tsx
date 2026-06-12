@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Bookmark2 as BookmarkPlus, ExportSquare as ExternalLink } from 'iconsax-reactjs';
 import type { DiscoveredPaperPreview } from '@/lib/api/discovery';
 import { AddToLibraryDialog } from './AddToLibraryDialog';
+import { PaperCoverPlaceholder } from '@/components/ui/PaperCoverPlaceholder';
 import { cn } from '@/lib/utils';
 import { getPaperTheme } from '@/lib/paper-themes';
 
@@ -91,35 +92,46 @@ export function DiscoveredPaperCard({
           </div>
         </div>
 
-        {/* Inset content area */}
+        {/* Inset content area: cover left, details right */}
         <div
-          className="rounded-t-xl border-t px-4 pt-3.5 pb-4 flex-1"
+          className="rounded-t-xl border-t px-4 pt-3.5 pb-4 flex-1 flex gap-3.5"
           style={{ backgroundColor: theme.accent, borderColor: theme.border }}
         >
-          <h3 className="text-btn font-bold leading-snug mb-2 line-clamp-2" style={{ color: theme.text }}>
-            {paper.title}
-          </h3>
+          {/* Cover thumbnail placeholder */}
+          <div
+            className="w-20 shrink-0 self-start aspect-[0.7727] rounded-lg overflow-hidden border shadow-xs"
+            style={{ borderColor: theme.border, backgroundColor: theme.bg }}
+          >
+            <PaperCoverPlaceholder theme={theme.name} />
+          </div>
 
-          {paper.authors && paper.authors.length > 0 && (
-            <p className="text-caption mb-2 opacity-75 line-clamp-1" style={{ color: theme.text }}>
-              {paper.authors.slice(0, 3).join(', ')}
-              {paper.authors.length > 3 && ` +${paper.authors.length - 3} more`}
-            </p>
-          )}
+          {/* Details */}
+          <div className="min-w-0 flex-1">
+            <h3 className="text-body font-semibold leading-snug line-clamp-2 mb-1" style={{ color: theme.text }}>
+              {paper.title}
+            </h3>
 
-          {paper.abstract && (
-            <p className="text-code leading-relaxed line-clamp-2 mb-3 opacity-70" style={{ color: theme.text }}>
-              {paper.abstract}
-            </p>
-          )}
-
-          <div className="flex items-center gap-3 text-caption opacity-60" style={{ color: theme.text }}>
-            {paper.citation_count !== undefined && <span>{paper.citation_count} citations</span>}
-            {paper.relevance_score !== undefined && (
-              <span className="font-semibold opacity-100">
-                {Math.round(paper.relevance_score * 100)}% relevant
-              </span>
+            {paper.authors && paper.authors.length > 0 && (
+              <p className="text-caption mb-2 opacity-75 line-clamp-1" style={{ color: theme.text }}>
+                {paper.authors.slice(0, 3).join(', ')}
+                {paper.authors.length > 3 && ` +${paper.authors.length - 3} more`}
+              </p>
             )}
+
+            {paper.abstract && (
+              <p className="text-code leading-relaxed line-clamp-2 mb-3 opacity-70" style={{ color: theme.text }}>
+                {paper.abstract}
+              </p>
+            )}
+
+            <div className="flex items-center gap-3 text-caption opacity-60" style={{ color: theme.text }}>
+              {paper.citation_count !== undefined && <span>{paper.citation_count} citations</span>}
+              {paper.relevance_score !== undefined && (
+                <span className="font-semibold opacity-100">
+                  {Math.round(paper.relevance_score * 100)}% relevant
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

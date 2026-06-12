@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { DocumentText as FileText, Book1 as BookOpen, Clock, TrendUp as TrendingUp, Tag as TagIcon } from 'iconsax-reactjs';
+import { DocumentText as FileText, Book1 as BookOpen, Clock, TrendUp as TrendingUp, Tag as TagIcon, ArrowRight2 as ChevronRight } from 'iconsax-reactjs';
 import { statisticsApi } from '@/lib/api/statistics';
 import { papersApi } from '@/lib/api/papers';
 import { tagsApi } from '@/lib/api/tags';
 import { Badge } from '@/components/ui/Badge';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { PaperCard } from '@/components/PaperCard';
+import { PaperCoverPlaceholder } from '@/components/ui/PaperCoverPlaceholder';
+import { usePaperThumbnail } from '@/hooks/use-paper-thumbnail';
+import { paperAuthors, paperYear } from '@/lib/paper-display';
+import { getPaperTheme } from '@/lib/paper-themes';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 /* ===== Reusable dashboard card shell ===== */
@@ -253,9 +256,9 @@ export default function Dashboard() {
                 </Link>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 p-4">
+              <div className="divide-y divide-(--border)">
                 {recentPapers.map((paper) => (
-                  <PaperCard key={paper.id} paper={paper} />
+                  <PaperRow key={paper.id} paper={paper} />
                 ))}
               </div>
             )}
@@ -296,6 +299,46 @@ export default function Dashboard() {
         )}
       </div>
     </div>
+  );
+}
+
+function PaperRow({ paper }: { paper: import('@/lib/api/papers').Paper }) {
+  const theme = getPaperTheme(paper.id);
+  const coverUrl = usePaperThumbnail(paper);
+  const authorText = paperAuthors(paper);
+  const publicationYear = paperYear(paper);
+
+  return (
+    <Link
+      to={`/papers/${paper.id}`}
+      className="flex items-center gap-3.5 px-5 py-3.5 transition-colors hover:bg-(--muted)/40"
+    >
+      {/* Thumbnail */}
+      <div
+        className="w-10 shrink-0 aspect-[0.7727] rounded-md overflow-hidden border shadow-xs"
+        style={{ borderColor: theme.border, backgroundColor: theme.bg }}
+      >
+        {coverUrl ? (
+          <img src={coverUrl} alt="" className="size-full object-cover" draggable={false} />
+        ) : (
+          <PaperCoverPlaceholder theme={theme.name} />
+        )}
+      </div>
+
+      {/* Details */}
+      <div className="min-w-0 flex-1">
+        <p className="text-code font-medium text-(--foreground) truncate">{paper.title}</p>
+        {authorText && (
+          <p className="text-caption text-(--muted-foreground) truncate">{authorText}</p>
+        )}
+      </div>
+
+      {publicationYear && (
+        <span className="text-caption text-(--muted-foreground) shrink-0">{publicationYear}</span>
+      )}
+
+      <ChevronRight size={13} className="shrink-0 text-(--muted-foreground) opacity-40" />
+    </Link>
   );
 }
 

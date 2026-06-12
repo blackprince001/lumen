@@ -3,6 +3,7 @@ import {
   DocumentUpload as Upload,
   Refresh as Loader2,
   CloseCircle as X,
+  Eye,
 } from 'iconsax-reactjs';
 import { renderLocalPdfCover } from '@/lib/pdf-cover';
 import { Progress } from '@/components/ui/Progress';
@@ -16,7 +17,13 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function LocalCover({ file }: { file: File }) {
+function LocalCover({
+  file,
+  className,
+}: {
+  file: File;
+  className?: string;
+}) {
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -39,7 +46,13 @@ function LocalCover({ file }: { file: File }) {
   }, [file]);
 
   return (
-    <div className="aspect-[0.7727] w-16 shrink-0 overflow-hidden rounded-md border border-(--border) bg-(--white)">
+    <div
+      className={cn(
+        'aspect-[0.7727] w-20 shrink-0 overflow-hidden rounded-lg border shadow-xs',
+        className,
+      )}
+      style={{ borderColor: 'var(--border)', backgroundColor: 'var(--background)' }}
+    >
       {url ? (
         <img src={url} alt="" className="size-full object-cover" draggable={false} />
       ) : (
@@ -70,6 +83,7 @@ export function UploadHero({
   fileProgressPct,
   fileState,
   maxFiles = 5,
+  onPreview,
 }: {
   files: File[];
   onFilesAdded: (files: File[]) => void;
@@ -80,6 +94,7 @@ export function UploadHero({
   fileProgressPct: (index: number) => number;
   fileState: (index: number) => FileUploadState;
   maxFiles?: number;
+  onPreview?: (file: File) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -154,19 +169,19 @@ export function UploadHero({
             )}
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="space-y-2">
             {files.map((file, i) => {
               const state = fileState(i);
               const pct = fileProgressPct(i);
               return (
                 <div
                   key={`${file.name}-${file.size}-${i}`}
-                  className="flex gap-3 rounded-lg border border-(--border) bg-(--muted) p-2.5"
+                  className="flex gap-3.5 rounded-lg border border-(--border) bg-(--card) p-3"
                 >
-                  <LocalCover file={file} />
-                  <div className="flex min-w-0 flex-1 flex-col">
+                  <LocalCover file={file} className="w-20" />
+                  <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <div className="flex items-start gap-1.5">
-                      <span className="min-w-0 flex-1 truncate text-code" title={file.name}>
+                      <span className="min-w-0 flex-1 truncate text-code font-medium" title={file.name}>
                         {file.name}
                       </span>
                       {!disabled && (
@@ -182,9 +197,18 @@ export function UploadHero({
                     <span className="text-caption text-(--muted-foreground)">
                       {formatBytes(file.size)}
                     </span>
-                    <div className="mt-auto">
-                      {isUploading ? (
-                        <div className="space-y-1">
+                    <div className="mt-auto flex items-center gap-2">
+                      {!isUploading && onPreview && (
+                        <button
+                          onClick={() => onPreview(file)}
+                          className="inline-flex items-center gap-1 text-caption font-medium text-(--muted-foreground) hover:text-(--foreground) transition-colors"
+                        >
+                          <Eye size={12} />
+                          Preview
+                        </button>
+                      )}
+                      {isUploading && (
+                        <div className="flex-1 space-y-1">
                           <Progress
                             value={state === 'processing' ? 100 : pct}
                             fillClassName={state === 'processing' ? 'animate-pulse' : undefined}
@@ -199,7 +223,7 @@ export function UploadHero({
                             {state === 'done' && 'uploaded'}
                           </span>
                         </div>
-                      ) : null}
+                      )}
                     </div>
                   </div>
                 </div>

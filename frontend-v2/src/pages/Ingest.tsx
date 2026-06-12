@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
@@ -12,6 +12,7 @@ import { groupsApi } from '@/lib/api/groups';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Progress } from '@/components/ui/Progress';
+import { Dialog } from '@/components/ui/Dialog';
 import { GroupTreeSelector } from '@/components/GroupTreeSelector';
 import { UploadHero, type FileUploadState } from '@/components/ingest/UploadHero';
 import { UrlChipsInput } from '@/components/ingest/UrlChipsInput';
@@ -44,6 +45,8 @@ export default function Ingest() {
   // Upload progress (bytes)
   const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number } | null>(null);
   const [isProcessingServer, setIsProcessingServer] = useState(false);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const previewUrlRef = useRef<string | null>(null);
 
   const { data: groups } = useQuery({
     queryKey: ['groups'],
@@ -173,6 +176,12 @@ export default function Ingest() {
 
   const itemCount = files.length + urlChips.length;
 
+  const handlePreview = (file: File) => {
+    if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
+    previewUrlRef.current = URL.createObjectURL(file);
+    setPreviewFile(file);
+  };
+
   return (
     <div className="max-w-225 mx-auto px-6 py-8">
       <div className="mb-8">
@@ -235,6 +244,7 @@ export default function Ingest() {
             fileProgressPct={fileProgressPct}
             fileState={fileState}
             maxFiles={MAX_FILES}
+            onPreview={handlePreview}
           />
 
           {uploadMutation.isPending && uploadProgress && (
@@ -287,6 +297,34 @@ export default function Ingest() {
               : 'Import Papers'}
         </Button>
       </div>
+
+      {/* PDF Preview Dialog */}
+      <Dialog
+        open={previewFile !== null}
+        onClose={() => {
+          setPreviewFile(null);
+          if (previewUrlRef.current) {
+            URL.revokeObjectURL(previewUrlRef.current);
+            previewUrlRef.current = null;
+          }
+        }}
+        title={previewFile?.name ?? 'Preview'}
+        size="xl"
+      >
+        {previewFile && previewUrlRef.current && (
+          <div className="h-[70vh]">
+            <object
+              data={previewUrlRef.current}
+              type="application/pdf"
+              className="size-full rounded-lg"
+            >
+              <p className="text-code text-(--muted-foreground) p-4">
+                PDF preview not available. <a href={previewUrlRef.current} download className="underline">Download file</a>
+              </p>
+            </object>
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }
