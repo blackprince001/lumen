@@ -330,4 +330,8 @@ export const papersApi = {
     }
     return response.json();
   },
+
+  /** PDF layout blocks in the @extend ParsedOcrOutput envelope. */
+  getLayout: (id: number): Promise<{ chunks: Array<{ blocks: unknown[] }> }> =>
+    api.get(`/papers/${id}/layout`),
 };

@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
-import { useParams, useNavigate, useOutletContext } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { papersApi } from '@/lib/api/papers';
 import { annotationsApi } from '@/lib/api/annotations';
-import { PDFViewer } from '@/components/PDFViewer';
+import { ReaderShell } from '@/components/reader/ReaderShell';
 import { useTabs } from '@/contexts/TabContext';
 import { useReadingSession } from '@/hooks/use-reading-session';
 import { Warning2 as AlertCircle, DocumentText as FileText } from 'iconsax-reactjs';
@@ -14,13 +14,6 @@ export default function PaperDetail() {
   const navigate = useNavigate();
   const paperId = id ? parseInt(id) : undefined;
   const { addTab, updateTab, tabs, activeTabId } = useTabs();
-  const { 
-    setChatPanelOpen,
-    setActiveTab
-  } = useOutletContext<{ 
-    setChatPanelOpen: (open: boolean) => void,
-    setActiveTab: (tab: string) => void
-  }>();
 
   const { data: paper, isLoading: paperLoading, error: paperError, refetch: refetchPaper } = useQuery({
     queryKey: ['paper', paperId],
@@ -81,7 +74,7 @@ export default function PaperDetail() {
 
   return (
     <div className="h-full w-full">
-      <PDFViewer
+      <ReaderShell
         paper={paper}
         annotations={annotations || []}
         onAnnotationSuccess={() => {
@@ -92,11 +85,6 @@ export default function PaperDetail() {
           const activeTab = tabs.find((t) => t.id === activeTabId);
           if (activeTab) updateTab(activeTab.id, { currentPage: page });
         }}
-        onNoteAction={() => {
-          setChatPanelOpen(true);
-          setActiveTab('notes');
-        }}
-        targetPage={currentPage}
       />
     </div>
   );

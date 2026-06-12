@@ -114,6 +114,8 @@ export type PDFViewerProps = {
   renderPageOverlay?: (props: PDFViewerPageOverlayProps) => React.ReactNode
   onActivePageChange?: (pageNumber: number) => void
   onDocumentLoadSuccess?: (numPages: number) => void
+  // PAPERS-FORK: expose the loaded proxy (outline/TOC extraction).
+  onDocumentProxy?: (pdf: PDFDocumentProxy) => void
   onPdfUpload?: (file: File) => void
   onPagePointerDown?: (
     event: React.PointerEvent<HTMLDivElement>,
@@ -753,6 +755,8 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
       renderPageOverlay,
       onActivePageChange,
       onDocumentLoadSuccess,
+      // PAPERS-FORK
+      onDocumentProxy,
       onPdfUpload,
       onPagePointerDown,
       onPagePointerMove,
@@ -1530,6 +1534,8 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
         setActivePage(1)
         onActivePageChange?.(1)
         onDocumentLoadSuccess?.(nextNumPages)
+        // PAPERS-FORK
+        onDocumentProxy?.(pdf)
         setSearchQuery("")
         setSearchDraft("")
         viewportRef.current?.scrollTo({ top: 0, left: 0 })
@@ -1547,7 +1553,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
           setIsDocumentLoading(false)
         }
       },
-      [onActivePageChange, onDocumentLoadSuccess, pageNumbers]
+      [onActivePageChange, onDocumentLoadSuccess, onDocumentProxy, pageNumbers]
     )
 
     const handleLoadError = React.useCallback(() => {

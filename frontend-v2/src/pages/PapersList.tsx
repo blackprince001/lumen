@@ -4,23 +4,23 @@ import { useNavigate } from 'react-router-dom';
 import { Add as Plus, Grid1 as LayoutGrid, MenuBoard as List, Trash as Trash2, Refresh as RefreshCw, Layer, TickSquare as CheckSquare, CloseCircle as X, FolderAdd as FolderInput } from 'iconsax-reactjs';
 import { Link } from 'react-router-dom';
 
-import { papersApi }    from '@/lib/api/papers';
-import { groupsApi }    from '@/lib/api/groups';
+import { papersApi } from '@/lib/api/papers';
+import { groupsApi } from '@/lib/api/groups';
 import { toastSuccess, toastError, toastInfo } from '@/lib/utils/toast';
-import { cn }           from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
-import { Button }                from '@/components/ui/Button';
-import { SearchInput }           from '@/components/ui/SearchInput';
-import { Skeleton }              from '@/components/ui/Skeleton';
-import { Pagination }            from '@/components/ui/Pagination';
-import { Tooltip }               from '@/components/ui/Tooltip';
-import { Select }                from '@/components/ui/Select';
+import { Button } from '@/components/ui/Button';
+import { SearchInput } from '@/components/ui/SearchInput';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { Pagination } from '@/components/ui/Pagination';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Select } from '@/components/ui/Select';
 
-import { PaperCard }             from '@/components/PaperCard';
-import { PaperTable }            from '@/components/PaperTable';
-import { SortFilterBar }         from '@/components/SortFilterBar';
-import { ConfirmDialog, useConfirmDialog }  from '@/components/ConfirmDialog';
-import { MovePapersDialog }      from '@/components/MovePapersDialog';
+import { PaperCard } from '@/components/PaperCard';
+import { PaperTable } from '@/components/PaperTable';
+import { SortFilterBar } from '@/components/SortFilterBar';
+import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
+import { MovePapersDialog } from '@/components/MovePapersDialog';
 
 import type { PaperListFilters } from '@/lib/api/papers';
 
@@ -55,17 +55,17 @@ export default function PapersList() {
   const queryClient = useQueryClient();
 
   /* ---- View / pagination / search state ---- */
-  const [viewMode, setViewMode]       = useState<ViewMode>('grid');
-  const [page, setPage]               = useState(1);
-  const [pageSize, setPageSize]       = useState(20);
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filters, setFilters]         = useState<PaperListFilters>({ sort_by: 'date_added', sort_order: 'desc' });
-  const [ownership, setOwnership]     = useState<'all' | 'mine' | 'shared'>('all');
+  const [filters, setFilters] = useState<PaperListFilters>({ sort_by: 'date_added', sort_order: 'desc' });
+  const [ownership, setOwnership] = useState<'all' | 'mine' | 'shared'>('all');
 
   /* ---- Selection state ---- */
-  const [selectionMode, setSelectionMode]   = useState(false);
-  const [selectedIds, setSelectedIds]       = useState<number[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [moveDialogOpen, setMoveDialogOpen] = useState(false);
 
   /* ---- Confirm dialog ---- */
@@ -101,9 +101,9 @@ export default function PapersList() {
     [recentData],
   );
 
-  const papers      = data?.papers ?? [];
-  const total       = data?.total ?? 0;
-  const totalPages  = Math.ceil(total / pageSize) || 0;
+  const papers = data?.papers ?? [];
+  const total = data?.total ?? 0;
+  const totalPages = Math.ceil(total / pageSize) || 0;
 
   /* ---- Search ---- */
   const handleSearch = useCallback((q: string) => {
@@ -298,11 +298,10 @@ export default function PapersList() {
           <button
             key={tab}
             onClick={() => { setOwnership(tab); setPage(1); }}
-            className={`px-3 py-1 text-caption rounded-full transition-colors ${
-              ownership === tab
+            className={`px-3 py-1 text-caption rounded-full transition-colors ${ownership === tab
                 ? 'bg-(--foreground) text-(--white)'
                 : 'bg-(--muted) text-(--muted-foreground) hover:bg-(--border)'
-            }`}
+              }`}
           >
             {tab === 'all' ? 'All' : tab === 'mine' ? 'My Papers' : 'Shared with me'}
           </button>

@@ -4853,6 +4853,12 @@ function FileSystemGalleryStage({
               "h-full",
               isDialog && "min-h-0 overflow-hidden rounded-2xl"
             )}
+            // PAPERS-FORK: self-hosted pdfjs assets instead of unpkg.
+            documentOptions={{
+              cMapPacked: true,
+              cMapUrl: "/pdfjs/cmaps/",
+              standardFontDataUrl: "/pdfjs/standard_fonts/",
+            }}
             downloadFileName={file.name}
             showToolbar={isDialog}
             showUpload={false}
