@@ -9,6 +9,7 @@
   font-display: swap;
   src: url('/fonts/InterVariable.woff2') format('woff2');
 }
+
 @font-face {
   font-family: 'InterVariable';
   font-style: italic;
@@ -151,30 +152,37 @@
     from {
       transform: translateX(-100%);
     }
+
     to {
       transform: translateX(0);
     }
   }
+
   @keyframes slide-out-to-left {
     from {
       transform: translateX(0);
     }
+
     to {
       transform: translateX(-100%);
     }
   }
+
   @keyframes fade-in {
     from {
       opacity: 0;
     }
+
     to {
       opacity: 1;
     }
   }
+
   @keyframes fade-out {
     from {
       opacity: 1;
     }
+
     to {
       opacity: 0;
     }
@@ -190,6 +198,7 @@
   color utility to any element that depends on these defaults.
 */
 @layer base {
+
   *,
   ::after,
   ::before,
@@ -468,7 +477,6 @@
   }
 
   body {
-    zoom: 1.1;
     font-family: var(--font-sans);
     font-size: 14px;
     font-weight: 500;
@@ -642,6 +650,7 @@ dialog::backdrop {
 .paper-card-hover {
   transition: border-color 0.2s ease;
 }
+
 .paper-card-hover:hover {
   border-color: var(--card-action) !important;
 }
