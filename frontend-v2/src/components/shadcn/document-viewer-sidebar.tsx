@@ -46,14 +46,18 @@ export function DocumentViewerThumbnailSidebar({
   className,
   inline,
   open,
+  outlinePanel,
 }: {
   children: React.ReactNode
   className?: string
   inline: boolean
   open: boolean
+  // PAPERS-FORK: optional outline/TOC panel toggled inside the sidebar.
+  outlinePanel?: React.ReactNode
 }) {
   const [transitionsReady, setTransitionsReady] = React.useState(false)
   const shouldAnimateSidebar = transitionsReady && open
+  const [sidebarView, setSidebarView] = React.useState<"thumbnails" | "outline">("thumbnails")
 
   React.useEffect(() => {
     let secondFrameId = 0
@@ -88,7 +92,36 @@ export function DocumentViewerThumbnailSidebar({
         className
       )}
     >
-      {children}
+      {/* PAPERS-FORK: view toggle header when outlinePanel is provided */}
+      {outlinePanel && (
+        <div className="flex border-b border-sidebar-border">
+          <button
+            type="button"
+            onClick={() => setSidebarView("thumbnails")}
+            className={cn(
+              "flex-1 px-2 py-1.5 text-micro font-medium transition-colors",
+              sidebarView === "thumbnails"
+                ? "bg-sidebar-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
+            )}
+          >
+            Pages
+          </button>
+          <button
+            type="button"
+            onClick={() => setSidebarView("outline")}
+            className={cn(
+              "flex-1 px-2 py-1.5 text-micro font-medium transition-colors",
+              sidebarView === "outline"
+                ? "bg-sidebar-accent text-foreground"
+                : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/50"
+            )}
+          >
+            Outline
+          </button>
+        </div>
+      )}
+      {sidebarView === "thumbnails" ? children : outlinePanel}
     </aside>
   )
 }

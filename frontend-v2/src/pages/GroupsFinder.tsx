@@ -176,6 +176,7 @@ export default function GroupsFinder() {
   const [nameValue, setNameValue] = useState('');
   const [movePaperIds, setMovePaperIds] = useState<number[] | null>(null);
   const [shareGroup, setShareGroup] = useState<Group | null>(null);
+  const [sharePaper, setSharePaper] = useState<{ id: number; title: string } | null>(null);
   const [chatGroup, setChatGroup] = useState<Group | null>(null);
   const [multiSelected, setMultiSelected] = useState<FileSystemFileItem[]>([]);
   const [quickLook, setQuickLook] = useState<{ title: string; url: string } | null>(null);
@@ -383,6 +384,15 @@ export default function GroupsFinder() {
         icon: <DocumentDownload size={15} />,
         onSelect: () => exportPapers(selectedIds),
       },
+      ...(!plural
+        ? [
+            {
+              label: 'Share paper',
+              icon: <Share size={15} />,
+              onSelect: () => setSharePaper({ id: meta.paperId, title: meta.title ?? 'Paper' }),
+            } as MenuAction,
+          ]
+        : []),
     ];
     if (meta.groupId != null && !isSharedPath(item.path)) {
       actions.push({
@@ -597,6 +607,16 @@ export default function GroupsFinder() {
           resourceId={shareGroup.id}
           resourceType="group"
           resourceTitle={shareGroup.name}
+        />
+      )}
+
+      {sharePaper && (
+        <ShareDialog
+          open
+          onClose={() => setSharePaper(null)}
+          resourceId={sharePaper.id}
+          resourceType="paper"
+          resourceTitle={sharePaper.title}
         />
       )}
 

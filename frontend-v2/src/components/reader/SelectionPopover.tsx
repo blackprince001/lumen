@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Refresh as Loader2 } from 'iconsax-reactjs';
 import { cn } from '@/lib/utils';
+import type { ThemeName } from '@/lib/paper-themes';
 import type { AIActionKind } from '@/lib/api/aiFeatures';
 import type { NormalizedRect } from './annotation-geometry';
+import { THEME_NAMES } from './highlight-colors';
 
 export interface SelectionState {
   page: number;
@@ -20,19 +22,21 @@ const AI_ACTIONS: Array<{ kind: AIActionKind; label: string }> = [
 ];
 
 /**
- * Floating actions for the current text selection: the mockup's
- * Explain / Why / Define triplet plus a free comment box.
+ * Floating actions for the current text selection: AI actions, color
+ * swatches for one-off highlights, and a free comment box.
  */
 export function SelectionPopover({
   selection,
   pendingAction,
   onAIAction,
+  onHighlight,
   onComment,
   onClose,
 }: {
   selection: SelectionState;
   pendingAction: AIActionKind | null;
   onAIAction: (kind: AIActionKind) => void;
+  onHighlight: (color: ThemeName) => void;
   onComment: (text: string) => void;
   onClose: () => void;
 }) {
@@ -92,6 +96,20 @@ export function SelectionPopover({
             {pendingAction === kind && <Loader2 size={11} className="animate-spin" />}
             {label}
           </button>
+        ))}
+      </div>
+
+      {/* Color swatch row for one-off highlights */}
+      <div className="mb-2 flex items-center gap-1.5 px-0.5">
+        {THEME_NAMES.map((name) => (
+          <button
+            key={name}
+            type="button"
+            onClick={() => onHighlight(name)}
+            className="size-5 rounded-full border border-(--border) transition-transform hover:scale-125"
+            style={{ backgroundColor: `var(--theme-${name}-action)` }}
+            aria-label={`Highlight ${name}`}
+          />
         ))}
       </div>
 

@@ -4,6 +4,7 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import ChatPanel from './ChatPanel';
 import { TabBar } from './TabBar';
+import { ReaderProvider } from '@/contexts/ReaderContext';
 
 const SIDEBAR_MIN = 57;
 const SIDEBAR_SNAP_CLOSE = 154;  // below this → snap to collapsed icon-only mode
@@ -112,85 +113,87 @@ export default function Layout() {
   const sidebarCollapsed = sidebarWidth <= SIDEBAR_MIN + 20;
 
   return (
-    <div
-      className="w-full h-dvh flex overflow-hidden bg-(--background) p-1 gap-(--panel-gap)"
-      style={{ backgroundImage: 'linear-gradient(180deg, rgba(60,145,230,0.05) 0%, transparent 26%)' }}
-    >
-      {/* === Desktop Sidebar — left column === */}
+    <ReaderProvider>
       <div
-        className="hidden md:flex shrink-0 min-h-0"
-        style={{ width: sidebarWidth }}
+        className="w-full h-dvh flex overflow-hidden bg-(--background) p-1 gap-(--panel-gap)"
+        style={{ backgroundImage: 'linear-gradient(180deg, rgba(60,145,230,0.05) 0%, transparent 26%)' }}
       >
-        <Sidebar
-          isOpen={!sidebarCollapsed}
-          onToggle={() =>
-            setSidebarWidth(() => (sidebarCollapsed ? SIDEBAR_DEFAULT : SIDEBAR_MIN))
-          }
-        />
-      </div>
-
-      {/* Sidebar resize divider */}
-      <ResizeDivider onDrag={onSidebarDrag} />
-
-      {/* === Mobile Sidebar Overlay (scrim) === */}
-      {mobileMenuOpen && (
+        {/* === Desktop Sidebar — left column === */}
         <div
-          className="fixed inset-0 z-60 bg-[rgba(0,0,0,0.4)] md:hidden animate-fade-in"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+          className="hidden md:flex shrink-0 min-h-0"
+          style={{ width: sidebarWidth }}
+        >
+          <Sidebar
+            isOpen={!sidebarCollapsed}
+            onToggle={() =>
+              setSidebarWidth(() => (sidebarCollapsed ? SIDEBAR_DEFAULT : SIDEBAR_MIN))
+            }
+          />
+        </div>
 
-      {/* === Mobile Sidebar Drawer === */}
-      <div
-        className={`fixed inset-y-0 left-0 z-70 w-60 p-1 transform transition-transform duration-300 ease-out md:hidden ${
-          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-      >
-        <Sidebar isOpen={true} onToggle={() => setMobileMenuOpen(false)} />
-      </div>
+        {/* Sidebar resize divider */}
+        <ResizeDivider onDrag={onSidebarDrag} />
 
-      {/* === Center: Navbar + Page === */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden rounded-(--panel-radius) border border-(--panel-border) bg-(--panel-surface) shadow-(--shadow-panel) backdrop-blur-sm">
-        <Navbar
-          onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
-          showChatToggle={isPaperDetailPage && !chatPanelOpen}
-          onChatToggle={() => {
-            setChatPanelOpen(true);
-            setChatWidth(CHAT_DEFAULT);
-          }}
-        />
-        {isPaperDetailPage && <TabBar />}
-        <main className={`flex-1 w-full bg-(--panel-surface) ${isPaperDetailPage ? 'overflow-hidden' : 'overflow-auto'}`}>
-          <Outlet context={{ 
-            chatPanelOpen, 
-            setChatPanelOpen,
-            activeTab,
-            setActiveTab 
-          }} />
-        </main>
-      </div>
-
-      {/* === Chat Panel — right column, only on paper detail === */}
-      {isPaperDetailPage && chatPanelOpen && (
-        <>
-          {/* Chat resize divider */}
-          <ResizeDivider onDrag={onChatDrag} />
+        {/* === Mobile Sidebar Overlay (scrim) === */}
+        {mobileMenuOpen && (
           <div
-            className="shrink-0 hidden md:flex min-h-0"
-            style={{ width: chatWidth }}
-          >
-            <ChatPanel
-              isOpen={chatPanelOpen}
-              onToggle={() => {
-                setChatPanelOpen(false);
-                setChatWidth(CHAT_DEFAULT);
-              }}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-            />
-          </div>
-        </>
-      )}
-    </div>
+            className="fixed inset-0 z-60 bg-[rgba(0,0,0,0.4)] md:hidden animate-fade-in"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+
+        {/* === Mobile Sidebar Drawer === */}
+        <div
+          className={`fixed inset-y-0 left-0 z-70 w-60 p-1 transform transition-transform duration-300 ease-out md:hidden ${
+            mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        >
+          <Sidebar isOpen={true} onToggle={() => setMobileMenuOpen(false)} />
+        </div>
+
+        {/* === Center: Navbar + Page === */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden rounded-(--panel-radius) border border-(--panel-border) bg-(--panel-surface) shadow-(--shadow-panel) backdrop-blur-sm">
+          <Navbar
+            onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
+            showChatToggle={isPaperDetailPage && !chatPanelOpen}
+            onChatToggle={() => {
+              setChatPanelOpen(true);
+              setChatWidth(CHAT_DEFAULT);
+            }}
+          />
+          {isPaperDetailPage && <TabBar />}
+          <main className={`flex-1 w-full bg-(--panel-surface) ${isPaperDetailPage ? 'overflow-hidden' : 'overflow-auto'}`}>
+            <Outlet context={{
+              chatPanelOpen,
+              setChatPanelOpen,
+              activeTab,
+              setActiveTab
+            }} />
+          </main>
+        </div>
+
+        {/* === Chat Panel — right column, only on paper detail === */}
+        {isPaperDetailPage && chatPanelOpen && (
+          <>
+            {/* Chat resize divider */}
+            <ResizeDivider onDrag={onChatDrag} />
+            <div
+              className="shrink-0 hidden md:flex min-h-0"
+              style={{ width: chatWidth }}
+            >
+              <ChatPanel
+                isOpen={chatPanelOpen}
+                onToggle={() => {
+                  setChatPanelOpen(false);
+                  setChatWidth(CHAT_DEFAULT);
+                }}
+                activeTab={activeTab}
+                setActiveTab={setActiveTab}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </ReaderProvider>
   );
 }

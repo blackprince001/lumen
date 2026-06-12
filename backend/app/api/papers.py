@@ -26,7 +26,7 @@ from app.api.crud import (
 )
 from app.api.crud.utils import ensure_loaded, sanitize_metadata
 from app.core.logger import get_logger
-from app.dependencies import CurrentUser, get_db, scoped_user_id
+from app.dependencies import AdminUser, CurrentUser, get_db, scoped_user_id
 from app.models.paper import Paper
 from app.models.reading_session import ReadingSession
 from app.models.sharing import GroupShare, PaperShare, UserPaperState
@@ -37,6 +37,7 @@ from app.schemas.paper import (
   PaperListResponse,
   PaperUpdate,
 )
+from pydantic import BaseModel
 from app.schemas.paper import (
   Paper as PaperSchema,
 )
@@ -1113,3 +1114,27 @@ async def revoke_paper_share(
   await session.delete(share)
   await session.commit()
   return None
+
+
+class BackfillLayoutsRequest(BaseModel):
+  paper_ids: list[int]
+
+
+class BackfillLayoutsResponse(BaseModel):
+  task_id: str
+  message: str
+
+
+@router.post("/papers/backfill-layouts")
+async def backfill_layouts(
+  request: BackfillLayoutsRequest,
+  admin: AdminUser,
+) -> BackfillLayoutsResponse:
+  """Admin-only: kick off Celery task to backfill layout blocks for papers."""
+  from app.tasks.paper_processing import backfill_layouts_task
+
+  task = backfill_layouts_task.delay(request.paper_ids)
+  return BackfillLayoutsResponse(
+    task_id=task.id,
+    message=f"Backfill task dispatched for {len(request.paper_ids)} paper(s)",
+  )

@@ -20,8 +20,12 @@ export function AnnotationCard({
   onClick?: () => void;
   onDelete?: () => void;
 }) {
-  const theme = highlightTheme(annotation.highlight_type);
-  const label = highlightLabel(annotation.highlight_type);
+  const theme = highlightTheme(annotation.highlight_type, annotation.selection_data);
+  const label = annotation.highlight_type
+    ? highlightLabel(annotation.highlight_type)
+    : annotation.selection_data?.color
+      ? 'Highlight'
+      : 'Note';
   const showQuote =
     annotation.highlighted_text && annotation.highlighted_text !== annotation.content;
 

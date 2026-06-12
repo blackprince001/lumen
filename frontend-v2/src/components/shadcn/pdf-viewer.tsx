@@ -116,6 +116,8 @@ export type PDFViewerProps = {
   onDocumentLoadSuccess?: (numPages: number) => void
   // PAPERS-FORK: expose the loaded proxy (outline/TOC extraction).
   onDocumentProxy?: (pdf: PDFDocumentProxy) => void
+  // PAPERS-FORK: optional outline/TOC panel rendered inside the sidebar.
+  outlinePanel?: React.ReactNode
   onPdfUpload?: (file: File) => void
   onPagePointerDown?: (
     event: React.PointerEvent<HTMLDivElement>,
@@ -473,7 +475,7 @@ function PDFSidebarThumbnail({
         type: "application/pdf",
       }}
       previewAspectRatio={thumbnailAspectRatio}
-      previewClassName="rounded-md bg-white"
+      previewClassName="rounded-md bg-(--card)"
       previewContent={
         <reactPdf.Thumbnail
           pageNumber={pageNumber}
@@ -719,7 +721,7 @@ function PDFViewerPage({
           ) : null}
         </>
       ) : (
-        <div className="size-full border bg-white shadow-xs" />
+        <div className="size-full border bg-(--card) shadow-xs" />
       )}
       {renderPageOverlay?.({
         pageNumber,
@@ -757,6 +759,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
       onDocumentLoadSuccess,
       // PAPERS-FORK
       onDocumentProxy,
+      outlinePanel,
       onPdfUpload,
       onPagePointerDown,
       onPagePointerMove,
@@ -1970,6 +1973,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                 <DocumentViewerThumbnailSidebar
                   inline={sidebarInline}
                   open={thumbnailSidebarVisible}
+                  outlinePanel={outlinePanel}
                 >
                   {thumbnailSidebarVisible ? (
                     <ScrollArea

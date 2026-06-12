@@ -668,3 +668,9 @@ dialog::backdrop {
 .paper-card-hover:hover {
   border-color: var(--card-action) !important;
 }
+
+/* ===== DOCUMENT DARK MODE ===== */
+/* Invert ONLY page canvases, leaving viewer chrome to follow app theme. */
+[data-reader-dark] .react-pdf__Page canvas {
+  filter: invert(1) hue-rotate(180deg);
+}

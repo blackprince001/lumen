@@ -2,18 +2,25 @@ import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTabs } from '@/contexts/TabContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { DocumentText as FileText, MagicStar as Sparkles, Magicpen as Highlighter, Link, Message as MessageSquare, Stickynote as StickyNote, SidebarRight as PanelRightClose, Bookmark } from 'iconsax-reactjs';
+import { DocumentText as FileText, MagicStar as Sparkles, Magicpen as Highlighter, Link, Message as MessageSquare, Stickynote as StickyNote, SidebarRight as PanelRightClose, Bookmark, AlignBoxBottomCenter as LayoutBlocks } from 'iconsax-reactjs';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { PaperDetails } from '@/components/PaperDetails';
 import { AISummary } from '@/components/AISummary';
 import { KeyFindings } from '@/components/KeyFindings';
 import { ReadingGuide } from '@/components/ReadingGuide';
 import { AutoHighlights } from '@/components/AutoHighlights';
-import { PaperAnnotationsPanel } from '@/components/PaperAnnotationsPanel';
 import { NotesPanel } from '@/components/NotesPanel';
 import { RelatedPapers } from '@/components/RelatedPapers';
 import { ChatTab } from '@/components/ChatTab';
 import { BookmarksTab } from '@/components/BookmarksTab';
+import { AnnotationsPanel } from '@/components/reader/AnnotationsPanel';
+import {
+  getOcrBlocks,
+  OcrBlocksPanel,
+  type OcrBlock,
+  type ParsedOcrOutput,
+} from '@/components/shadcn/layout-blocks';
+import { useReader } from '@/contexts/ReaderContext';
 import { papersApi } from '@/lib/api/papers';
 import { annotationsApi } from '@/lib/api/annotations';
 
@@ -33,6 +40,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
   const queryClient = useQueryClient();
   const { tabs, activeTabId, updateTab } = useTabs();
   const currentPage = tabs.find((t) => t.id === activeTabId)?.currentPage ?? 1;
+  const reader = useReader();
 
   const { data: paper } = useQuery({
     queryKey: ['paper', paperId],
@@ -46,6 +54,12 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
     enabled: !!paperId,
   });
 
+  const { data: layout } = useQuery({
+    queryKey: ['paper-layout', paperId],
+    queryFn: () => papersApi.getLayout(paperId!),
+    enabled: !!paperId,
+  });
+
   const deleteAnnotationMutation = useMutation({
     mutationFn: (annotationId: number) => annotationsApi.delete(annotationId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['annotations', paperId] }),
@@ -54,6 +68,8 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
   // Split into highlights/annotations vs freeform notes
   const annotationItems = annotations.filter((a) => a.type !== 'note');
   const noteItems = annotations.filter((a) => a.type === 'note');
+  const ocrBlocks = layout ? getOcrBlocks(layout as ParsedOcrOutput) : [];
+  const [activeBlockId, setActiveBlockId] = useState<string | undefined>(undefined);
 
   if (!isOpen) return null;
 
@@ -96,6 +112,9 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
                     {annotationItems.length}
                   </span>
                 )}
+              </TabsTrigger>
+              <TabsTrigger value="layout" title="Layout" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+                <LayoutBlocks size={18} />
               </TabsTrigger>
               <TabsTrigger value="bookmarks" title="Bookmarks" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
                 <Bookmark size={18} />
@@ -173,21 +192,26 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
 
             {/* Annotations tab — highlights only (type !== 'note') */}
             <TabsContent value="annotations" className="h-full overflow-y-auto scrollbar-none p-6">
-              <PaperAnnotationsPanel
+              <AnnotationsPanel
                 annotations={annotationItems}
-                isLoading={annotationsLoading}
-                currentPage={currentPage}
-                filterByPage={filterByPage}
-                onFilterByPageChange={setFilterByPage}
-                onAnnotationClick={(ann) => {
-                  const page = (ann.coordinate_data as { page?: number })?.page;
-                  if (page) {
-                    const tab = tabs.find((t) => t.id === activeTabId);
-                    if (tab) updateTab(tab.id, { currentPage: page });
-                  }
+                activeId={reader.activeAnnotationId}
+                onSelect={(ann) => {
+                  reader.scrollCallbacks?.scrollToAnnotation(ann);
                 }}
-                onEditAnnotation={() => { }}
-                onDeleteAnnotation={(annotationId) => deleteAnnotationMutation.mutate(annotationId)}
+                onDelete={(ann) => deleteAnnotationMutation.mutate(ann.id)}
+              />
+            </TabsContent>
+
+            {/* Layout blocks tab */}
+            <TabsContent value="layout" className="h-full overflow-y-auto scrollbar-none p-6">
+              <OcrBlocksPanel
+                blocks={ocrBlocks}
+                activeBlockId={activeBlockId}
+                onBlockFocus={(block) => {
+                  setActiveBlockId(block.id);
+                  reader.scrollCallbacks?.scrollToBlock(block);
+                }}
+                className="h-full"
               />
             </TabsContent>
 

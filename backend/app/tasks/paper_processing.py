@@ -340,6 +340,51 @@ def _mark_paper_failed(paper_id: int, request, exc, traceback) -> dict[str, Any]
     session.close()
 
 
+@celery_app.task(bind=True, base=BaseTask, name="processing.backfill_layouts")
+def backfill_layouts_task(self, paper_ids: list[int]) -> dict[str, Any]:
+    """Bulk backfill layout blocks for papers that are missing them."""
+    from datetime import datetime, timezone
+
+    from app.services.layout_extractor import extract_layout
+
+    session = get_sync_session()
+    results: list[dict[str, Any]] = []
+    try:
+        papers = (
+            session.query(Paper)
+            .filter(Paper.id.in_(paper_ids))
+            .filter(Paper.layout_blocks.is_(None))
+            .filter(Paper.file_path.isnot(None))
+            .all()
+        )
+
+        for paper in papers:
+            try:
+                path = Path(paper.file_path)
+                if not path.is_absolute():
+                    path = Path(settings.STORAGE_PATH) / path
+                if not path.exists():
+                    results.append({"paper_id": paper.id, "status": "skipped", "reason": "File not found"})
+                    continue
+
+                blocks = extract_layout(path.read_bytes())
+                paper.layout_blocks = blocks
+                paper.layout_extracted_at = datetime.now(timezone.utc)
+                results.append({"paper_id": paper.id, "status": "success", "count": len(blocks)})
+            except Exception as e:
+                results.append({"paper_id": paper.id, "status": "error", "error": str(e)})
+                logger.warning("Layout backfill failed", paper_id=paper.id, error=str(e))
+
+        session.commit()
+        return {"status": "completed", "total": len(papers), "results": results}
+    except Exception as e:
+        session.rollback()
+        logger.error("Layout backfill task failed", error=str(e))
+        raise
+    finally:
+        session.close()
+
+
 @celery_app.task(bind=True, base=BaseTask, name="processing.finalize_paper")
 def _finalize_paper_processing(self, paper_id: int) -> dict[str, Any]:
   """Mark paper processing as complete."""

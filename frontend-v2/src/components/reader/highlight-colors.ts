@@ -1,5 +1,7 @@
 import type { ThemeName } from '@/lib/paper-themes';
 
+export const THEME_NAMES: ThemeName[] = ['olive', 'beige', 'blue', 'green', 'terracotta', 'sage', 'slate', 'sand'];
+
 /** highlight_type → paper-theme palette, shared by overlay rects and cards. */
 const HIGHLIGHT_THEMES: Record<string, ThemeName> = {
   method: 'blue',
@@ -21,7 +23,13 @@ export const HIGHLIGHT_TYPE_LABELS: Record<string, string> = {
   define: 'Definition',
 };
 
-export function highlightTheme(highlightType: string | undefined): ThemeName {
+export function highlightTheme(
+  highlightType: string | undefined,
+  selectionData?: Record<string, unknown> | null,
+): ThemeName {
+  if (selectionData?.color && typeof selectionData.color === 'string') {
+    return selectionData.color as ThemeName;
+  }
   return HIGHLIGHT_THEMES[highlightType ?? ''] ?? 'sand';
 }
 

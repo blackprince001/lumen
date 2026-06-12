@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
 import { Warning2 as AlertCircle } from 'iconsax-reactjs';
@@ -10,24 +10,22 @@ import {
   type PDFViewerHandle,
   type PDFViewerPageOverlayProps,
 } from '@/components/shadcn/pdf-viewer';
-import { PdfBlockResizableShell } from '@/components/pdf-block-resizable-shell';
 import {
   getOcrBlocks,
   blockToArea,
   OcrBlockOverlay,
-  OcrBlocksPanel,
   type OcrBlock,
   type ParsedOcrOutput,
 } from '@/components/shadcn/layout-blocks';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/Tabs';
 import { canAnnotate } from '@/lib/utils/permissions';
 import { toastError, toastSuccess } from '@/lib/utils/toast';
 import { cn } from '@/lib/utils';
+import { useReader } from '@/contexts/ReaderContext';
 import { usePaperFile } from './use-paper-file';
 import { annotationPage, annotationRects, type NormalizedRect } from './annotation-geometry';
-import { highlightTheme } from './highlight-colors';
+import { highlightTheme, THEME_NAMES } from './highlight-colors';
+import type { ThemeName } from '@/lib/paper-themes';
 import { AnnotationCard } from './AnnotationCard';
-import { AnnotationsPanel } from './AnnotationsPanel';
 import { OutlinePanel } from './OutlinePanel';
 import { ReaderToolbarActions } from './ReaderToolbarActions';
 import { SelectionPopover, type SelectionState } from './SelectionPopover';
@@ -42,8 +40,6 @@ const PDF_DOCUMENT_OPTIONS = {
 const MARGIN_CARD_WIDTH = 264;
 const MARGIN_CARD_GAP = 10;
 const MARGIN_CARD_MIN_HEIGHT = 72;
-
-type PanelTab = 'annotations' | 'outline' | 'layout';
 
 interface ReaderShellProps {
   paper: Paper;
@@ -63,12 +59,19 @@ export function ReaderShell({
   const viewerRef = useRef<PDFViewerHandle>(null);
   const [pdfProxy, setPdfProxy] = useState<PDFDocumentProxy | null>(null);
   const [activePage, setActivePage] = useState(1);
-  const [panelTab, setPanelTab] = useState<PanelTab>('annotations');
-  const [activeAnnotationId, setActiveAnnotationId] = useState<number | null>(null);
-  const [activeBlockId, setActiveBlockId] = useState<string | undefined>(undefined);
+  const {
+    activeAnnotationId,
+    setActiveAnnotationId,
+    activeBlockId,
+    setActiveBlockId,
+    registerScrollCallbacks,
+    unregisterScrollCallbacks,
+  } = useReader();
   const [selection, setSelection] = useState<SelectionState | null>(null);
   const [pendingAction, setPendingAction] = useState<AIActionKind | null>(null);
   const [isDark, setIsDark] = useState(false);
+  const [highlighterActive, setHighlighterActive] = useState(false);
+  const [highlighterColor, setHighlighterColor] = useState<ThemeName>('yellow' as ThemeName);
 
   const highlights = useMemo(
     () => annotations.filter((a) => a.type !== 'note' && annotationRects(a).length > 0),
@@ -91,7 +94,6 @@ export function ReaderShell({
   const { data: layout } = useQuery({
     queryKey: ['paper-layout', paper.id],
     queryFn: () => papersApi.getLayout(paper.id),
-    enabled: panelTab === 'layout',
     staleTime: Infinity,
     retry: false,
   });
@@ -99,6 +101,17 @@ export function ReaderShell({
     () => (layout ? getOcrBlocks(layout as ParsedOcrOutput) : []),
     [layout]
   );
+
+  /* ── register scroll callbacks with ReaderContext ──────────────────── */
+
+  useEffect(() => {
+    registerScrollCallbacks({
+      scrollToAnnotation,
+      scrollToBlock: focusBlock,
+    });
+    return () => unregisterScrollCallbacks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scrollToAnnotation, focusBlock, registerScrollCallbacks, unregisterScrollCallbacks]);
 
   /* ── navigation ─────────────────────────────────────────────────────── */
 
@@ -193,6 +206,41 @@ export function ReaderShell({
     }
   };
 
+  /** Create a color-only highlight annotation from text selection. */
+  const createHighlight = useCallback(
+    async (color: ThemeName, sel: SelectionState) => {
+      try {
+        const annotation = await annotationsApi.create({
+          paper_id: paper.id,
+          content: sel.text,
+          type: 'annotation',
+          highlighted_text: sel.text,
+          selection_data: { rects: sel.rects, color },
+          coordinate_data: {
+            page: sel.page,
+            x: sel.rects[0] ? sel.rects[0].left + sel.rects[0].width / 2 : 0.5,
+            y: sel.rects[0]?.top ?? 0,
+          },
+        });
+        invalidateAnnotations();
+        setSelection(null);
+        setActiveAnnotationId(annotation.id);
+      } catch {
+        toastError('Failed to create highlight');
+      }
+    },
+    [paper.id, invalidateAnnotations],
+  );
+
+  /** Called from SelectionPopover swatch row. */
+  const handleHighlight = useCallback(
+    (color: ThemeName) => {
+      if (!selection) return;
+      void createHighlight(color, selection);
+    },
+    [selection, createHighlight],
+  );
+
   /* ── text selection capture ─────────────────────────────────────────── */
 
   const handlePagePointerUp = useCallback(
@@ -225,6 +273,18 @@ export function ReaderShell({
         }
         if (rects.length === 0) return;
 
+        // Instant highlight when toolbar highlighter is active.
+        if (highlighterActive) {
+          void createHighlight(highlighterColor, {
+            page: pageNumber,
+            text,
+            rects,
+            clientX: 0,
+            clientY: 0,
+          });
+          return;
+        }
+
         const selectionRect = range.getBoundingClientRect();
         setSelection({
           page: pageNumber,
@@ -235,7 +295,7 @@ export function ReaderShell({
         });
       }, 0);
     },
-    [paper]
+    [paper, highlighterActive, highlighterColor, createHighlight]
   );
 
   /* ── per-page overlay: highlights + margin cards + layout blocks ────── */
@@ -269,7 +329,7 @@ export function ReaderShell({
         <>
           {/* Highlight rects */}
           {pageAnnotations.map((ann) => {
-            const theme = highlightTheme(ann.highlight_type);
+            const theme = highlightTheme(ann.highlight_type, ann.selection_data);
             return annotationRects(ann).map((rect, i) => (
               <button
                 key={`${ann.id}-${i}`}
@@ -277,10 +337,10 @@ export function ReaderShell({
                 aria-label="Annotation highlight"
                 onClick={() => {
                   setActiveAnnotationId(ann.id);
-                  setPanelTab('annotations');
                 }}
                 className={cn(
-                  'absolute rounded-[2px] mix-blend-multiply transition-opacity',
+                  'absolute rounded-[2px] transition-opacity',
+                  isDark ? 'mix-blend-screen' : 'mix-blend-multiply',
                   activeAnnotationId === ann.id ? 'opacity-90' : 'opacity-60 hover:opacity-80',
                 )}
                 style={{
@@ -294,17 +354,16 @@ export function ReaderShell({
             ));
           })}
 
-          {/* Layout block overlays (Layout tab) */}
-          {panelTab === 'layout' &&
-            ocrBlocks
-              .filter((block) => block.page === pageNumber)
-              .map((block) => (
-                <OcrBlockOverlay
-                  key={block.id}
-                  block={block}
-                  isActive={block.id === activeBlockId}
-                />
-              ))}
+          {/* Layout block overlays — visible when a block is selected */}
+          {ocrBlocks
+            .filter((block) => block.page === pageNumber)
+            .map((block) => (
+              <OcrBlockOverlay
+                key={block.id}
+                block={block}
+                isActive={block.id === activeBlockId}
+              />
+            ))}
 
           {/* Margin cards + leader lines (mockup look) */}
           {showMarginCards && placed.length > 0 && (
@@ -314,7 +373,7 @@ export function ReaderShell({
                 className="pointer-events-none absolute inset-0 size-full overflow-visible"
               >
                 {placed.map(({ ann, rect, top }) => {
-                  const theme = highlightTheme(ann.highlight_type);
+                  const theme = highlightTheme(ann.highlight_type, ann.selection_data);
                   const x1 = (rect!.left + rect!.width) * renderedWidth;
                   const y1 = (rect!.top + rect!.height / 2) * renderedHeight;
                   const x2 = renderedWidth + MARGIN_CARD_GAP;
@@ -355,7 +414,7 @@ export function ReaderShell({
       );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [byPage, panelTab, ocrBlocks, activeBlockId, activeAnnotationId, paper]
+    [byPage, ocrBlocks, activeBlockId, activeAnnotationId, paper, isDark]
   );
 
   /* ── render ─────────────────────────────────────────────────────────── */
@@ -371,100 +430,57 @@ export function ReaderShell({
 
   return (
     <div ref={containerRef} className="h-full w-full p-3">
-      <PdfBlockResizableShell
-        autoSaveId="reader-panel"
-        heightClassName="h-full"
-        leftDefaultSize={24}
-        leftMinSize={16}
-        left={
-          <div className="flex h-full flex-col">
-            <Tabs
-              value={panelTab}
-              onValueChange={(value) => setPanelTab(value as PanelTab)}
-              className="border-b border-(--border) px-2 pt-2"
-            >
-              <TabsList className="w-full">
-                <TabsTrigger value="annotations">Annotations</TabsTrigger>
-                <TabsTrigger value="outline">Outline</TabsTrigger>
-                <TabsTrigger value="layout">Layout</TabsTrigger>
-              </TabsList>
-            </Tabs>
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              {panelTab === 'annotations' && (
-                <AnnotationsPanel
-                  annotations={annotations}
-                  activeId={activeAnnotationId}
-                  onSelect={scrollToAnnotation}
-                  onDelete={(ann) => deleteMutation.mutate(ann.id)}
-                />
-              )}
-              {panelTab === 'outline' && (
-                <OutlinePanel
-                  pdf={pdfProxy}
-                  activePage={activePage}
-                  onNavigate={(page) =>
-                    viewerRef.current?.scrollToPageArea(page, { top: 0 }, { behavior: 'smooth' })
-                  }
-                />
-              )}
-              {panelTab === 'layout' && (
-                <OcrBlocksPanel
-                  blocks={ocrBlocks}
-                  activeBlockId={activeBlockId}
-                  onBlockFocus={focusBlock}
-                  className="h-full"
-                />
-              )}
-            </div>
-          </div>
-        }
-        right={
-          fileUrl ? (
-            // Simple document dark mode: invert the rendered pages. The
-            // image-aware variant (usePDFDarkMode) is a follow-up; it needs
-            // per-page wiring that fights the virtualized viewer.
-            <div
-              className="h-full"
-              style={isDark ? { filter: 'invert(1) hue-rotate(180deg)' } : undefined}
-            >
-              <div className="h-full">
-                <PDFViewer
-                  ref={viewerRef}
-                  file={fileUrl}
-                  documentOptions={PDF_DOCUMENT_OPTIONS}
-                  showUpload={false}
-                  toolbarActions={
-                    <ReaderToolbarActions
-                      paper={paper}
-                      currentPage={activePage}
-                      isDark={isDark}
-                      onToggleDark={() => setIsDark((v) => !v)}
-                      onPaperChanged={onAnnotationSuccess}
-                    />
-                  }
-                  renderPageOverlay={renderPageOverlay}
-                  onPagePointerUp={handlePagePointerUp}
-                  onDocumentProxy={setPdfProxy}
-                  onActivePageChange={(page) => {
-                    setActivePage(page);
-                    onCurrentPageChange?.(page);
-                  }}
-                />
-              </div>
-            </div>
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <div className="size-10 animate-spin rounded-full border-4 border-(--border) border-t-(--sky-blue)" />
-            </div>
-          )
-        }
-      />
+      {fileUrl ? (
+        <div className="h-full" data-reader-dark={isDark || undefined}>
+          <PDFViewer
+            ref={viewerRef}
+            file={fileUrl}
+            documentOptions={PDF_DOCUMENT_OPTIONS}
+            showUpload={false}
+            toolbarActions={
+              <ReaderToolbarActions
+                paper={paper}
+                currentPage={activePage}
+                isDark={isDark}
+                highlighterActive={highlighterActive}
+                highlighterColor={highlighterColor}
+                onToggleDark={() => setIsDark((v) => !v)}
+                onToggleHighlighter={() => setHighlighterActive((v) => !v)}
+                onHighlighterColorChange={setHighlighterColor}
+                onPaperChanged={onAnnotationSuccess}
+              />
+            }
+            renderPageOverlay={renderPageOverlay}
+            onPagePointerUp={handlePagePointerUp}
+            onDocumentProxy={setPdfProxy}
+            onActivePageChange={(page) => {
+              setActivePage(page);
+              onCurrentPageChange?.(page);
+            }}
+            // PAPERS-FORK: render outline in sidebar
+            outlinePanel={
+              <OutlinePanel
+                pdf={pdfProxy}
+                activePage={activePage}
+                onNavigate={(page) =>
+                  viewerRef.current?.scrollToPageArea(page, { top: 0 }, { behavior: 'smooth' })
+                }
+              />
+            }
+          />
+        </div>
+      ) : (
+        <div className="flex h-full items-center justify-center">
+          <div className="size-10 animate-spin rounded-full border-4 border-(--border) border-t-(--sky-blue)" />
+        </div>
+      )}
 
       {selection && (
         <SelectionPopover
           selection={selection}
           pendingAction={pendingAction}
           onAIAction={(kind) => void handleAIAction(kind)}
+          onHighlight={handleHighlight}
           onComment={(text) => void handleComment(text)}
           onClose={() => {
             if (!pendingAction) setSelection(null);

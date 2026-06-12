@@ -15,24 +15,23 @@ from app.schemas.paper import PaperMetadata
 
 logger = get_logger(__name__)
 
-METADATA_EXTRACTION_PROMPT = """Extract metadata from this research paper. \
-Analyze the following text from the first page(s) of the paper and extract \
-all available metadata.
+METADATA_EXTRACTION_PROMPT = """You are extracting metadata from a research paper. \
+Below are the layout blocks extracted from the PDF, organized by page. Each block \
+has a type (heading / text / figure), its content, and its position on the page.
 
-Text from first page(s):
-{text}
+{blocks}
 
 Extract the following information:
-- Title: The exact paper title
-- Authors: List of all author names (format: "First Last" for each author)
+- Title: The exact paper title (usually the first heading on page 1, often the largest text)
+- Authors: List of all author names (usually right below the title on page 1)
 - Publication Date: Publication date in YYYY-MM-DD format if available
 - Journal: Journal or conference name if mentioned
 - Volume: Journal volume number if available
 - Issue: Journal issue number if available
 - Pages: Page numbers (e.g., "1-10" or "123-145") if available
-- DOI: Digital Object Identifier if mentioned
-- Abstract: The abstract text if present
-- Keywords: List of keywords if mentioned
+- DOI: Digital Object Identifier if mentioned (often near the header/footer or abstract)
+- Abstract: The abstract text if present (usually follows a heading like "Abstract")
+- Keywords: List of keywords if mentioned (often after the abstract)
 
 IMPORTANT: Return ONLY a valid JSON object with this structure:
 {{
@@ -119,6 +118,41 @@ def find_abstract_index(lines: list[str]) -> int | None:
 
 
 class PDFParser:
+  @staticmethod
+  def _format_layout_blocks(blocks: list[dict[str, Any]], max_chars: int = 15000) -> str:
+    """Format layout blocks into a structured text representation for the prompt."""
+    lines: list[str] = []
+    current_page = 0
+    char_count = 0
+    for block in blocks:
+      meta = block.get("metadata", {})
+      page_num = meta.get("page", {}).get("number", 0)
+      if page_num != current_page:
+        current_page = page_num
+        header = f"\nPage {page_num}:"
+        lines.append(header)
+        char_count += len(header)
+      btype = block.get("type", "text")
+      content = block.get("content", "")[:300]
+      bbox = block.get("boundingBox", {})
+      top = bbox.get("top", 0)
+      left = bbox.get("left", 0)
+      entry = f"  [{btype}] (top={top:.0f}, left={left:.0f}) {content}"
+      if char_count + len(entry) > max_chars:
+        lines.append("  ... (remaining blocks omitted)")
+        break
+      lines.append(entry)
+      char_count += len(entry)
+    return "\n".join(lines)
+
+  def _extract_layout_sync(self, pdf_content: bytes) -> list[dict[str, Any]] | None:
+    from app.services.layout_extractor import extract_layout
+
+    try:
+      return extract_layout(pdf_content)
+    except Exception:
+      return None
+
   def _extract_text_sync(self, pdf_content: bytes, max_pages: int | None = None) -> str:
     try:
       reader = PdfReader(io.BytesIO(pdf_content))
@@ -192,14 +226,24 @@ class PDFParser:
 
     try:
       loop = asyncio.get_event_loop()
-      first_pages_text = await loop.run_in_executor(
-        None, self._read_first_pages_text, pdf_content
+      blocks = await loop.run_in_executor(
+        None, self._extract_layout_sync, pdf_content
       )
-      if not first_pages_text:
-        return None
+      if blocks:
+        block_text = self._format_layout_blocks(blocks)
+        prompt = METADATA_EXTRACTION_PROMPT.format(blocks=block_text)
+      else:
+        # Fallback: use raw text from first pages
+        first_pages_text = await loop.run_in_executor(
+          None, self._read_first_pages_text, pdf_content
+        )
+        if not first_pages_text:
+          return None
+        prompt = METADATA_EXTRACTION_PROMPT.format(
+          blocks=f"Page 1:\n  [text] {first_pages_text}"
+        )
 
       client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-      prompt = METADATA_EXTRACTION_PROMPT.format(text=first_pages_text)
       response_text = await self._call_metadata_api(client, prompt)
 
       if not response_text:
