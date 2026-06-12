@@ -103,6 +103,8 @@ export type FileSystemFolderItem = {
   hasChildren?: boolean
   createdAt?: string
   updatedAt?: string
+  // PAPERS-FORK: folders carry metadata too (tint theme, group id).
+  metadata?: Record<string, string>
 }
 
 export type FileSystemFileItem = {
@@ -183,6 +185,15 @@ export type FileSystemProps = {
     file: FileSystemFileItem,
     pageIndex: number
   ) => Promise<string | null>
+  // PAPERS-FORK: additive props for the Groups Finder.
+  /** Fires whenever the visible folder changes (navigation, back/forward). */
+  onPathChange?: (path: string) => void
+  /** Right-click on a row/tile. The wrapper owns the context menu UI. */
+  onItemContextMenu?: (item: FileSystemItem, event: React.MouseEvent) => void
+  /** Extra controls rendered in the toolbar's right cluster. */
+  toolbarExtra?: React.ReactNode
+  /** Fires when the cmd/ctrl-click multi-selection of files changes. */
+  onMultiSelectionChange?: (items: FileSystemFileItem[]) => void
 }
 
 type FolderEntry = FileSystemFolderItem & {
@@ -728,7 +739,38 @@ const FOLDER_GLYPH_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 6
 
 const FOLDER_GLYPH_DATA_URL = `data:image/svg+xml,${encodeURIComponent(FOLDER_GLYPH_SVG)}`
 
-function FileSystemFolderGlyph({ className }: { className?: string }) {
+// PAPERS-FORK: folders accept a tint (paper-theme name). Tinted folders render
+// inline SVG so the fills can reference the theme CSS variables and follow
+// light/dark mode; untinted folders keep the original blue data-URL image.
+function FileSystemFolderGlyph({
+  className,
+  tint,
+}: {
+  className?: string
+  tint?: string
+}) {
+  if (tint) {
+    const back = `var(--theme-${tint}-action)`
+    const front = `color-mix(in srgb, var(--theme-${tint}-action) 45%, var(--theme-${tint}-accent))`
+
+    return (
+      <svg
+        viewBox="0 0 64 50"
+        aria-hidden="true"
+        className={className}
+        style={{ aspectRatio: "64 / 50" }}
+      >
+        <path
+          d="M5 10c0-3.31 2.69-6 6-6h10.9c1.6 0 3.13.7 4.18 1.9l1.5 1.73a3.5 3.5 0 0 0 2.64 1.22H54c2.76 0 5 2.24 5 5V40c0 3.87-3.13 7-7 7H12c-3.87 0-7-3.13-7-7V10Z"
+          fill={back}
+        />
+        <path
+          d="M5 15.5h54V40c0 3.87-3.13 7-7 7H12c-3.87 0-7-3.13-7-7V15.5Z"
+          fill={front}
+        />
+      </svg>
+    )
+  }
   return (
     <img
       src={FOLDER_GLYPH_DATA_URL}
@@ -1202,6 +1244,11 @@ export function FileSystem({
   loadChildren,
   loadPreviewImageUrl,
   renderFilePreview,
+  // PAPERS-FORK: additive props.
+  onPathChange,
+  onItemContextMenu,
+  toolbarExtra,
+  onMultiSelectionChange,
 }: FileSystemProps) {
   const [internalView, setInternalView] = React.useState(defaultView)
   const view = viewProp ?? internalView
@@ -1330,13 +1377,50 @@ export function FileSystem({
     return { ...visibleIndex, children }
   }, [sort, visibleIndex])
 
+  // PAPERS-FORK: cmd/ctrl-click accumulates a file multi-selection on top of
+  // the single anchor selection. Any unmodified click clears it.
+  const [multiSelectedPaths, setMultiSelectedPaths] = React.useState<
+    ReadonlySet<string>
+  >(() => new Set())
+
+  React.useEffect(() => {
+    if (!onMultiSelectionChange) return
+    const files: FileEntry[] = []
+    for (const path of multiSelectedPaths) {
+      const file = index.files.get(path)
+      if (file) files.push(file)
+    }
+    onMultiSelectionChange(files)
+  }, [index, multiSelectedPaths, onMultiSelectionChange])
+
   // The ref mirrors the state so re-selecting the same entry (e.g. the
   // pointerdown + click pair the columns view emits per press) stays a
   // no-op without widening the callback's dependencies.
   const selectedPathRef = React.useRef<string | null>(null)
   const selectEntry = React.useCallback(
-    (entry: FileSystemEntry | null) => {
+    (
+      entry: FileSystemEntry | null,
+      event?: { metaKey?: boolean; ctrlKey?: boolean }
+    ) => {
       const path = entry?.path ?? null
+
+      // PAPERS-FORK: modifier-click toggles file membership in the multi-set.
+      if (entry?.kind === "file" && (event?.metaKey || event?.ctrlKey)) {
+        setMultiSelectedPaths((previous) => {
+          const next = new Set(previous)
+          const anchor = selectedPathRef.current
+
+          if (anchor && anchor !== path) next.add(anchor)
+          if (next.has(path!)) next.delete(path!)
+          else next.add(path!)
+          return next
+        })
+        selectedPathRef.current = path
+        setSelectedPath(path)
+        onSelectionChange?.(entry)
+        return
+      }
+      setMultiSelectedPaths((previous) => (previous.size ? new Set() : previous))
 
       if (selectedPathRef.current === path) return
       selectedPathRef.current = path
@@ -1823,11 +1907,31 @@ export function FileSystem({
 
   // Selecting a lazy folder (columns view, keyboard nav) prefetches children.
   const selectAndPrefetchEntry = React.useCallback(
-    (entry: FileSystemEntry | null) => {
-      selectEntry(entry)
+    (
+      entry: FileSystemEntry | null,
+      // PAPERS-FORK: views forward the click event for modifier detection.
+      event?: { metaKey?: boolean; ctrlKey?: boolean }
+    ) => {
+      selectEntry(entry, event)
       if (entry?.kind === "folder") ensureChildren(entry.path)
     },
     [ensureChildren, selectEntry]
+  )
+
+  // PAPERS-FORK: surface folder navigation to the wrapper (URL sync).
+  React.useEffect(() => {
+    onPathChange?.(currentPath)
+  }, [currentPath, onPathChange])
+
+  // PAPERS-FORK: right-click selects the entry, then hands off to the wrapper.
+  const handleItemContextMenu = React.useCallback(
+    (entry: FileSystemEntry, event: React.MouseEvent) => {
+      if (!onItemContextMenu) return
+      event.preventDefault()
+      if (!multiSelectedPaths.has(entry.path)) selectEntry(entry)
+      onItemContextMenu(entry, event)
+    },
+    [multiSelectedPaths, onItemContextMenu, selectEntry]
   )
 
   const goBack = React.useCallback(() => {
@@ -1870,6 +1974,9 @@ export function FileSystem({
     onOpen: openEntry,
     onSelect: selectAndPrefetchEntry,
     onSortColumnClick: toggleSortColumn,
+    // PAPERS-FORK
+    multiSelectedPaths,
+    onItemContextMenu: onItemContextMenu ? handleItemContextMenu : undefined,
     pageUrlCache,
     poolStagePath,
     registerStageHost,
@@ -1995,6 +2102,8 @@ export function FileSystem({
           </Tabs>
         )}
         <div className="flex min-w-0 items-center justify-end gap-1">
+          {/* PAPERS-FORK: wrapper-provided toolbar controls. */}
+          {toolbarExtra}
           <FileSystemSortSelect
             layout={headerLayout}
             onKeyChange={applySortKey}
@@ -3009,8 +3118,14 @@ type FileSystemViewProps = {
   ) => Promise<string | null>
   loadingFolders: Set<string>
   onOpen: (entry: FileSystemEntry) => void
-  onSelect: (entry: FileSystemEntry | null) => void
+  onSelect: (
+    entry: FileSystemEntry | null,
+    event?: { metaKey?: boolean; ctrlKey?: boolean }
+  ) => void
   onSortColumnClick: (key: FileSystemSortKey) => void
+  // PAPERS-FORK: multi-selection styling + wrapper-owned context menu.
+  multiSelectedPaths: ReadonlySet<string>
+  onItemContextMenu?: (entry: FileSystemEntry, event: React.MouseEvent) => void
   /** Pooled paths currently attached to the DOM (reveal instantly). */
   attachedStagePaths: string[]
   /** `"path#pageIndex"` → thumbnail URL, shared by every pager. */
@@ -3277,6 +3392,8 @@ const ICON_ROW_STRIDE = ICON_TILE_HEIGHT + ICON_ROW_GAP
 
 function FileSystemIconsView({
   entries,
+  multiSelectedPaths,
+  onItemContextMenu,
   onOpen,
   onSelect,
   renderFilePreview,
@@ -3427,7 +3544,9 @@ function FileSystemIconsView({
           }}
         >
           {visibleEntries.map((entry) => {
-            const isSelected = entry.path === selectedPath
+            // PAPERS-FORK: multi-selected tiles highlight like the anchor.
+            const isSelected =
+              entry.path === selectedPath || multiSelectedPaths.has(entry.path)
 
             return (
               <button
@@ -3443,8 +3562,9 @@ function FileSystemIconsView({
                     itemRefs.current.delete(entry.path)
                   }
                 }}
-                onClick={() => onSelect(entry)}
+                onClick={(event) => onSelect(entry, event)}
                 onDoubleClick={() => onOpen(entry)}
+                onContextMenu={(event) => onItemContextMenu?.(entry, event)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") onOpen(entry)
                 }}
@@ -3457,7 +3577,10 @@ function FileSystemIconsView({
                   )}
                 >
                   {entry.kind === "folder" ? (
-                    <FileSystemFolderGlyph className="h-13 w-auto drop-shadow-sm" />
+                    <FileSystemFolderGlyph
+                      className="h-13 w-auto drop-shadow-sm"
+                      tint={entry.metadata?.theme}
+                    />
                   ) : (
                     <FileVisual
                       file={entry}
@@ -4149,6 +4272,8 @@ function FileSystemColumnsView(props: FileSystemViewProps) {
     index,
     loadPreviewImageUrl,
     loadingFolders,
+    multiSelectedPaths,
+    onItemContextMenu,
     onOpen,
     onSelect,
     pageUrlCache,
@@ -4315,6 +4440,8 @@ function FileSystemColumnsView(props: FileSystemViewProps) {
             entries={index.children.get(columnPath) ?? []}
             index={index}
             isLoading={loadingFolders.has(columnPath)}
+            multiSelectedPaths={multiSelectedPaths}
+            onItemContextMenu={onItemContextMenu}
             onOpen={onOpen}
             onSelect={onSelect}
             rowRefs={rowRefs}
@@ -4389,6 +4516,8 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
   entries,
   index,
   isLoading,
+  multiSelectedPaths,
+  onItemContextMenu,
   onOpen,
   onSelect,
   rowRefs,
@@ -4399,8 +4528,14 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
   entries: FileSystemEntry[]
   index: FileSystemIndex
   isLoading: boolean
+  // PAPERS-FORK
+  multiSelectedPaths: ReadonlySet<string>
+  onItemContextMenu?: (entry: FileSystemEntry, event: React.MouseEvent) => void
   onOpen: (entry: FileSystemEntry) => void
-  onSelect: (entry: FileSystemEntry | null) => void
+  onSelect: (
+    entry: FileSystemEntry | null,
+    event?: { metaKey?: boolean; ctrlKey?: boolean }
+  ) => void
   rowRefs: React.RefObject<Map<string, HTMLButtonElement>>
   selectedChildPath: string | null
   tabStopChildPath: string | null
@@ -4455,7 +4590,10 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
             style={{ top: start * COLUMN_ROW_STRIDE }}
           >
             {entries.slice(start, end).map((entry) => {
-              const isSelected = entry.path === selectedChildPath
+              // PAPERS-FORK: include the multi-selection.
+              const isSelected =
+                entry.path === selectedChildPath ||
+                multiSelectedPaths.has(entry.path)
               const isOnTrail =
                 entry.kind === "folder" && entry.path === trailChildPath
 
@@ -4485,12 +4623,20 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
                   // @pierre/trees rows have. Touch keeps selection on the
                   // click so scroll gestures don't select.
                   onPointerDown={(event) => {
-                    if (event.pointerType === "mouse" && event.button === 0) {
+                    // PAPERS-FORK: modifier presses defer to onClick so the
+                    // multi-select toggle fires exactly once.
+                    if (
+                      event.pointerType === "mouse" &&
+                      event.button === 0 &&
+                      !event.metaKey &&
+                      !event.ctrlKey
+                    ) {
                       onSelect(entry)
                     }
                   }}
-                  onClick={() => onSelect(entry)}
+                  onClick={(event) => onSelect(entry, event)}
                   onDoubleClick={() => onOpen(entry)}
+                  onContextMenu={(event) => onItemContextMenu?.(entry, event)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") onOpen(entry)
                   }}
@@ -4504,7 +4650,10 @@ const FileSystemColumn = React.memo(function FileSystemColumn({
                   )}
                 >
                   {entry.kind === "folder" ? (
-                    <FileSystemFolderGlyph className="h-3.5 w-auto shrink-0" />
+                    <FileSystemFolderGlyph
+                      className="h-3.5 w-auto shrink-0"
+                      tint={entry.metadata?.theme}
+                    />
                   ) : coverUrl ? (
                     <img
                       src={coverUrl}
@@ -4732,6 +4881,8 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
     attachedStagePaths,
     entries,
     index,
+    multiSelectedPaths,
+    onItemContextMenu,
     onOpen,
     onSelect,
     poolStagePath,
@@ -4863,8 +5014,10 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
             style={{ left: stripStart * GALLERY_TILE_STRIDE }}
           >
             {entries.slice(stripStart, stripEnd).map((entry) => {
+              // PAPERS-FORK: include the multi-selection.
               const isActive =
-                entry.path === (activeEntry?.path ?? selectedPath)
+                entry.path === (activeEntry?.path ?? selectedPath) ||
+                multiSelectedPaths.has(entry.path)
 
               return (
                 <button
@@ -4880,8 +5033,9 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
                       stripRefs.current.delete(entry.path)
                     }
                   }}
-                  onClick={() => onSelect(entry)}
+                  onClick={(event) => onSelect(entry, event)}
                   onDoubleClick={() => onOpen(entry)}
+                  onContextMenu={(event) => onItemContextMenu?.(entry, event)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter") onOpen(entry)
                   }}
@@ -4892,7 +5046,10 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
                   )}
                 >
                   {entry.kind === "folder" ? (
-                    <FileSystemFolderGlyph className="h-9 w-auto" />
+                    <FileSystemFolderGlyph
+                      className="h-9 w-auto"
+                      tint={entry.metadata?.theme}
+                    />
                   ) : (
                     <FileVisual
                       file={entry}
@@ -4910,7 +5067,10 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
       <div className="flex min-h-0 flex-1">
         <div className="relative flex min-h-0 min-w-0 flex-1 items-center justify-center p-3">
           {activeEntry?.kind === "folder" ? (
-            <FileSystemFolderGlyph className="h-40 max-h-full w-auto drop-shadow-md" />
+            <FileSystemFolderGlyph
+              className="h-40 max-h-full w-auto drop-shadow-md"
+              tint={activeEntry.metadata?.theme}
+            />
           ) : activeFile && !attachedStagePaths.includes(activeFile.path) ? (
             <Spinner className="size-6 text-muted-foreground" />
           ) : null}
@@ -4961,7 +5121,14 @@ function FileSystemGalleryView(props: FileSystemViewProps) {
                   renderFilePreview={renderFilePreview}
                 />
               ) : (
-                <FileSystemFolderGlyph className="h-8 w-auto shrink-0" />
+                <FileSystemFolderGlyph
+                  className="h-8 w-auto shrink-0"
+                  tint={
+                    activeEntry.kind === "folder"
+                      ? activeEntry.metadata?.theme
+                      : undefined
+                  }
+                />
               )}
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold wrap-break-word">
