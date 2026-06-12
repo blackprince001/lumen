@@ -1,4 +1,5 @@
 import { fetchApi } from '@/lib/api/client';
+import { renderPdfCover } from '@/lib/pdf-cover';
 import type { FileSystemFileItem } from '@/components/shadcn/file-system';
 import type { PaperFileMetadata } from './manifest';
 
@@ -56,48 +57,21 @@ async function cachePut(key: string, blob: Blob): Promise<void> {
 }
 
 async function renderPage(fileUrl: string, pageIndex: number): Promise<Blob | null> {
-  const pdfjs = await import('pdfjs-dist');
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url
-  ).toString();
-
   const pdfBlob = await fetchApi<Blob>(fileUrl, { method: 'GET', responseType: 'blob' });
-  const doc = await pdfjs.getDocument({
-    data: await pdfBlob.arrayBuffer(),
-    cMapPacked: true,
-    cMapUrl: '/pdfjs/cmaps/',
-    standardFontDataUrl: '/pdfjs/standard_fonts/',
-  }).promise;
-
-  try {
-    if (pageIndex >= doc.numPages) return null;
-    const page = await doc.getPage(pageIndex + 1);
-    const base = page.getViewport({ scale: 1 });
-    const viewport = page.getViewport({ scale: THUMB_WIDTH / base.width });
-
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return null;
-    await page.render({ canvas, canvasContext: ctx, viewport }).promise;
-
-    return await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
-  } finally {
-    void doc.destroy();
-  }
+  return renderPdfCover(await pdfBlob.arrayBuffer(), pageIndex, THUMB_WIDTH);
 }
 
-/** `loadPreviewImageUrl` prop for the FileSystem component. */
-export async function loadPaperThumbnail(
-  file: FileSystemFileItem,
-  pageIndex: number
+/**
+ * Cached cover/page thumbnail for a paper. Shared by the Finder, paper
+ * cards, and anything else that knows a paper id + file URL.
+ */
+export async function loadPaperCover(
+  paperId: number,
+  fileUrl: string,
+  updatedAt?: string,
+  pageIndex = 0
 ): Promise<string | null> {
-  const meta = file.metadata as unknown as PaperFileMetadata | undefined;
-  if (!meta?.paperId || !file.url) return null;
-
-  const key = `/thumbs/p${meta.paperId}/${pageIndex}?v=${encodeURIComponent(file.updatedAt ?? '')}`;
+  const key = `/thumbs/p${paperId}/${pageIndex}?v=${encodeURIComponent(updatedAt ?? '')}`;
   const existing = inflight.get(key);
   if (existing) return existing;
 
@@ -105,7 +79,7 @@ export async function loadPaperThumbnail(
     const cached = await cacheGet(key);
     if (cached) return cached;
 
-    const blob = await withConcurrencyLimit(() => renderPage(file.url!, pageIndex));
+    const blob = await withConcurrencyLimit(() => renderPage(fileUrl, pageIndex));
     if (!blob) return null;
     void cachePut(key, blob);
     return URL.createObjectURL(blob);
@@ -116,4 +90,14 @@ export async function loadPaperThumbnail(
 
   inflight.set(key, promise);
   return promise;
+}
+
+/** `loadPreviewImageUrl` prop for the FileSystem component. */
+export async function loadPaperThumbnail(
+  file: FileSystemFileItem,
+  pageIndex: number
+): Promise<string | null> {
+  const meta = file.metadata as unknown as PaperFileMetadata | undefined;
+  if (!meta?.paperId || !file.url) return null;
+  return loadPaperCover(meta.paperId, file.url, file.updatedAt, pageIndex);
 }

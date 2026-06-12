@@ -1,29 +1,24 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import {
-  DocumentUpload as Upload,
-  Global as Globe,
-  DocumentUpload as FileUp,
   Refresh as Loader2,
-  CloseCircle as X,
   ArrowDown2,
   ArrowRight2,
+  DocumentUpload,
 } from 'iconsax-reactjs';
 import { papersApi } from '@/lib/api/papers';
 import { groupsApi } from '@/lib/api/groups';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Progress } from '@/components/ui/Progress';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { GroupTreeSelector } from '@/components/GroupTreeSelector';
+import { UploadHero, type FileUploadState } from '@/components/ingest/UploadHero';
+import { UrlChipsInput } from '@/components/ingest/UrlChipsInput';
 import { toastSuccess, toastError, toastInfo } from '@/lib/utils/toast';
-import { cn } from '@/lib/utils';
 
-const SUPPORTED_SOURCES = [
-  'arXiv', 'ACM', 'IEEE', 'OpenReview', 'PMLR', 'NeurIPS', 'Semantic Scholar'
-];
+const MAX_FILES = 5;
+const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 interface IngestRouteState {
   preselectedGroupIds?: number[];
@@ -39,12 +34,9 @@ export default function Ingest() {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [activeTab, setActiveTab] = useState('url');
-  const [url, setUrl] = useState('');
-  const [batchUrls, setBatchUrls] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [urlChips, setUrlChips] = useState<string[]>([]);
   const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
   const [groupSearch, setGroupSearch] = useState('');
   const [groupsExpanded, setGroupsExpanded] = useState(false);
@@ -58,7 +50,7 @@ export default function Ingest() {
     queryFn: () => groupsApi.list(),
   });
 
-  // Seed selected groups from route state (e.g. from GroupDetail "Add Paper")
+  // Seed selected groups from route state (e.g. from the Finder's "Add Paper")
   useEffect(() => {
     const state = location.state as IngestRouteState | null;
     if (state?.preselectedGroupIds?.length) {
@@ -68,19 +60,6 @@ export default function Ingest() {
       navigate(location.pathname, { replace: true, state: null });
     }
   }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const urlMutation = useMutation({
-    mutationFn: (data: { url: string; group_ids?: number[] }) =>
-      papersApi.create({ title: '', url: data.url, group_ids: data.group_ids }),
-    onSuccess: (paper) => {
-      queryClient.invalidateQueries({ queryKey: ['papers'] });
-      toastSuccess(paper.background_processing_message || 'Paper added successfully');
-      setUrl('');
-      setSelectedGroupIds([]);
-      navigate('/');
-    },
-    onError: (error: Error) => toastError(`Failed to import: ${error.message}`),
-  });
 
   const uploadMutation = useMutation({
     mutationFn: (data: { files: File[]; group_ids?: number[] }) =>
@@ -92,25 +71,7 @@ export default function Ingest() {
       setUploadProgress({ loaded: 0, total: 1 });
       setIsProcessingServer(false);
     },
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['papers'] });
-
-      if (response.paper_ids.length > 0) {
-        toastInfo(response.message || `${response.paper_ids.length} file(s) uploaded successfully`);
-      }
-
-      if (response.errors.length > 0) {
-        response.errors.forEach((e) => toastError(`${e.filename}: ${e.error}`));
-      }
-
-      setSelectedFiles([]);
-      setSelectedGroupIds([]);
-      setUploadProgress(null);
-      setIsProcessingServer(false);
-      navigate('/');
-    },
-    onError: (error: Error) => {
-      toastError(`Upload failed: ${error.message}`);
+    onSettled: () => {
       setUploadProgress(null);
       setIsProcessingServer(false);
     },
@@ -119,58 +80,72 @@ export default function Ingest() {
   const batchMutation = useMutation({
     mutationFn: (data: { urls: string[]; group_ids?: number[] }) =>
       papersApi.ingestBatch(data.urls, data.group_ids),
-    onSuccess: (response) => {
-      queryClient.invalidateQueries({ queryKey: ['papers'] });
-
-      if (response.paper_ids.length > 0) {
-        toastSuccess(`${response.paper_ids.length} paper(s) imported successfully`);
-      }
-
-      if (response.errors.length > 0) {
-        response.errors.forEach((e) => toastError(`${e.url}: ${e.error}`));
-      }
-
-      setBatchUrls('');
-      setSelectedGroupIds([]);
-      navigate('/');
-    },
-    onError: (error: Error) => toastError(`Batch import failed: ${error.message}`),
   });
 
-  const handleSubmit = () => {
-    const groupIds = selectedGroupIds.length > 0 ? selectedGroupIds : undefined;
+  const isProcessing = uploadMutation.isPending || batchMutation.isPending;
 
-    if (activeTab === 'url' && url.trim()) {
-      urlMutation.mutate({ url: url.trim(), group_ids: groupIds });
-    } else if (activeTab === 'upload' && selectedFiles.length > 0) {
-      uploadMutation.mutate({ files: selectedFiles, group_ids: groupIds });
-    } else if (activeTab === 'batch' && batchUrls.trim()) {
-      const urls = batchUrls.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
-      batchMutation.mutate({ urls, group_ids: groupIds });
+  const handleSubmit = async () => {
+    const groupIds = selectedGroupIds.length > 0 ? selectedGroupIds : undefined;
+    let anySuccess = false;
+
+    if (files.length > 0) {
+      try {
+        const response = await uploadMutation.mutateAsync({ files, group_ids: groupIds });
+        if (response.paper_ids.length > 0) {
+          anySuccess = true;
+          toastInfo(response.message || `${response.paper_ids.length} file(s) uploaded successfully`);
+        }
+        response.errors.forEach((e) => toastError(`${e.filename}: ${e.error}`));
+        setFiles([]);
+      } catch (error) {
+        toastError(`Upload failed: ${(error as Error).message}`);
+        return;
+      }
+    }
+
+    if (urlChips.length > 0) {
+      try {
+        const response = await batchMutation.mutateAsync({ urls: urlChips, group_ids: groupIds });
+        if (response.paper_ids.length > 0) {
+          anySuccess = true;
+          toastSuccess(`${response.paper_ids.length} paper(s) imported successfully`);
+        }
+        response.errors.forEach((e) => toastError(`${e.url}: ${e.error}`));
+        setUrlChips([]);
+      } catch (error) {
+        toastError(`Import failed: ${(error as Error).message}`);
+        return;
+      }
+    }
+
+    if (anySuccess) {
+      queryClient.invalidateQueries({ queryKey: ['papers'] });
+      queryClient.invalidateQueries({ queryKey: ['groups'] });
+      setSelectedGroupIds([]);
+      navigate('/');
     }
   };
 
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files) return;
-    const incoming = Array.from(files);
-    setSelectedFiles((prev) => {
-      const combined = [...prev, ...incoming];
-      if (combined.length > 5) {
-        toastError('Maximum 5 files at a time');
-        return combined.slice(0, 5);
+  const handleFilesAdded = (incoming: File[]) => {
+    const valid = incoming.filter((f) => {
+      if (f.size > MAX_FILE_SIZE) {
+        toastError(`${f.name} exceeds 50MB`);
+        return false;
+      }
+      return true;
+    });
+    setFiles((prev) => {
+      const combined = [...prev, ...valid];
+      if (combined.length > MAX_FILES) {
+        toastError(`Maximum ${MAX_FILES} files at a time`);
+        return combined.slice(0, MAX_FILES);
       }
       return combined;
     });
   };
 
-  const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const isProcessing = urlMutation.isPending || uploadMutation.isPending || batchMutation.isPending;
-
   // Aggregate upload metrics (only meaningful during uploadMutation)
-  const totalSize = selectedFiles.reduce((acc, f) => acc + f.size, 0);
+  const totalSize = files.reduce((acc, f) => acc + f.size, 0);
   const aggregatePct = uploadProgress
     ? Math.min(100, Math.round((uploadProgress.loaded / uploadProgress.total) * 100))
     : 0;
@@ -180,17 +155,14 @@ export default function Ingest() {
   function fileProgressPct(index: number): number {
     if (!uploadProgress || totalSize === 0) return 0;
     if (isProcessingServer) return 100;
-    // Bytes uploaded "into" the file region, derived from the global byte count.
-    const fileStart = selectedFiles.slice(0, index).reduce((a, f) => a + f.size, 0);
-    const fileSize = selectedFiles[index].size;
-    // Scale global loaded bytes to the fraction of total that's file content.
-    // Multipart overhead is small; treating loaded ≈ file bytes is fine for a UI bar.
+    const fileStart = files.slice(0, index).reduce((a, f) => a + f.size, 0);
+    const fileSize = files[index].size;
     const scaledLoaded = Math.min(totalSize, (uploadProgress.loaded / uploadProgress.total) * totalSize);
     const localLoaded = Math.max(0, Math.min(fileSize, scaledLoaded - fileStart));
     return Math.round((localLoaded / fileSize) * 100);
   }
 
-  function fileState(index: number): 'pending' | 'uploading' | 'processing' | 'done' {
+  function fileState(index: number): FileUploadState {
     if (!uploadMutation.isPending) return 'pending';
     if (isProcessingServer) return 'processing';
     const pct = fileProgressPct(index);
@@ -199,12 +171,14 @@ export default function Ingest() {
     return 'pending';
   }
 
+  const itemCount = files.length + urlChips.length;
+
   return (
     <div className="max-w-225 mx-auto px-6 py-8">
       <div className="mb-8">
         <h1 className="text-page-title mb-1">Add Paper</h1>
         <p className="text-body text-(--muted-foreground)">
-          Import papers from URLs or upload PDFs directly
+          Drop PDFs or paste links — arXiv, ACM, IEEE, OpenReview, PMLR, NeurIPS, Semantic Scholar
         </p>
       </div>
 
@@ -249,208 +223,68 @@ export default function Ingest() {
           </div>
         )}
 
-        {/* Import Methods */}
-        <div className="bg-(--card) border border-(--border) rounded-xl p-6">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid w-full grid-cols-3 mb-6">
-              <TabsTrigger value="url">Single URL</TabsTrigger>
-              <TabsTrigger value="batch">Batch URLs</TabsTrigger>
-              <TabsTrigger value="upload">Upload Files</TabsTrigger>
-            </TabsList>
+        {/* Upload hero + smart link input */}
+        <div className="bg-(--card) border border-(--border) rounded-xl p-6 space-y-4">
+          <UploadHero
+            files={files}
+            onFilesAdded={handleFilesAdded}
+            onRemove={(index) => setFiles((prev) => prev.filter((_, i) => i !== index))}
+            onClear={() => setFiles([])}
+            disabled={isProcessing}
+            isUploading={uploadMutation.isPending}
+            fileProgressPct={fileProgressPct}
+            fileState={fileState}
+            maxFiles={MAX_FILES}
+          />
 
-            <TabsContent value="url" className="space-y-4">
-              <div>
-                <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider mb-2">
-                  Paper URL
-                </label>
-                <Input
-                  placeholder="https://arxiv.org/abs/1706.03762"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-                  disabled={isProcessing}
-                  className="h-9"
-                />
+          {uploadMutation.isPending && uploadProgress && (
+            <div className="space-y-1.5 p-3 rounded-lg bg-(--muted) border border-(--border)">
+              <div className="flex items-center justify-between text-caption">
+                <span className="font-medium text-(--foreground)">
+                  {isProcessingServer
+                    ? 'Processing on server…'
+                    : `Uploading ${formatBytes(uploadProgress.loaded)} / ${formatBytes(uploadProgress.total)}`}
+                </span>
+                <span className="text-(--muted-foreground)">
+                  {isProcessingServer ? '' : `${aggregatePct}%`}
+                </span>
               </div>
-              {urlMutation.isPending && (
-                <div className="space-y-1.5">
-                  <Progress value={100} fillClassName="animate-pulse" />
-                  <p className="text-caption text-(--muted-foreground)">Fetching paper…</p>
-                </div>
-              )}
-              <div className="flex flex-wrap gap-1.5">
-                <span className="text-micro text-(--muted-foreground) uppercase tracking-wider">Supported:</span>
-                {SUPPORTED_SOURCES.map((s) => (
-                  <Badge key={s} variant="secondary" className="text-micro h-5">
-                    {s}
-                  </Badge>
-                ))}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="batch" className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-caption font-medium text-(--muted-foreground) uppercase tracking-wider">
-                    URLs (one per line, max 5)
-                  </label>
-                  {batchUrls.trim() && (
-                    <button
-                      onClick={() => setBatchUrls('')}
-                      className="text-caption text-(--muted-foreground) hover:text-(--foreground) transition-colors"
-                    >
-                      Clear all
-                    </button>
-                  )}
-                </div>
-                <textarea
-                  placeholder="https://arxiv.org/abs/1706.03762&#10;https://arxiv.org/abs/..."
-                  className="w-full bg-(--white) text-(--foreground) text-body px-3 py-2 h-32 rounded-lg border border-(--border) placeholder:text-(--muted-foreground) focus:outline-none focus:border-(--foreground) focus:ring-2 focus:ring-(--foreground)/10 resize-none"
-                  value={batchUrls}
-                  onChange={(e) => {
-                    const lines = e.target.value.split('\n');
-                    const nonEmpty = lines.filter((l) => l.trim().length > 0);
-                    if (nonEmpty.length > 5) {
-                      toastError('Maximum 5 URLs at a time');
-                      return;
-                    }
-                    setBatchUrls(e.target.value);
-                  }}
-                  disabled={isProcessing}
-                />
-                {(() => {
-                  const count = batchUrls.split('\n').filter((l) => l.trim().length > 0).length;
-                  return count > 0 ? (
-                    <p className="text-caption text-(--muted-foreground) mt-1">{count}/5 URLs</p>
-                  ) : null;
-                })()}
-              </div>
-              {batchMutation.isPending && (
-                <div className="space-y-1.5">
-                  <Progress value={100} fillClassName="animate-pulse" />
-                  <p className="text-caption text-(--muted-foreground)">Processing URLs…</p>
-                </div>
-              )}
-            </TabsContent>
-
-            <TabsContent value="upload" className="space-y-4">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf"
-                multiple
-                className="hidden"
-                onChange={(e) => handleFileSelect(e.target.files)}
+              <Progress
+                value={isProcessingServer ? 100 : aggregatePct}
+                fillClassName={isProcessingServer ? 'animate-pulse' : undefined}
               />
+            </div>
+          )}
 
-              <div
-                className={cn(
-                  'border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center transition-colors border-(--border)',
-                  !isProcessing && selectedFiles.length < 5
-                    ? 'cursor-pointer hover:border-(--foreground) hover:bg-(--muted)/30'
-                    : 'opacity-50 cursor-not-allowed',
-                )}
-                onClick={() => !isProcessing && selectedFiles.length < 5 && fileInputRef.current?.click()}
-              >
-                <Upload size={28} className="text-(--muted-foreground) mb-2" />
-                <p className="text-code font-medium text-(--foreground) text-center mb-1">
-                  Drop PDF files here or click to browse
-                </p>
-                <p className="text-caption text-(--muted-foreground)">Max 50MB per file · Up to 5 files</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-(--border)" />
+            <span className="text-micro uppercase tracking-wider text-(--muted-foreground)">
+              or paste links
+            </span>
+            <div className="h-px flex-1 bg-(--border)" />
+          </div>
 
-              {selectedFiles.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-caption font-medium uppercase tracking-wider text-(--muted-foreground)">
-                      {selectedFiles.length}/5 file(s) selected
-                    </p>
-                    {!isProcessing && (
-                      <button
-                        onClick={() => setSelectedFiles([])}
-                        className="text-caption text-(--muted-foreground) hover:text-(--foreground) transition-colors"
-                      >
-                        Clear all
-                      </button>
-                    )}
-                  </div>
+          <UrlChipsInput chips={urlChips} onChange={setUrlChips} disabled={isProcessing} />
 
-                  {uploadMutation.isPending && uploadProgress && (
-                    <div className="space-y-1.5 p-3 rounded-lg bg-(--muted) border border-(--border)">
-                      <div className="flex items-center justify-between text-caption">
-                        <span className="font-medium text-(--foreground)">
-                          {isProcessingServer
-                            ? 'Processing on server…'
-                            : `Uploading ${formatBytes(uploadProgress.loaded)} / ${formatBytes(uploadProgress.total)}`}
-                        </span>
-                        <span className="text-(--muted-foreground)">
-                          {isProcessingServer ? '' : `${aggregatePct}%`}
-                        </span>
-                      </div>
-                      <Progress
-                        value={isProcessingServer ? 100 : aggregatePct}
-                        fillClassName={isProcessingServer ? 'animate-pulse' : undefined}
-                      />
-                    </div>
-                  )}
-
-                  {selectedFiles.map((file, i) => {
-                    const state = fileState(i);
-                    const pct = fileProgressPct(i);
-                    return (
-                      <div
-                        key={i}
-                        className="p-2 rounded-lg bg-(--muted) border border-(--border) space-y-1.5"
-                      >
-                        <div className="flex items-center gap-2 text-code">
-                          <FileUp size={14} className="text-(--muted-foreground)" />
-                          <span className="flex-1 truncate">{file.name}</span>
-                          <span className="text-caption text-(--muted-foreground) shrink-0">
-                            {formatBytes(file.size)}
-                          </span>
-                          {state === 'uploading' && (
-                            <Loader2 size={12} className="text-(--muted-foreground) animate-spin" />
-                          )}
-                          {state === 'processing' && (
-                            <span className="text-caption text-(--muted-foreground)">processing…</span>
-                          )}
-                          {!isProcessing && (
-                            <button
-                              onClick={() => removeFile(i)}
-                              className="text-(--muted-foreground) hover:text-(--foreground) p-1 rounded hover:bg-(--border) transition-colors"
-                              aria-label={`Remove ${file.name}`}
-                            >
-                              <X size={14} />
-                            </button>
-                          )}
-                        </div>
-                        {uploadMutation.isPending && (
-                          <Progress
-                            value={state === 'processing' ? 100 : pct}
-                            fillClassName={state === 'processing' ? 'animate-pulse' : undefined}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
+          {batchMutation.isPending && (
+            <div className="space-y-1.5">
+              <Progress value={100} fillClassName="animate-pulse" />
+              <p className="text-caption text-(--muted-foreground)">Processing links…</p>
+            </div>
+          )}
         </div>
 
         <Button
           variant="primary"
-          icon={isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Globe size={14} />}
+          icon={isProcessing ? <Loader2 size={14} className="animate-spin" /> : <DocumentUpload size={14} />}
           onClick={handleSubmit}
-          disabled={
-            isProcessing ||
-            (activeTab === 'url' && !url.trim()) ||
-            (activeTab === 'upload' && selectedFiles.length === 0) ||
-            (activeTab === 'batch' && !batchUrls.trim())
-          }
+          disabled={isProcessing || itemCount === 0}
         >
-          {isProcessing ? 'Processing...' : 'Import Papers'}
+          {isProcessing
+            ? 'Processing…'
+            : itemCount > 0
+              ? `Import ${itemCount} ${itemCount === 1 ? 'paper' : 'papers'}`
+              : 'Import Papers'}
         </Button>
       </div>
     </div>
