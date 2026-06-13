@@ -24,6 +24,7 @@ async def get_group_or_404(
   if user_id is not None:
     query = query.where(Group.user_id == user_id)
 
+  query = query.options(selectinload(Group.user))
   if with_relations:
     query = query.options(
       selectinload(Group.papers).selectinload(Paper.tags),
@@ -53,6 +54,7 @@ async def get_visible_group_or_404(
   if user_id is not None:
     query = query.where(visible_groups_clause(user_id))
 
+  query = query.options(selectinload(Group.user))
   if with_relations:
     query = query.options(
       selectinload(Group.papers).selectinload(Paper.tags),

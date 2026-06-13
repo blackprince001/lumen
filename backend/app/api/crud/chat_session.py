@@ -24,6 +24,7 @@ async def get_chat_session_or_404(
       (ChatSession.user_id == user_id) | (ChatSession.user_id.is_(None))
     )
 
+  query = query.options(selectinload(ChatSession.user), selectinload(ChatSession.paper))
   if with_messages:
     query = query.options(selectinload(ChatSession.messages))
 
@@ -51,7 +52,11 @@ async def list_chat_sessions_for_paper(
 
   query = (
     select(ChatSession)
-    .options(selectinload(ChatSession.messages))
+    .options(
+      selectinload(ChatSession.messages),
+      selectinload(ChatSession.user),
+      selectinload(ChatSession.paper),
+    )
     .where(ChatSession.paper_id == paper_id)
   )
   if user_id is not None:

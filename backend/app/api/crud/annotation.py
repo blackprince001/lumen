@@ -3,6 +3,7 @@
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.crud.paper import get_visible_paper_or_404
 from app.models.annotation import Annotation
@@ -15,7 +16,11 @@ async def get_annotation_or_404(
   *,
   user_id: int | None = None,
 ) -> Annotation:
-  query = select(Annotation).where(Annotation.id == annotation_id)
+  query = (
+    select(Annotation)
+    .where(Annotation.id == annotation_id)
+    .options(selectinload(Annotation.paper), selectinload(Annotation.user))
+  )
   result = await session.execute(query)
   annotation = result.scalar_one_or_none()
 
@@ -50,8 +55,6 @@ async def list_annotations_for_paper(
   await get_visible_paper_or_404(session, paper_id, user_id=user_id)
 
   # All annotations on the paper are visible to anyone with access
-  from sqlalchemy.orm import selectinload
-
   query = (
     select(Annotation)
     .where(Annotation.paper_id == paper_id)

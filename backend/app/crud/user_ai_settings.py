@@ -43,10 +43,6 @@ async def create_user_ai_settings(
     settings.base_url = data.base_url
   if data.model:
     settings.model = data.model
-  if data.embedding_model:
-    settings.embedding_model = data.embedding_model
-  if data.embedding_dimension:
-    settings.embedding_dimension = data.embedding_dimension
 
   db_session.add(settings)
   await db_session.commit()
@@ -76,8 +72,6 @@ async def update_user_ai_settings(
       api_key=data.api_key or "",
       base_url=data.base_url,
       model=data.model or "",
-      embedding_model=data.embedding_model or "",
-      embedding_dimension=data.embedding_dimension or 768,
     )
     return await create_user_ai_settings(db_session, user_id, create_data)
 

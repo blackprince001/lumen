@@ -16,11 +16,13 @@ class SummaryResponse(BaseModel):
 
 class FindingsResponse(BaseModel):
   findings: Optional[Dict] = None
+  generated_at: Optional[datetime] = None
   status: str = "completed"
 
 
 class ReadingGuideResponse(BaseModel):
   guide: Optional[Dict] = None
+  generated_at: Optional[datetime] = None
   status: str = "completed"
 
 

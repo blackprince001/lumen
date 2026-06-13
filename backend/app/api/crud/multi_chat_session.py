@@ -24,6 +24,9 @@ async def get_multi_chat_session_or_404(
       (MultiChatSession.user_id == user_id) | (MultiChatSession.user_id.is_(None))
     )
 
+  query = query.options(
+    selectinload(MultiChatSession.user), selectinload(MultiChatSession.group)
+  )
   if with_messages:
     query = query.options(selectinload(MultiChatSession.messages))
   if with_papers:
@@ -55,6 +58,8 @@ async def list_multi_chat_sessions_for_group(
     .options(
       selectinload(MultiChatSession.messages),
       selectinload(MultiChatSession.papers),
+      selectinload(MultiChatSession.user),
+      selectinload(MultiChatSession.group),
     )
     .where(MultiChatSession.group_id == group_id)
   )

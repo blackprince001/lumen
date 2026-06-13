@@ -6,6 +6,7 @@ from typing import Optional, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
+from pydantic import BaseModel
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -37,7 +38,6 @@ from app.schemas.paper import (
   PaperListResponse,
   PaperUpdate,
 )
-from pydantic import BaseModel
 from app.schemas.paper import (
   Paper as PaperSchema,
 )
@@ -186,6 +186,7 @@ async def list_papers_endpoint(
   ),
   sort_order: Optional[str] = Query("desc", pattern="^(asc|desc)$"),
   group_id: Optional[int] = None,
+  ungrouped: Optional[bool] = None,
   tag_id: Optional[int] = None,
   has_file: Optional[bool] = None,
   date_from: Optional[str] = None,
@@ -195,7 +196,7 @@ async def list_papers_endpoint(
 ):
   """List papers with filtering and pagination."""
   # Build base query with eager loading
-  from sqlalchemy import func, or_
+  from sqlalchemy import exists, func, or_
 
   from app.models.paper import paper_group_association
   from app.models.tag import paper_tag_association
@@ -227,6 +228,12 @@ async def list_papers_endpoint(
   if group_id is not None:
     query = query.join(paper_group_association).where(
       paper_group_association.c.group_id == group_id
+    )
+
+  # Papers belonging to no group at all (the Finder shows these at its root).
+  if ungrouped:
+    query = query.where(
+      ~exists().where(paper_group_association.c.paper_id == Paper.id)
     )
 
   if tag_id is not None:
@@ -578,7 +585,7 @@ async def regenerate_paper_metadata(
     with open(file_path, "rb") as f:
       pdf_content = f.read()
 
-    metadata = await pdf_parser.extract_metadata(pdf_content)
+    metadata = await pdf_parser.extract_metadata(pdf_content, user.id)
     metadata = sanitize_metadata(metadata)
 
     if metadata.get("title") and len(metadata.get("title", "").strip()) > 0:
@@ -642,7 +649,7 @@ async def regenerate_paper_metadata_bulk(
       with open(file_path, "rb") as f:
         pdf_content = f.read()
 
-      metadata = await pdf_parser.extract_metadata(pdf_content)
+      metadata = await pdf_parser.extract_metadata(pdf_content, user.id)
       metadata = sanitize_metadata(metadata)
 
       if metadata.get("title"):
@@ -688,7 +695,7 @@ async def extract_paper_citations(
       pdf_content = f.read()
 
     citation_count = await citation_extractor.extract_and_store_citations(
-      session, paper_id, pdf_content
+      session, paper_id, pdf_content, user.id
     )
     return {"paper_id": paper_id, "citations_extracted": citation_count}
 

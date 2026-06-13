@@ -18,16 +18,16 @@ class Settings(BaseSettings):
   STORAGE_PATH: str = "./storage/papers"
   EMBEDDING_MODEL: str = "gemini-embedding-001"
   EMBEDDING_DIMENSION: int = 768
+  # Google key powers embeddings only (the one server-side default).
+  # Chat/feature providers are per-user (BYO) — there is no env-key fallback.
   GOOGLE_API_KEY: str = ""
-  OPENAI_API_KEY: str = ""
-  ANTHROPIC_API_KEY: str = ""
-  DEEPSEEK_API_KEY: str = ""
   SERPAPI_KEY: str = ""
   SEMANTIC_SCHOLAR_API_KEY: str = ""
   OPENALEX_API_KEY: str = ""
   GENAI_MODEL: str = "gemini-3-flash-preview"
   ENABLE_DEEP_RESEARCH: bool = False
   DEEP_RESEARCH_DAILY_CAP: int = 10
+  AGENT_MAX_TURNS: int = 25
   DEBUG: bool = False
   PORT: int = 8000
 

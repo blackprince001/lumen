@@ -152,6 +152,7 @@ async def search_papers(
 @router.post("/ai-search", response_model=AISearchResponse)
 async def ai_search_papers(
   request: AISearchRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """AI-enhanced search for papers with natural language understanding.
@@ -168,6 +169,12 @@ async def ai_search_papers(
   if not request.query or not request.query.strip():
     raise HTTPException(status_code=400, detail="Query cannot be empty")
 
+  from app.services.ai.helpers import get_provider_for_user
+
+  ai_provider = await get_provider_for_user(
+    session, user.id, preferred_provider_id=request.provider_id
+  )
+
   # Convert schema filters to service filters
   filters = None
   if request.filters:
@@ -182,7 +189,9 @@ async def ai_search_papers(
   query_understanding_data = None
   search_query = request.query
   try:
-    query_understanding_data = await ai_search_service.understand_query(request.query)
+    query_understanding_data = await ai_search_service.understand_query(
+      request.query, provider=ai_provider
+    )
     if query_understanding_data and query_understanding_data.get("boolean_query"):
       search_query = query_understanding_data["boolean_query"]
   except Exception as e:
@@ -230,6 +239,7 @@ async def ai_search_papers(
   results = await asyncio.gather(*search_tasks)
 
   # Convert to response schema
+  total_results = 0
   for src_result in results:
     papers = [
       DiscoveredPaperPreview(
@@ -256,6 +266,9 @@ async def ai_search_papers(
       )
     )
     all_papers.extend(src_result.get("papers", []))
+    total_results += src_result.get("total_available") or len(
+      src_result.get("papers", [])
+    )
 
   # Build ExternalPaperResult list for AI service
   from app.services.discovery.base_provider import ExternalPaperResult
@@ -284,6 +297,7 @@ async def ai_search_papers(
     include_overview=request.include_overview,
     include_clustering=request.include_clustering,
     include_relevance=request.include_relevance,
+    provider=ai_provider,
   )
 
   # Convert AI results to response schemas
@@ -341,12 +355,12 @@ async def ai_search_papers(
     relevance_explanations = RelevanceExplanations(explanations=explanations)
 
   return AISearchResponse(
-    query=search_result["query"],
+    query=request.query,
     query_understanding=query_understanding,
-    sources_searched=search_result["sources_searched"],
+    sources_searched=request.sources,
     results=source_results,
-    total_results=search_result["total_results"],
-    deduplicated_count=search_result["deduplicated_count"],
+    total_results=total_results,
+    deduplicated_count=len(all_papers),
     overview=overview,
     clustering=clustering,
     relevance_explanations=relevance_explanations,
@@ -372,6 +386,7 @@ def _redis_client() -> redis_sync.Redis:
 @router.post("/ai-search/stream")
 async def ai_search_stream(
   request: AISearchRequest,
+  user: CurrentUser,
   session: AsyncSession = Depends(get_db),
 ):
   """Stream AI-enhanced search results via SSE.
@@ -397,6 +412,13 @@ async def ai_search_stream(
         "status", {"stage": "starting", "message": "Starting search...", "progress": 0}
       )
 
+      # Resolve the user's configured AI provider once for in-request use.
+      from app.services.ai.helpers import get_provider_for_user
+
+      ai_provider = await get_provider_for_user(
+        session, user.id, preferred_provider_id=request.provider_id
+      )
+
       # Query understanding runs in-request — it's fast (~1s) and needed to
       # route queries correctly to providers before we enqueue tasks.
       search_query = request.query
@@ -406,7 +428,8 @@ async def ai_search_stream(
           {"stage": "understanding", "message": "Analyzing query...", "progress": 5},
         )
         qu = await asyncio.wait_for(
-          ai_search_service.understand_query(request.query), timeout=10.0
+          ai_search_service.understand_query(request.query, provider=ai_provider),
+          timeout=10.0,
         )
         if qu:
           if qu.get("boolean_query"):
@@ -466,7 +489,7 @@ async def ai_search_stream(
 
       ai_task_enqueued = False
       progress_key = f"discovery:{search_id}:progress"
-      deadline = asyncio.get_event_loop().time() + 90.0  # 90s total timeout
+      deadline = asyncio.get_event_loop().time() + 300.0  # matches Celery time_limit
 
       while True:
         if asyncio.get_event_loop().time() > deadline:
@@ -477,9 +500,10 @@ async def ai_search_stream(
         raw = await asyncio.to_thread(r.blpop, progress_key, 2)
 
         if raw is None:
-          # No progress yet — check if we're done
+          # No progress yet — send keepalive, then check if we're done
           if not expected_source_events and (not expected_ai or not ai_task_enqueued):
             break
+          yield _sse_event("keepalive", {})
           continue
 
         _, marker_json = raw
@@ -520,6 +544,7 @@ async def ai_search_stream(
                 request.include_overview or False,
                 request.include_clustering or False,
                 request.include_relevance or False,
+                user_id=user.id,
               )
               ai_task_enqueued = True
               yield _sse_event(
@@ -570,9 +595,18 @@ async def ai_search_stream(
         },
       )
 
+    except GeneratorExit:
+      return
+    except asyncio.CancelledError:
+      raise
     except Exception as e:
       logger.error("Stream error", error=str(e))
       yield _sse_event("error", {"message": str(e)})
+    finally:
+      try:
+        r.close()
+      except Exception:
+        pass
 
   return StreamingResponse(
     event_generator(),

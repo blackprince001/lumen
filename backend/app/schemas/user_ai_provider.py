@@ -19,10 +19,6 @@ class UserAIProviderCreate(BaseModel):
     default=None, description="Base URL for OpenAI-compatible providers"
   )
   model: str = Field(default="", description="Model name for chat/generation")
-  embedding_model: str = Field(default="", description="Model name for embeddings")
-  embedding_dimension: int = Field(
-    default=768, description="Embedding vector dimension"
-  )
   is_default: bool = Field(
     default=False, description="Make this the user's default provider"
   )
@@ -36,8 +32,6 @@ class UserAIProviderUpdate(BaseModel):
   api_key: str | None = None
   base_url: str | None = None
   model: str | None = None
-  embedding_model: str | None = None
-  embedding_dimension: int | None = None
   is_default: bool | None = None
   is_active: bool | None = None
 
@@ -52,8 +46,6 @@ class UserAIProviderResponse(BaseModel):
   has_api_key: bool
   base_url: str | None = None
   model: str
-  embedding_model: str
-  embedding_dimension: int
   is_default: bool
   is_active: bool
   created_at: datetime

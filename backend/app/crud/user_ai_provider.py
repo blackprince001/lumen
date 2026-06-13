@@ -80,8 +80,6 @@ async def create_user_ai_provider(
     provider=data.provider,
     base_url=data.base_url,
     model=data.model,
-    embedding_model=data.embedding_model,
-    embedding_dimension=data.embedding_dimension or 768,
     is_default=make_default,
   )
   if data.api_key:

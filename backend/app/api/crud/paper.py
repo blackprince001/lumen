@@ -26,12 +26,12 @@ async def get_paper_or_404(
   if user_id is not None:
     query = query.where(Paper.uploaded_by_id == user_id)
 
+  query = query.options(
+    selectinload(Paper.tags),
+    selectinload(Paper.groups),
+  )
   if with_relations:
-    query = query.options(
-      selectinload(Paper.annotations),
-      selectinload(Paper.groups),
-      selectinload(Paper.tags),
-    )
+    query = query.options(selectinload(Paper.annotations))
 
   result = await session.execute(query)
   paper = result.scalar_one_or_none()
@@ -41,6 +41,8 @@ async def get_paper_or_404(
 
   if with_relations:
     ensure_loaded(paper, "tags", "groups", "annotations")
+  else:
+    ensure_loaded(paper, "tags", "groups")
 
   return paper
 
@@ -55,12 +57,12 @@ async def get_visible_paper_or_404(
   query = select(Paper).where(Paper.id == paper_id)
   query = apply_visible_papers_filter(query, user_id)
 
+  query = query.options(
+    selectinload(Paper.tags),
+    selectinload(Paper.groups),
+  )
   if with_relations:
-    query = query.options(
-      selectinload(Paper.annotations),
-      selectinload(Paper.groups),
-      selectinload(Paper.tags),
-    )
+    query = query.options(selectinload(Paper.annotations))
 
   result = await session.execute(query)
   paper = result.scalar_one_or_none()
@@ -70,6 +72,8 @@ async def get_visible_paper_or_404(
 
   if with_relations:
     ensure_loaded(paper, "tags", "groups", "annotations")
+  else:
+    ensure_loaded(paper, "tags", "groups")
 
   return paper
 

@@ -313,6 +313,10 @@ class AISearchRequest(BaseModel):
   include_relevance: bool = Field(
     default=True, description="Add relevance explanations"
   )
+  provider_id: Optional[int] = Field(
+    default=None,
+    description="Preferred saved AI provider id; falls back to user default",
+  )
 
 
 class AISearchResponse(BaseModel):

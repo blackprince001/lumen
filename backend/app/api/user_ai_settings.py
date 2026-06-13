@@ -54,8 +54,6 @@ async def set_my_ai_settings(
       existing.set_api_key(data.api_key)
     existing.base_url = data.base_url
     existing.model = data.model
-    existing.embedding_model = data.embedding_model
-    existing.embedding_dimension = data.embedding_dimension
     await db_session.commit()
     await db_session.refresh(existing)
     return UserAISettingsResponse.model_validate(existing)

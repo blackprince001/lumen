@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from sqlalchemy import create_engine, text
@@ -54,6 +55,30 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
       raise
     finally:
       await session.close()
+
+
+@asynccontextmanager
+async def stream_db_session() -> AsyncGenerator[AsyncSession, None]:
+  """A dedicated DB session for use inside ``StreamingResponse`` generators.
+
+  Long-lived SSE / agent streams must NOT reuse the request-scoped session
+  from ``Depends(get_db)``. That session's underlying asyncpg connection is
+  bound to the greenlet/task where it was first used (auth in
+  ``get_current_user`` and the route's ``get_visible_*_or_404`` guard, which
+  run during request handling). Starlette iterates the streaming response body
+  in a *different* task, so the first DB IO inside the stream finds the
+  connection's async→sync greenlet bridge gone and raises
+  ``greenlet_spawn has not been called`` (``MissingGreenlet``).
+
+  Opening a fresh session here keeps the connection's entire lifecycle inside
+  the streaming task. Rolls back on error; always closes on exit.
+  """
+  async with AsyncSessionLocal() as session:
+    try:
+      yield session
+    except Exception:
+      await session.rollback()
+      raise
 
 
 async def init_db() -> None:
