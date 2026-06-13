@@ -84,6 +84,7 @@ class MultiChatRequest(BaseModel):
   session_id: Optional[int] = None
   paper_ids: Optional[List[int]] = None
   group_id: Optional[int] = None
+  provider_id: Optional[int] = None  # Pin a specific user AI provider
 
 
 class MultiChatResponse(BaseModel):

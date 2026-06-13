@@ -49,6 +49,11 @@ class MultiChatSession(Base):
     nullable=True,
     index=True,
   )
+  provider_id = Column(
+    Integer,
+    ForeignKey("user_ai_providers.id", ondelete="SET NULL"),
+    nullable=True,
+  )
   created_at = Column(
     DateTime(timezone=True),
     default=lambda: datetime.now(timezone.utc),

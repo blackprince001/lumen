@@ -58,6 +58,7 @@ class ChatRequest(BaseModel):
   message: str
   references: Optional[Dict[str, Any]] = {}  # Parsed references from @ mentions
   session_id: Optional[int] = None
+  provider_id: Optional[int] = None  # Pin a specific user AI provider
 
 
 class ChatResponse(BaseModel):

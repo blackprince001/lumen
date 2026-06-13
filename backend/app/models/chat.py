@@ -20,6 +20,11 @@ class ChatSession(Base):
     index=True,
   )
   name = Column(String, server_default="New Session", nullable=False)
+  provider_id = Column(
+    Integer,
+    ForeignKey("user_ai_providers.id", ondelete="SET NULL"),
+    nullable=True,
+  )
   created_at = Column(
     DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
   )
