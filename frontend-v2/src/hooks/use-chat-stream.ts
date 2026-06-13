@@ -68,6 +68,7 @@ export interface UseChatStreamReturn extends ChatStreamState {
     message: string,
     references?: ChatReferences,
     sessionId?: number,
+    providerId?: number,
   ) => void;
   /** Cancel the current stream (abort). */
   cancel: () => void;
@@ -92,6 +93,7 @@ export function useChatStream(): UseChatStreamReturn {
     message: string;
     references?: ChatReferences;
     sessionId?: number;
+    providerId?: number;
   } | null>(null);
   const pendingUserMessageRef = useRef<string | null>(null);
   const displayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -141,12 +143,13 @@ export function useChatStream(): UseChatStreamReturn {
       message: string,
       references?: ChatReferences,
       sessionId?: number,
+      providerId?: number,
     ) => {
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
 
-      lastSendRef.current = { paperId, message, references, sessionId };
+      lastSendRef.current = { paperId, message, references, sessionId, providerId };
       pendingUserMessageRef.current = message;
       accumulatedContentRef.current = '';
 
@@ -163,7 +166,7 @@ export function useChatStream(): UseChatStreamReturn {
           message,
           references,
           sessionId,
-          { signal: controller.signal, timeoutMs: 60_000, maxRetries: 2 },
+          { signal: controller.signal, timeoutMs: 60_000, maxRetries: 2, providerId },
         );
 
         for await (const event of gen) {
@@ -288,8 +291,9 @@ export function useChatStream(): UseChatStreamReturn {
       message: string,
       references?: ChatReferences,
       sessionId?: number,
+      providerId?: number,
     ) => {
-      void runStream(paperId, message, references, sessionId);
+      void runStream(paperId, message, references, sessionId, providerId);
     },
     [runStream],
   );
@@ -313,6 +317,7 @@ export function useChatStream(): UseChatStreamReturn {
       last.message,
       last.references,
       last.sessionId,
+      last.providerId,
     );
   }, [runStream]);
 

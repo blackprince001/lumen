@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { MarkdownMessage } from '@/components/MarkdownMessage';
 import { StreamingMessage } from '@/components/ai/StreamingMessage';
 import { ExpandedInput } from '@/components/ExpandedInput';
+import { ProviderPicker } from '@/components/ai/ProviderPicker';
 import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 
@@ -39,6 +40,7 @@ const GROUP_PROMPTS = [
 
 export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelProps) {
   const [currentSessionId, setCurrentSessionId] = useState<number | null>(null);
+  const [activeProviderId, setActiveProviderId] = useState<number | null>(null);
   const [message, setMessage] = useState('');
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
   const [streamState, setStreamState] = useState<{
@@ -192,7 +194,12 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
         userMessage,
         undefined,
         sessionId,
-        { signal: controller.signal, timeoutMs: 60_000, maxRetries: 2 },
+        {
+          signal: controller.signal,
+          timeoutMs: 60_000,
+          maxRetries: 2,
+          providerId: activeProviderId ?? undefined,
+        },
       );
 
       for await (const event of gen) {
@@ -282,7 +289,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     } finally {
       setPendingUserMessage(null);
     }
-  }, [currentSessionId, groupId, queryClient, createSessionMutation]);
+  }, [currentSessionId, groupId, queryClient, createSessionMutation, activeProviderId]);
 
   const handleSend = useCallback(() => {
     if (!message.trim() || isStreaming) return;
@@ -396,6 +403,13 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
 
       {/* Input */}
       <div className="border-t border-(--panel-border) p-3 shrink-0 bg-(--panel-surface)">
+        <div className="mb-2 flex justify-end">
+          <ProviderPicker
+            value={activeProviderId}
+            onChange={setActiveProviderId}
+            className="max-w-56"
+          />
+        </div>
         <ExpandedInput
           value={message}
           onChange={setMessage}

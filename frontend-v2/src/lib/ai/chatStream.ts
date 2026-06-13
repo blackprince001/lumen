@@ -9,7 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/
  * Extended stream event with typed fields for all agent events.
  */
 export interface StreamEvent extends SSEEvent {
-  type: 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'thought' | 'keepalive' | (string & {});
+  type: 'chunk' | 'done' | 'error' | 'tool_call' | 'tool_result' | 'thought' | 'keepalive' | 'provider_switched' | (string & {});
   content?: string;
   error?: string;
   error_code?: 'rate_limit' | 'auth' | 'provider_unavailable' | 'timeout' | 'tool_error' | 'internal' | 'network' | 'no_provider' | (string & {});
@@ -20,6 +20,10 @@ export interface StreamEvent extends SSEEvent {
   tool?: string;
   arguments?: Record<string, unknown>;
   result?: string;
+  // provider_switched event fields
+  from?: string;
+  to?: string;
+  reason?: string;
 }
 
 export interface ChatStreamOptions {
@@ -27,6 +31,8 @@ export interface ChatStreamOptions {
   timeoutMs?: number;
   maxRetries?: number;
   onRetry?: (attempt: number, error: Error) => void;
+  /** Pin a specific user AI provider for this message. */
+  providerId?: number;
 }
 
 /**
@@ -139,6 +145,7 @@ export const chatStreamClient = {
       message,
       references: references ?? { notes: [], annotations: [], papers: [] },
       session_id: sessionId,
+      provider_id: options.providerId,
     };
 
     const response = await streamingFetch(url, body, options.signal);
@@ -186,6 +193,7 @@ export const chatStreamClient = {
       references: references ?? { notes: [], annotations: [], papers: [] },
       group_id: groupId,
       session_id: sessionId,
+      provider_id: options.providerId,
     };
 
     const response = await streamingFetch(url, body, options.signal);
@@ -211,6 +219,7 @@ export const chatStreamClient = {
       references: references ?? { notes: [], annotations: [], papers: [] },
       session_id: sessionId,
       paper_ids: paperIds,
+      provider_id: options.providerId,
     };
 
     const response = await streamingFetch(url, body, options.signal);

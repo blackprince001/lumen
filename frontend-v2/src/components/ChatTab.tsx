@@ -11,6 +11,7 @@ import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
 import { ExpandedInput } from '@/components/ExpandedInput';
 import { MessageThread } from '@/components/MessageThread';
 import { StreamingMessage } from '@/components/ai/StreamingMessage';
+import { ProviderPicker } from '@/components/ai/ProviderPicker';
 import { defaultPrompts } from '@/lib/constants/defaultPrompts';
 import { cn } from '@/lib/utils';
 import { toastError, toastSuccess } from '@/lib/utils/toast';
@@ -67,6 +68,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
   const [isCreatingSession, setIsCreatingSession] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<number | null>(null);
   const [sessionsCollapsed, setSessionsCollapsed] = useState(false);
+  const [activeProviderId, setActiveProviderId] = useState<number | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesTopRef = useRef<HTMLDivElement>(null);
@@ -200,8 +202,14 @@ export function ChatTab({ paperId }: ChatTabProps) {
     setInput('');
     setReferences({ notes: [], annotations: [], papers: [] });
 
-    send(paperId, userMessage, userReferences, currentSessionId || undefined);
-  }, [input, references, isActive, send, paperId, currentSessionId]);
+    send(
+      paperId,
+      userMessage,
+      userReferences,
+      currentSessionId || undefined,
+      activeProviderId ?? undefined,
+    );
+  }, [input, references, isActive, send, paperId, currentSessionId, activeProviderId]);
 
   const handleCreateSession = async () => {
     if (isCreatingSession) return;
@@ -495,6 +503,13 @@ export function ChatTab({ paperId }: ChatTabProps) {
 
         {/* Input */}
         <div className="border-t border-(--border) p-3 shrink-0">
+          <div className="mb-2 flex justify-end">
+            <ProviderPicker
+              value={activeProviderId}
+              onChange={setActiveProviderId}
+              className="max-w-56"
+            />
+          </div>
           <ExpandedInput
             value={input}
             onChange={setInput}
