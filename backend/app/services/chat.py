@@ -34,7 +34,12 @@ from app.services.ai.agent.context import (
   get_byo_context,
   set_byo_context,
 )
+from app.services.ai.agent.fallback_runner import stream_agent_with_fallback
 from app.services.ai.agent.multi_provider import ProviderRouteConfig
+from app.services.ai.agent.provider_resolver import (
+  ResolvedProvider,
+  resolve_providers,
+)
 from app.services.ai.base_ai_service import BaseAIService
 from app.services.ai.providers.base import (
   AIProviderError,
@@ -354,14 +359,13 @@ class ChatService(BaseAIService):
 
   # ---- Streaming (rewritten to use agent framework) ----
 
-  async def _setup_byo_context(
+  def _setup_byo_context(
     self,
     db_session: AsyncSession,
     user_id: int | None,
-  ) -> list[ProviderRouteConfig]:
-    """Set up the BYOContext for the current request and return provider configs."""
-    provider_configs = await self._resolve_provider_configs(db_session, user_id)
-
+    provider_configs: list[ProviderRouteConfig],
+  ) -> None:
+    """Set up the BYOContext for the current request."""
     ctx = get_byo_context()
     if ctx.user_id is None:
       set_byo_context(
@@ -371,73 +375,40 @@ class ChatService(BaseAIService):
           extra={"db_session": db_session},
         )
       )
-    return provider_configs
+
+  async def _resolve_providers(
+    self,
+    db_session: AsyncSession,
+    user_id: int | None,
+    preferred_provider_id: int | None = None,
+  ) -> list[ResolvedProvider]:
+    return await resolve_providers(db_session, user_id, preferred_provider_id)
 
   async def _resolve_provider_configs(
     self,
     db_session: AsyncSession,
     user_id: int | None,
+    preferred_provider_id: int | None = None,
   ) -> list[ProviderRouteConfig]:
-    """Resolve provider configs for the user, with env fallback."""
-    from app.crud.user_ai_settings import get_user_ai_settings
+    """Resolve provider routes for the user, with env fallback."""
+    resolved = await self._resolve_providers(
+      db_session, user_id, preferred_provider_id
+    )
+    return [r.route for r in resolved]
 
-    configs: list[ProviderRouteConfig] = []
-
-    if user_id is not None:
-      try:
-        ai_settings = await get_user_ai_settings(db_session, user_id)
-        if ai_settings and ai_settings.is_configured:
-          configs.append(
-            ProviderRouteConfig(
-              provider_type=ai_settings.provider or "openai-compatible",
-              api_key=ai_settings.get_api_key(),
-              base_url=ai_settings.base_url,
-              default_model=ai_settings.model,
-            )
-          )
-      except Exception as e:
-        logger.error("Error loading user AI settings", user_id=user_id, error=str(e))
-
-    if not configs:
-      from app.core.config import settings as app_settings
-
-      if app_settings.GOOGLE_API_KEY:
-        configs.append(
-          ProviderRouteConfig(
-            provider_type="gemini",
-            api_key=app_settings.GOOGLE_API_KEY,
-            default_model=app_settings.GENAI_MODEL,
-          )
-        )
-
-      if app_settings.OPENAI_API_KEY:
-        configs.append(
-          ProviderRouteConfig(
-            provider_type="openai",
-            api_key=app_settings.OPENAI_API_KEY,
-            default_model="gpt-4o",
-          )
-        )
-
-      if app_settings.ANTHROPIC_API_KEY:
-        configs.append(
-          ProviderRouteConfig(
-            provider_type="anthropic",
-            api_key=app_settings.ANTHROPIC_API_KEY,
-            default_model="claude-sonnet-4-20250514",
-          )
-        )
-
-      if app_settings.DEEPSEEK_API_KEY:
-        configs.append(
-          ProviderRouteConfig(
-            provider_type="deepseek",
-            api_key=app_settings.DEEPSEEK_API_KEY,
-            default_model="deepseek-chat",
-          )
-        )
-
-    return configs
+  async def _persist_session_provider(
+    self,
+    db_session: AsyncSession,
+    chat_session: ChatSession,
+    used_holder: list[ResolvedProvider],
+  ) -> None:
+    """Remember which provider produced the response on the session."""
+    if not used_holder:
+      return
+    used = used_holder[-1]
+    if used.provider_id is not None and chat_session.provider_id != used.provider_id:
+      chat_session.provider_id = used.provider_id
+      await db_session.commit()
 
   def _can_use_agent(self, provider_type: str) -> bool:
     """Check if the provider supports the agent framework."""
@@ -558,6 +529,7 @@ class ChatService(BaseAIService):
     references: dict[str, Any] | None = None,
     session_id: int | None = None,
     user_id: int | None = None,
+    provider_id: int | None = None,
   ) -> AsyncGenerator[dict[str, Any], None]:
     """Stream a chat message response.
 
@@ -586,11 +558,16 @@ class ChatService(BaseAIService):
       }
       return
 
-    # Resolve provider configs for agent path (supports multiple env keys)
-    provider_configs = await self._resolve_provider_configs(db_session, user_id)
+    # Resolve provider fallback chain for agent path
+    preferred_provider_id = provider_id or cast(
+      "int | None", chat_session.provider_id
+    )
+    resolved = await self._resolve_providers(
+      db_session, user_id, preferred_provider_id
+    )
 
     # ---- Agent path (OpenAI-compatible providers) ----
-    if provider_configs and self._can_use_agent(provider_configs[0].provider_type):
+    if resolved and self._can_use_agent(resolved[0].route.provider_type):
       _Runner = _get_runner()
       if _Runner is None:
         yield {
@@ -601,12 +578,8 @@ class ChatService(BaseAIService):
         }
         return
       try:
-        provider_configs = await self._setup_byo_context(db_session, user_id)
+        self._setup_byo_context(db_session, user_id, [r.route for r in resolved])
         agent = create_paper_agent(paper)
-        rc = build_run_config(
-          provider_configs=provider_configs,
-          model_hint=provider_configs[0].default_model or None,
-        )
 
         await self._save_user_message(
           db_session, cast(int, chat_session.id), user_message, {}
@@ -614,8 +587,15 @@ class ChatService(BaseAIService):
 
         full_content: list[str] = []
         had_error = False
-        result = _Runner.run_streamed(agent, input=user_message, run_config=rc)
-        async for adapted in adapt_stream(result, session_id=chat_session.id):
+        used_holder: list[ResolvedProvider] = []
+        async for adapted in stream_agent_with_fallback(
+          runner=_Runner,
+          agent=agent,
+          user_message=user_message,
+          providers=resolved,
+          session_id=chat_session.id,
+          used_holder=used_holder,
+        ):
           if adapted["type"] == "chunk":
             full_content.append(adapted.get("content", ""))
           elif adapted["type"] == "error":
@@ -626,6 +606,9 @@ class ChatService(BaseAIService):
           response_text = "".join(full_content)
           assistant_msg = await self._save_assistant_message(
             db_session, cast(int, chat_session.id), response_text
+          )
+          await self._persist_session_provider(
+            db_session, chat_session, used_holder
           )
           yield {
             "type": "done",
@@ -654,7 +637,9 @@ class ChatService(BaseAIService):
       return
 
     # ---- Legacy path (Gemini etc.) ----
-    provider = await self._get_provider(db_session, user_id)
+    provider = await self._get_provider(
+      db_session, user_id, preferred_provider_id=preferred_provider_id
+    )
     if not provider:
       yield {
         "type": "error",
@@ -727,6 +712,7 @@ class ChatService(BaseAIService):
     references: dict[str, Any] | None = None,
     session_id: int | None = None,
     user_id: int | None = None,
+    provider_id: int | None = None,
   ) -> ChatMessage | None:
     """Send a chat message and get a response (non-streaming).
 
@@ -738,10 +724,15 @@ class ChatService(BaseAIService):
     if session_error or not chat_session:
       raise ValueError(session_error or "Failed to get session")
 
-    provider_configs = await self._resolve_provider_configs(db_session, user_id)
+    preferred_provider_id = provider_id or cast(
+      "int | None", chat_session.provider_id
+    )
+    resolved = await self._resolve_providers(
+      db_session, user_id, preferred_provider_id
+    )
 
     # ---- Agent path ----
-    if provider_configs and self._can_use_agent(provider_configs[0].provider_type):
+    if resolved and self._can_use_agent(resolved[0].route.provider_type):
       _Runner = _get_runner()
       if _Runner is None:
         raise ValueError("OpenAI Agents SDK not installed. Please install openai-agents to use this provider.")
@@ -749,11 +740,12 @@ class ChatService(BaseAIService):
       if not paper:
         raise ValueError(f"Paper {paper_id} not found")
       try:
-        provider_configs = await self._setup_byo_context(db_session, user_id)
+        self._setup_byo_context(db_session, user_id, [r.route for r in resolved])
         agent = create_paper_agent(paper)
+        primary = resolved[0]
         rc = build_run_config(
-          provider_configs=provider_configs,
-          model_hint=provider_configs[0].default_model or None,
+          provider_configs=[primary.route],
+          model_hint=primary.route.default_model or None,
         )
 
         await self._save_user_message(
@@ -763,6 +755,7 @@ class ChatService(BaseAIService):
         result = await _Runner.run(agent, input=user_message, run_config=rc)
         response_text = result.final_output
 
+        await self._persist_session_provider(db_session, chat_session, [primary])
         return await self._save_assistant_message(
           db_session, cast(int, chat_session.id), response_text
         )
@@ -780,7 +773,9 @@ class ChatService(BaseAIService):
         raise ValueError(f"Failed to get AI response: {str(e)[:200]}") from e
 
     # ---- Legacy path ----
-    provider = await self._get_provider(db_session, user_id)
+    provider = await self._get_provider(
+      db_session, user_id, preferred_provider_id=preferred_provider_id
+    )
     if not provider:
       raise ValueError(
         "AI provider not configured. Please configure your AI provider in settings."

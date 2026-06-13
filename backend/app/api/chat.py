@@ -56,6 +56,7 @@ async def send_chat_message(
       references=chat_request.references,
       session_id=chat_request.session_id,
       user_id=scoped_user_id(user),
+      provider_id=chat_request.provider_id,
     )
 
     session_id = assistant_message.session_id if assistant_message else None
@@ -117,6 +118,7 @@ async def stream_chat_message(
         references=chat_request.references,
         session_id=chat_request.session_id,
         user_id=scoped_user_id(user),
+        provider_id=chat_request.provider_id,
       ):
         data = json.dumps(chunk)
         yield f"data: {data}\n\n"

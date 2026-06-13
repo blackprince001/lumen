@@ -32,6 +32,7 @@ class BaseAIService:
     self,
     db_session: AsyncSession | None = None,
     user_id: int | None = None,
+    preferred_provider_id: int | None = None,
   ) -> AIProvider | None:
     """Resolve the AI provider for the given user context.
 
@@ -42,6 +43,12 @@ class BaseAIService:
     Returns:
         An AIProvider instance, or None if no provider is available.
     """
+    # When a specific provider is requested, bypass the per-instance cache.
+    if preferred_provider_id is not None:
+      return await get_provider_for_user(
+        db_session, user_id, preferred_provider_id=preferred_provider_id
+      )
+
     if self._provider is not None:
       return self._provider
 

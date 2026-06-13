@@ -84,6 +84,7 @@ async def stream_group_chat_message(
       group_id=group_id,
       references=chat_request.references,
       session_id=chat_request.session_id,
+      provider_id=chat_request.provider_id,
     ):
       yield f"data: {json.dumps(chunk)}\n\n"
 
@@ -190,6 +191,7 @@ async def stream_multi_chat_message(
       group_id=chat_request.group_id,
       references=chat_request.references,
       session_id=chat_request.session_id,
+      provider_id=chat_request.provider_id,
     ):
       yield f"data: {json.dumps(chunk)}\n\n"
 
