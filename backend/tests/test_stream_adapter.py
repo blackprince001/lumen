@@ -1,126 +1,165 @@
-"""Tests for the streaming event adapter."""
+"""Tests for the streaming event adapter.
+
+The adapter translates the OpenAI Agents SDK event stream into the app's
+SSE chunk format. The SDK delivers model text as ``RawResponsesStreamEvent``
+objects wrapping a Responses-style ``.data`` payload, and tool activity as
+``RunItemStreamEvent`` objects. These tests mirror those real shapes.
+
+Note: ``adapt_stream`` does NOT emit the terminal ``done`` event — that is
+added by the chat service after persistence — so it is not asserted here.
+"""
 
 from __future__ import annotations
 
 from typing import Any, AsyncIterator
 
-from app.services.ai.agent.stream_adapter import (
-  _classify_event,
-  adapt_stream,
-)
+from app.services.ai.agent.stream_adapter import _adapt_event, adapt_stream
 
 
-class MockEvent:
-  """Minimal mock for SDK streaming events."""
+class RawData:
+  """Mimics an OpenAI Responses-style data payload (e.g. text delta)."""
 
-  def __init__(self, event_cls: str, **kwargs: Any) -> None:
-    self._event_cls = event_cls
-    for k, v in kwargs.items():
-      setattr(self, k, v)
+  def __init__(self, data_type: str, delta: str | None = None) -> None:
+    self.type = data_type
+    if delta is not None:
+      self.delta = delta
 
-  @property
-  def __class__(self):
-    return type("MockClass", (), {"__name__": self._event_cls})()
+
+# The adapter dispatches on ``type(event).__name__``, so the mock classes must
+# be named exactly as the SDK classes they stand in for.
+class RawResponsesStreamEvent:
+  """Mimics ``RawResponsesStreamEvent`` (token-level model output)."""
+
+  def __init__(self, data: RawData) -> None:
+    self.data = data
+
+
+class _RawToolCall:
+  def __init__(self, name: str, arguments: Any) -> None:
+    self.name = name
+    self.arguments = arguments
+
+
+class _RunItem:
+  def __init__(self, raw_item: Any = None, output: Any = None) -> None:
+    self.raw_item = raw_item
+    self.output = output
+
+
+class RunItemStreamEvent:
+  """Mimics ``RunItemStreamEvent`` (completed tool call / tool output)."""
+
+  def __init__(self, name: str, item: _RunItem) -> None:
+    self.name = name
+    self.item = item
+
+
+def text_delta(delta: str) -> RawResponsesStreamEvent:
+  return RawResponsesStreamEvent(RawData("response.output_text.delta", delta))
+
+
+def reasoning_delta(delta: str) -> RawResponsesStreamEvent:
+  return RawResponsesStreamEvent(RawData("response.reasoning_text.delta", delta))
+
+
+def non_text_raw() -> RawResponsesStreamEvent:
+  return RawResponsesStreamEvent(RawData("response.created"))
 
 
 class MockRunResultStreaming:
-  """Minimal mock for RunResultStreaming."""
+  """Minimal mock for ``RunResultStreaming``."""
 
-  def __init__(self, events: list[MockEvent]) -> None:
+  def __init__(self, events: list[Any]) -> None:
     self._events = events
 
-  async def stream_events(self) -> AsyncIterator[MockEvent]:
+  async def stream_events(self) -> AsyncIterator[Any]:
     for event in self._events:
       yield event
 
 
-class TestClassifyEvent:
-  """Event classification."""
+class TestAdaptEvent:
+  """Single-event adaptation against real SDK event shapes."""
 
-  def test_text_delta(self):
-    event = MockEvent("AgentTextDelta", delta="Hello")
-    assert _classify_event(event) == "text_delta"
+  def test_text_delta_becomes_chunk(self):
+    out = _adapt_event(text_delta("Hello"), full_content=[])
+    assert out == {"type": "chunk", "content": "Hello"}
 
-  def test_tool_call(self):
-    event = MockEvent("ToolCall", tool_name="search", arguments={})
-    assert _classify_event(event) == "tool_call"
+  def test_empty_text_delta_ignored(self):
+    assert _adapt_event(text_delta(""), full_content=[]) is None
 
-  def test_tool_result(self):
-    event = MockEvent("ToolResult", tool_name="search", result="found")
-    assert _classify_event(event) == "tool_result"
+  def test_non_text_raw_event_ignored(self):
+    assert _adapt_event(non_text_raw(), full_content=[]) is None
 
-  def test_thought(self):
-    event = MockEvent("Thought", content="I need to think...")
-    assert _classify_event(event) == "thought"
+  def test_reasoning_delta_becomes_thought(self):
+    out = _adapt_event(reasoning_delta("thinking..."), full_content=[])
+    assert out == {"type": "thought", "content": "thinking..."}
 
-  def test_error(self):
-    event = MockEvent("Error", message="Something broke")
-    assert _classify_event(event) == "error"
+  def test_tool_call_event(self):
+    ev = RunItemStreamEvent(
+      "tool_called",
+      _RunItem(raw_item=_RawToolCall("search_papers", {"query": "x"})),
+    )
+    out = _adapt_event(ev)
+    assert out["type"] == "tool_call"
+    assert out["tool"] == "search_papers"
+    assert out["arguments"] == {"query": "x"}
 
-  def test_unknown(self):
-    event = MockEvent("UnknownEvent")
-    assert _classify_event(event) == "unknown"
+  def test_tool_output_event(self):
+    ev = RunItemStreamEvent(
+      "tool_output",
+      _RunItem(raw_item=_RawToolCall("search_papers", {}), output="found 3"),
+    )
+    out = _adapt_event(ev)
+    assert out["type"] == "tool_result"
+    assert out["tool"] == "search_papers"
+    assert out["result"] == "found 3"
+
+  def test_full_content_accumulates(self):
+    acc: list[str] = []
+    _adapt_event(text_delta("Hello "), full_content=acc)
+    _adapt_event(text_delta("World"), full_content=acc)
+    assert "".join(acc) == "Hello World"
 
 
 class TestAdaptStream:
-  """Full stream adaptation."""
+  """Full stream adaptation end-to-end."""
 
   async def test_text_chunks_yielded(self):
-    events = [
-      MockEvent("AgentTextDelta", delta="Hello "),
-      MockEvent("AgentTextDelta", delta="World"),
-    ]
+    events = [text_delta("Hello "), text_delta("World")]
     stream = MockRunResultStreaming(events)
-    results = []
-    async for chunk in adapt_stream(stream, session_id=1, message_id=10):
-      results.append(chunk)
+    results = [chunk async for chunk in adapt_stream(stream, session_id=1)]
 
-    assert len(results) == 3
-    assert results[0] == {"type": "chunk", "content": "Hello "}
-    assert results[1] == {"type": "chunk", "content": "World"}
-    assert results[2]["type"] == "done"
-    assert results[2]["message_id"] == 10
-    assert results[2]["session_id"] == 1
-    assert results[2]["content"] == "Hello World"
-
-  async def test_error_stops_stream(self):
-    events = [
-      MockEvent("AgentTextDelta", delta="Starting..."),
-      MockEvent("Error", message="Rate limit hit"),
+    chunks = [r for r in results if r["type"] == "chunk"]
+    assert chunks == [
+      {"type": "chunk", "content": "Hello "},
+      {"type": "chunk", "content": "World"},
     ]
-    stream = MockRunResultStreaming(events)
-    results = []
-    async for chunk in adapt_stream(stream):
-      results.append(chunk)
 
-    assert len(results) == 2
-    assert results[0]["type"] == "chunk"
-    assert results[1] == {"type": "error", "error": "Rate limit hit"}
-
-  async def test_empty_stream(self):
+  async def test_empty_stream_yields_nothing(self):
     stream = MockRunResultStreaming([])
-    results = []
-    async for chunk in adapt_stream(stream, session_id=5, message_id=20):
-      results.append(chunk)
+    results = [chunk async for chunk in adapt_stream(stream, session_id=5)]
+    # No model events → no content chunks (the terminal "done" is added by
+    # the chat service, not the adapter).
+    assert [r for r in results if r["type"] == "chunk"] == []
 
-    assert len(results) == 1
-    assert results[0]["type"] == "done"
-    assert results[0]["session_id"] == 5
-    assert results[0]["message_id"] == 20
-
-  async def test_tool_call_and_result(self):
+  async def test_tool_call_then_text(self):
     events = [
-      MockEvent("ToolCall", tool_name="search_papers", arguments={"query": "test"}),
-      MockEvent("ToolResult", tool_name="search_papers", result="found 3 papers"),
-      MockEvent("AgentTextDelta", delta="Here are the results."),
+      RunItemStreamEvent(
+        "tool_called",
+        _RunItem(raw_item=_RawToolCall("search_papers", {"query": "t"})),
+      ),
+      RunItemStreamEvent(
+        "tool_output",
+        _RunItem(raw_item=_RawToolCall("search_papers", {}), output="3 papers"),
+      ),
+      text_delta("Here are the results."),
     ]
     stream = MockRunResultStreaming(events)
-    results = []
-    async for chunk in adapt_stream(stream, session_id=1):
-      results.append(chunk)
+    results = [
+      chunk
+      async for chunk in adapt_stream(stream, session_id=1)
+      if chunk["type"] != "keepalive"
+    ]
 
-    assert results[0]["type"] == "tool_call"
-    assert results[0]["tool"] == "search_papers"
-    assert results[1]["type"] == "tool_result"
-    assert results[2]["type"] == "chunk"
-    assert results[3]["type"] == "done"
+    types = [r["type"] for r in results]
+    assert types == ["tool_call", "tool_result", "chunk"]

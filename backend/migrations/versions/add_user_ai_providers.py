@@ -103,8 +103,6 @@ def upgrade() -> None:
 
 def downgrade() -> None:
   """Downgrade schema."""
-  op.drop_index(
-    op.f("ix_user_ai_providers_user_id"), table_name="user_ai_providers"
-  )
+  op.drop_index(op.f("ix_user_ai_providers_user_id"), table_name="user_ai_providers")
   op.drop_index(op.f("ix_user_ai_providers_id"), table_name="user_ai_providers")
   op.drop_table("user_ai_providers")

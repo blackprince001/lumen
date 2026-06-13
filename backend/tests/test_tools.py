@@ -24,7 +24,7 @@ class TestGetPaperContent:
       "app.services.ai.agent.tools.paper_tools.get_byo_context",
       return_value=AsyncMock(extra={}, user_id=None),
     ):
-      result = await get_paper_content(paper_id=1)
+      result = await get_paper_content(paper_ids=[1])
       assert "No database session" in result
 
 
