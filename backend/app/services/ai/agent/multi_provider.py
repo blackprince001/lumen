@@ -32,12 +32,14 @@ class ProviderRouteConfig:
 # OpenAI Agents SDK — optional dependency
 try:
   from agents import MultiProvider, set_tracing_disabled
+  from agents.models.multi_provider import MultiProviderMap
   from agents.models.openai_provider import OpenAIProvider
   from openai import AsyncOpenAI
 
   _HAS_AGENTS_SDK = True
 except ImportError:
   MultiProvider = object  # type: ignore[misc,assignment]
+  MultiProviderMap = object  # type: ignore[misc,assignment]
   OpenAIProvider = object  # type: ignore[misc,assignment]
   set_tracing_disabled = lambda _: None  # type: ignore[assignment]
   AsyncOpenAI = object  # type: ignore[misc,assignment]
@@ -232,13 +234,25 @@ class MultiProviderBuilder:
     keyed by its ``model_prefix``.  The provider is backed by an
     ``AsyncOpenAI`` client pointed at the user's chosen endpoint.
     """
-    mp = MultiProvider(unknown_prefix_mode="model_id")
+    provider_map = MultiProviderMap()
 
     for provider in self._providers:
-      mp.add_provider(
-        provider.model_prefix,
-        OpenAIProvider(client=provider.openai_client),
+      # MultiProviderMap keys on a bare prefix (no trailing slash); the SDK
+      # splits "prefix/model" on the first "/" to route by prefix.
+      prefix = provider.model_prefix.rstrip("/")
+      # Only the real OpenAI API supports the Responses API. DeepSeek, Ollama,
+      # vLLM, Anthropic-via-proxy, and other OpenAI-compatible endpoints only
+      # implement /chat/completions, so force Chat Completions for them.
+      use_responses = provider.provider_type == "openai"
+      provider_map.add_provider(
+        prefix,
+        OpenAIProvider(
+          openai_client=provider.openai_client,
+          use_responses=use_responses,
+        ),
       )
+
+    mp = MultiProvider(provider_map=provider_map, unknown_prefix_mode="model_id")
 
     logger.info(
       "Built MultiProvider with routes",

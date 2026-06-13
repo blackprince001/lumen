@@ -13,9 +13,14 @@ This module translates between them so the frontend needs **zero changes**.
 from __future__ import annotations
 
 import asyncio
+import re
 from typing import Any, AsyncIterator
 
 from app.core.logger import get_logger
+from app.services.ai.agent.error import classify_exception
+
+# A 5xx HTTP status as a standalone token (avoids matching "gpt-5", "415", etc.).
+_SERVER_ERROR_RE = re.compile(r"\b5\d\d\b")
 
 logger = get_logger(__name__)
 
@@ -37,13 +42,15 @@ ERROR_CODE_PROVIDER_UNAVAILABLE = "provider_unavailable"
 ERROR_CODE_TIMEOUT = "timeout"
 ERROR_CODE_TOOL_ERROR = "tool_error"
 ERROR_CODE_INTERNAL = "internal"
+ERROR_CODE_MAX_TURNS = "max_turns"
 ERROR_CODE_NETWORK = "network"
 ERROR_CODE_NO_PROVIDER = "no_provider"
 
 # OpenAI Agents SDK — optional dependency
 try:
-  from agents import RunResultStreaming
+  from agents import MaxTurnsExceeded, RunResultStreaming
 except ImportError:
+  MaxTurnsExceeded = Exception  # type: ignore[misc]
   RunResultStreaming = Any  # type: ignore[misc]
 
 
@@ -78,14 +85,29 @@ async def adapt_stream(
           await queue.put(adapted)
         if adapted and adapted.get("type") == CHUNK_TYPE_ERROR:
           break
+    except MaxTurnsExceeded as exc:
+      logger.error("SDK stream error", error=str(exc))
+      await queue.put(
+        {
+          "type": CHUNK_TYPE_ERROR,
+          "error": f"Agent exceeded max turns ({exc})",
+          "error_code": ERROR_CODE_MAX_TURNS,
+          "recoverable": True,
+        }
+      )
+    except asyncio.CancelledError:
+      raise
     except Exception as exc:
       logger.error("SDK stream error", error=str(exc))
-      await queue.put({
-        "type": CHUNK_TYPE_ERROR,
-        "error": str(exc)[:200],
-        "error_code": ERROR_CODE_INTERNAL,
-        "recoverable": False,
-      })
+      error_code, recoverable = classify_exception(exc)
+      await queue.put(
+        {
+          "type": CHUNK_TYPE_ERROR,
+          "error": str(exc)[:200],
+          "error_code": error_code,
+          "recoverable": recoverable,
+        }
+      )
     finally:
       stream_done.set()
       await queue.put(None)
@@ -128,6 +150,21 @@ def _adapt_event(
   full_content: list[str] | None = None,
 ) -> dict[str, Any] | None:
   """Adapt a single SDK event to the app's SSE chunk format."""
+  cls = type(event).__name__
+
+  # The SDK wraps the model's token stream in ``RawResponsesStreamEvent``,
+  # whose ``.data`` is an OpenAI Responses-style event (e.g.
+  # ``ResponseTextDeltaEvent`` with ``type == 'response.output_text.delta'``).
+  # Text/reasoning deltas only ever arrive this way, so we must unwrap it.
+  if cls == "RawResponsesStreamEvent":
+    return _adapt_raw_response(event, full_content)
+
+  # Higher-level events fire once per completed run item (tool calls, tool
+  # outputs). These carry tool name/arguments/results.
+  if cls == "RunItemStreamEvent":
+    return _adapt_run_item(event)
+
+  # Fallback: legacy/name-based classification for other SDK shapes.
   event_type = _classify_event(event)
 
   if event_type == "text_delta":
@@ -167,6 +204,69 @@ def _adapt_event(
       "error": error_msg,
       "error_code": error_code,
       "recoverable": recoverable,
+    }
+
+  return None
+
+
+def _adapt_raw_response(
+  event: Any,
+  full_content: list[str] | None,
+) -> dict[str, Any] | None:
+  """Adapt a ``RawResponsesStreamEvent`` (token-level model output)."""
+  data = getattr(event, "data", None)
+  if data is None:
+    return None
+
+  data_type = getattr(data, "type", "") or ""
+
+  if data_type == "response.output_text.delta":
+    delta = getattr(data, "delta", "") or ""
+    if delta:
+      if full_content is not None:
+        full_content.append(delta)
+      return {"type": CHUNK_TYPE_TEXT, "content": delta}
+    return None
+
+  # Reasoning/thinking deltas (o-series, DeepSeek-R1, etc.).
+  if data_type in (
+    "response.reasoning_summary_text.delta",
+    "response.reasoning_text.delta",
+  ):
+    delta = getattr(data, "delta", "") or ""
+    if delta:
+      return {"type": CHUNK_TYPE_THOUGHT, "content": delta}
+
+  return None
+
+
+def _adapt_run_item(event: Any) -> dict[str, Any] | None:
+  """Adapt a ``RunItemStreamEvent`` (completed tool call or tool output)."""
+  name = getattr(event, "name", "")
+  item = getattr(event, "item", None)
+  if item is None:
+    return None
+
+  raw = getattr(item, "raw_item", None)
+
+  if name == "tool_called":
+    tool_name = getattr(raw, "name", None) or "tool"
+    arguments = getattr(raw, "arguments", None) or {}
+    return {
+      "type": CHUNK_TYPE_TOOL_CALL,
+      "tool": tool_name,
+      "arguments": arguments,
+    }
+
+  if name == "tool_output":
+    tool_name = getattr(raw, "name", None) or "tool"
+    output = getattr(item, "output", None)
+    if output is None and isinstance(raw, dict):
+      output = raw.get("output")
+    return {
+      "type": CHUNK_TYPE_TOOL_RESULT,
+      "tool": tool_name,
+      "result": str(output) if output is not None else "",
     }
 
   return None
@@ -237,17 +337,25 @@ def _get_error(event: Any) -> tuple[str, str, bool]:
 
   msg_lower = msg.lower()
 
+  if "max turns" in msg_lower or "maxturn" in msg_lower:
+    return msg, ERROR_CODE_MAX_TURNS, True
   if "rate" in msg_lower and ("limit" in msg_lower or "429" in msg):
     return msg, ERROR_CODE_RATE_LIMIT, True
   if any(k in msg_lower for k in ("auth", "api key", "unauthorized", "401", "403")):
     return msg, ERROR_CODE_AUTH, False
   if any(k in msg_lower for k in ("timeout", "timed out", "timed_out")):
     return msg, ERROR_CODE_TIMEOUT, True
-  if any(k in msg_lower for k in ("5", "502", "503", "unavailable", "server error")):
+  if (
+    "unavailable" in msg_lower
+    or "server error" in msg_lower
+    or _SERVER_ERROR_RE.search(msg)
+  ):
     return msg, ERROR_CODE_PROVIDER_UNAVAILABLE, True
   if any(k in msg_lower for k in ("tool", "function")) and "error" in msg_lower:
     return msg, ERROR_CODE_TOOL_ERROR, True
-  if any(k in msg_lower for k in ("connection", "network", "econnrefused", "econnreset")):
+  if any(
+    k in msg_lower for k in ("connection", "network", "econnrefused", "econnreset")
+  ):
     return msg, ERROR_CODE_NETWORK, True
 
   return msg, ERROR_CODE_INTERNAL, False

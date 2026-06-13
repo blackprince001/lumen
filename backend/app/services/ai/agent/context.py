@@ -5,6 +5,7 @@ making them available to agent tools without threading them through every
 function signature.
 """
 
+import asyncio
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
@@ -28,17 +29,46 @@ class BYOContext:
   extra: dict[str, Any] = field(default_factory=dict)
 
 
-_byo_context: ContextVar[BYOContext] = ContextVar("byo_context", default=BYOContext())  # noqa: B039
+_SENTINEL = object()
+_byo_context: ContextVar[BYOContext] = ContextVar("byo_context", default=_SENTINEL)  # noqa: B039
 
 
 def get_byo_context() -> BYOContext:
-  """Return the current request's BYO context."""
-  return _byo_context.get()
+  """Return the current request's BYO context, or a fresh default if unset.
+
+  Returns a fresh ``BYOContext()`` when the context variable has not been
+  explicitly set (e.g. code paths that bypass the middleware).  Callers
+  should not cache the result — each call returns the same instance within
+  a request but a fresh one across requests.
+  """
+  ctx = _byo_context.get()
+  if ctx is _SENTINEL:
+    ctx = BYOContext()
+    _byo_context.set(ctx)
+  return ctx
 
 
 def set_byo_context(ctx: BYOContext) -> None:
   """Set the BYO context for the current request."""
   _byo_context.set(ctx)
+
+
+def get_tool_lock() -> asyncio.Lock:
+  """Return the per-request lock that serializes tool DB access.
+
+  Tools share one request-scoped ``AsyncSession`` (asyncpg connection),
+  which is NOT safe for concurrent use. The agents SDK may execute several
+  tool calls from one model turn concurrently, so each tool acquires this
+  lock around its work to avoid ``another operation is in progress`` /
+  ``greenlet_spawn`` / aborted-transaction errors. The lock is created
+  lazily on the running event loop.
+  """
+  ctx = get_byo_context()
+  lock = ctx.extra.get("_tool_lock")
+  if lock is None:
+    lock = asyncio.Lock()
+    ctx.extra["_tool_lock"] = lock
+  return lock
 
 
 def reset_byo_context() -> None:

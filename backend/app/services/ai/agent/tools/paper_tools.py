@@ -15,24 +15,26 @@ except ImportError:
 
 from app.core.logger import get_logger
 from app.services.ai.agent.context import get_byo_context
-from app.services.ai.agent.tools import with_timeout
+from app.services.ai.agent.paper_meta import authors_str, publication_year
+from app.services.ai.agent.tools import rollback_quietly, with_timeout
 
 logger = get_logger(__name__)
 
 
 @function_tool
 @with_timeout()
-async def get_paper_content(paper_id: int) -> str:
-  """Retrieve the full text content of a paper by its ID.
+async def get_paper_content(paper_ids: list[int]) -> str:
+  """Retrieve the full text content of one or more papers.
 
-  Use this when you need to read the paper's body text to answer
+  Use this when you need to read a paper's body text to answer
   detailed questions about methodology, results, or conclusions.
+  Pass multiple IDs to batch-read several papers at once.
 
   Args:
-      paper_id: The unique ID of the paper in the user's library.
+      paper_ids: One or more paper IDs in the user's library.
 
   Returns:
-      The paper's full text content, or an error message if the
+      The paper(s) full text content, or an error message if a
       paper is not found or not accessible.
   """
   ctx = get_byo_context()
@@ -46,33 +48,47 @@ async def get_paper_content(paper_id: int) -> str:
     from sqlalchemy import select
 
     from app.models.paper import Paper
+    from sqlalchemy.orm import selectinload
 
-    result = await db.execute(select(Paper).where(Paper.id == paper_id))
-    paper = result.scalar_one_or_none()
-
-    if not paper:
-      return f"Paper {paper_id} not found."
+    result = await db.execute(
+      select(Paper)
+      .where(Paper.id.in_(paper_ids))
+      .options(selectinload(Paper.tags), selectinload(Paper.groups))
+    )
+    papers = {p.id: p for p in result.scalars().all()}
 
     from app.services.access import apply_visible_papers_filter
 
+    visible_ids: set[int] | None = None
     if user_id is not None:
-      visible_query = apply_visible_papers_filter(select(Paper), user_id)
-      visible_papers = (await db.execute(visible_query)).scalars().all()
-      if paper not in visible_papers:
-        return f"Paper {paper_id} is not accessible."
+      visible_query = apply_visible_papers_filter(select(Paper.id), user_id)
+      visible_ids = {r[0] for r in (await db.execute(visible_query)).all()}
 
-    text = paper.content_text
-    if not text:
-      return f"Paper '{paper.title}' has no extracted text content."
+    parts: list[str] = []
+    for pid in paper_ids:
+      paper = papers.get(pid)
+      if not paper:
+        parts.append(f"## Paper {pid}\n\n(not found)")
+        continue
+      if visible_ids is not None and paper.id not in visible_ids:
+        parts.append(f"## {paper.title}\n\n(not accessible)")
+        continue
 
-    max_chars = 15000
-    if len(text) > max_chars:
-      text = text[:max_chars] + "\n\n[Content truncated...]"
+      text = paper.content_text
+      if not text:
+        parts.append(f"## {paper.title}\n\n(no extracted text content)")
+        continue
 
-    return f"# {paper.title}\n\n{text}"
+      max_chars = 50000
+      if len(text) > max_chars:
+        text = text[:max_chars]
+      parts.append(f"# {paper.title}\n\n{text}")
+
+    return "\n\n---\n\n".join(parts)
 
   except Exception as e:
-    logger.error("Error in get_paper_content", paper_id=paper_id, error=str(e))
+    await rollback_quietly(db)
+    logger.error("Error in get_paper_content", paper_ids=paper_ids, error=str(e))
     return f"Error retrieving paper content: {str(e)[:200]}"
 
 
@@ -100,10 +116,15 @@ async def get_paper_metadata(paper_id: int) -> str:
 
   try:
     from sqlalchemy import select
+    from sqlalchemy.orm import selectinload
 
     from app.models.paper import Paper
 
-    result = await db.execute(select(Paper).where(Paper.id == paper_id))
+    # Eager-load tags: a lazy relationship access on an async session raises
+    # "greenlet_spawn has not been called".
+    result = await db.execute(
+      select(Paper).where(Paper.id == paper_id).options(selectinload(Paper.tags))
+    )
     paper = result.scalar_one_or_none()
 
     if not paper:
@@ -111,17 +132,16 @@ async def get_paper_metadata(paper_id: int) -> str:
 
     lines = [
       f"Title: {paper.title or 'N/A'}",
-      f"Authors: {paper.authors or 'N/A'}",
+      f"Authors: {authors_str(paper) or 'N/A'}",
       f"DOI: {paper.doi or 'N/A'}",
-      f"arXiv ID: {paper.arxiv_id or 'N/A'}",
-      f"Year: {paper.publication_year or 'N/A'}",
-      f"Source: {paper.source or 'N/A'}",
-      f"Pages: {paper.page_count or 'N/A'}",
-      f"Tags: {', '.join(t.name for t in paper.tags) if hasattr(paper, 'tags') and paper.tags else 'None'}",
+      f"Year: {publication_year(paper) or 'N/A'}",
+      f"Pages: {paper.pages or 'N/A'}",
+      f"Tags: {', '.join(t.name for t in paper.tags) if paper.tags else 'None'}",
     ]
     return "\n".join(lines)
 
   except Exception as e:
+    await rollback_quietly(db)
     logger.error("Error in get_paper_metadata", paper_id=paper_id, error=str(e))
     return f"Error retrieving paper metadata: {str(e)[:200]}"
 
@@ -157,11 +177,15 @@ async def search_papers(query: str, limit: int = 10) -> str:
 
     search_filter = or_(
       Paper.title.ilike(f"%{query}%"),
-      Paper.abstract.ilike(f"%{query}%"),
-      Paper.authors.ilike(f"%{query}%"),
+      Paper.content_text.ilike(f"%{query}%"),
     )
 
-    result = await db.execute(select(Paper).where(search_filter).limit(limit))
+    result = await db.execute(
+      select(Paper)
+      .where(search_filter)
+      .limit(limit)
+      .options(selectinload(Paper.tags), selectinload(Paper.groups))
+    )
     papers = result.scalars().all()
 
     if not papers:
@@ -170,13 +194,15 @@ async def search_papers(query: str, limit: int = 10) -> str:
     lines = [f"Found {len(papers)} paper(s) matching '{query}':\n"]
     for i, p in enumerate(papers, 1):
       lines.append(f"{i}. [{p.id}] {p.title}")
-      if p.authors:
-        lines.append(f"   Authors: {p.authors[:100]}")
+      p_authors = authors_str(p)
+      if p_authors:
+        lines.append(f"   Authors: {p_authors[:100]}")
       lines.append("")
 
     return "\n".join(lines).strip()
 
   except Exception as e:
+    await rollback_quietly(db)
     logger.error("Error in search_papers", query=query, error=str(e))
     return f"Error searching papers: {str(e)[:200]}"
 
@@ -211,10 +237,15 @@ async def get_annotations(
     from sqlalchemy import select
 
     from app.models.annotation import Annotation
+    from sqlalchemy.orm import selectinload
 
-    query = select(Annotation).where(
-      Annotation.paper_id == paper_id,
-      Annotation.type == "annotation",
+    query = (
+      select(Annotation)
+      .where(
+        Annotation.paper_id == paper_id,
+        Annotation.type == "annotation",
+      )
+      .options(selectinload(Annotation.paper))
     )
     if annotation_ids:
       query = query.where(Annotation.id.in_(annotation_ids))
@@ -241,6 +272,7 @@ async def get_annotations(
     return "\n".join(lines).strip()
 
   except Exception as e:
+    await rollback_quietly(db)
     logger.error("Error in get_annotations", paper_id=paper_id, error=str(e))
     return f"Error retrieving annotations: {str(e)[:200]}"
 
@@ -271,10 +303,15 @@ async def get_notes(paper_id: int, note_ids: list[int] | None = None) -> str:
     from sqlalchemy import select
 
     from app.models.annotation import Annotation
+    from sqlalchemy.orm import selectinload
 
-    query = select(Annotation).where(
-      Annotation.paper_id == paper_id,
-      Annotation.type == "note",
+    query = (
+      select(Annotation)
+      .where(
+        Annotation.paper_id == paper_id,
+        Annotation.type == "note",
+      )
+      .options(selectinload(Annotation.paper))
     )
     if note_ids:
       query = query.where(Annotation.id.in_(note_ids))
@@ -297,6 +334,7 @@ async def get_notes(paper_id: int, note_ids: list[int] | None = None) -> str:
     return "\n".join(lines).strip()
 
   except Exception as e:
+    await rollback_quietly(db)
     logger.error("Error in get_notes", paper_id=paper_id, error=str(e))
     return f"Error retrieving notes: {str(e)[:200]}"
 
@@ -336,12 +374,99 @@ async def get_citations(paper_id: int) -> str:
 
     lines = [f"Citation info for paper {paper_id}:\n"]
     for c in citations:
-      lines.append(f"- {c.citation_text or 'N/A'}")
-      if c.doi:
-        lines.append(f"  DOI: {c.doi}")
+      ctx = c.citation_context or "N/A"
+      lines.append(f"- {ctx}")
+      if c.external_paper_title:
+        lines.append(f"  Title: {c.external_paper_title}")
+      if c.external_paper_doi:
+        lines.append(f"  DOI: {c.external_paper_doi}")
 
     return "\n".join(lines).strip()
 
   except Exception as e:
+    await rollback_quietly(db)
     logger.error("Error in get_citations", paper_id=paper_id, error=str(e))
     return f"Error retrieving citations: {str(e)[:200]}"
+
+
+@function_tool
+@with_timeout()
+async def get_paper_layout(paper_id: int) -> str:
+  """Retrieve the paper's document structure: section headings and figures.
+
+  Returns an outline of section headings with page numbers and the pages
+  on which figures appear. Use this to locate sections, figures, or tables,
+  or to answer questions about the paper's structure and layout.
+
+  Args:
+      paper_id: The unique ID of the paper in the user's library.
+
+  Returns:
+      A formatted outline of headings and figure locations.
+  """
+  ctx = get_byo_context()
+  db = ctx.extra.get("db_session")
+
+  if not db:
+    return "Error: No database session available."
+
+  try:
+    from collections import Counter
+
+    from sqlalchemy import select
+
+    from app.models.paper import Paper
+
+    result = await db.execute(
+      select(Paper)
+      .where(Paper.id == paper_id)
+      .options(selectinload(Paper.tags), selectinload(Paper.groups))
+    )
+    paper = result.scalar_one_or_none()
+
+    if not paper:
+      return f"Paper {paper_id} not found."
+
+    blocks = paper.layout_blocks or []
+    if not blocks:
+      return (
+        f"Paper '{paper.title}' has no extracted layout. Use get_paper_content "
+        "to read the full text instead."
+      )
+
+    headings: list[str] = []
+    figure_pages: list[int] = []
+    for b in blocks:
+      if not isinstance(b, dict):
+        continue
+      btype = b.get("type")
+      page = (b.get("metadata", {}) or {}).get("page", {}) or {}
+      page_no = page.get("number")
+      if btype == "heading":
+        snippet = (b.get("content") or "").strip().replace("\n", " ")[:120]
+        if snippet:
+          headings.append(f"(p{page_no}) {snippet}")
+      elif btype == "figure" and page_no is not None:
+        figure_pages.append(page_no)
+
+    lines = [f"Document structure for '{paper.title}':"]
+    if headings:
+      lines.append("\nHeadings:")
+      lines.extend(f"- {h}" for h in headings[:80])
+    if figure_pages:
+      counts = Counter(figure_pages)
+      pages_str = ", ".join(
+        f"p{p}×{c}" if c > 1 else f"p{p}" for p, c in sorted(counts.items())
+      )
+      lines.append(f"\nFigures detected: {len(figure_pages)} (pages: {pages_str})")
+    if not headings and not figure_pages:
+      return (
+        f"Paper '{paper.title}' has layout data but no headings or figures "
+        "were detected."
+      )
+    return "\n".join(lines)
+
+  except Exception as e:
+    await rollback_quietly(db)
+    logger.error("Error in get_paper_layout", paper_id=paper_id, error=str(e))
+    return f"Error retrieving paper layout: {str(e)[:200]}"

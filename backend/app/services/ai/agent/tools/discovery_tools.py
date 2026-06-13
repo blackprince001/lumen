@@ -36,7 +36,10 @@ def _format_paper(p, index: int = 0) -> str:
   if p.year:
     lines.append(f"   Year: {p.year}")
   if p.abstract:
-    lines.append(f"   Abstract: {p.abstract[:300]}...")
+    snippet = p.abstract[:500]
+    if len(p.abstract) > 500:
+      snippet += "..."
+    lines.append(f"   Abstract: {snippet}")
   details = []
   if p.doi:
     details.append(f"DOI: {p.doi}")

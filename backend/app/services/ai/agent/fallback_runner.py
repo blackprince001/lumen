@@ -9,10 +9,13 @@ to avoid duplicated output).
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any, AsyncGenerator
 
+from app.core.config import settings
 from app.core.logger import get_logger
 from app.services.ai.agent import adapt_stream, build_run_config
+from app.services.ai.agent.error import classify_exception
 from app.services.ai.agent.provider_resolver import ResolvedProvider
 
 logger = get_logger(__name__)
@@ -21,7 +24,7 @@ logger = get_logger(__name__)
 async def stream_agent_with_fallback(
   runner: Any,
   agent: Any,
-  user_message: str,
+  agent_input: Any,
   providers: list[ResolvedProvider],
   session_id: int | None,
   used_holder: list[ResolvedProvider],
@@ -31,7 +34,9 @@ async def stream_agent_with_fallback(
   Args:
       runner: The SDK ``Runner`` class.
       agent: The agent to run.
-      user_message: The user's input.
+      agent_input: The run input — either the user's message string or a
+          list of prior conversation items plus the new message (so the
+          agent keeps context across turns and across a provider switch).
       providers: Ordered fallback chain (head tried first).
       session_id: For the adapter's ``done`` event.
       used_holder: Mutated to append the provider that ultimately produced
@@ -52,7 +57,12 @@ async def stream_agent_with_fallback(
         provider_configs=[rp.route],
         model_hint=rp.route.default_model or None,
       )
-      result = runner.run_streamed(agent, input=user_message, run_config=run_config)
+      result = runner.run_streamed(
+        agent,
+        input=agent_input,
+        run_config=run_config,
+        max_turns=settings.AGENT_MAX_TURNS,
+      )
 
       async for adapted in adapt_stream(result, session_id=session_id):
         if adapted.get("type") == "chunk":
@@ -81,6 +91,8 @@ async def stream_agent_with_fallback(
         return
       # hit_error + switched: continue to next provider
 
+    except asyncio.CancelledError:
+      raise
     except Exception as e:  # noqa: BLE001 — provider/client construction errors
       logger.error(
         "Provider failed in fallback chain",
@@ -88,11 +100,12 @@ async def stream_agent_with_fallback(
         error_type=type(e).__name__,
         error=str(e)[:200],
       )
+      error_code, recoverable = classify_exception(e)
       last_error = {
         "type": "error",
         "error": str(e)[:200],
-        "error_code": "internal",
-        "recoverable": False,
+        "error_code": error_code,
+        "recoverable": recoverable,
       }
       if not emitted_content and has_more:
         yield {

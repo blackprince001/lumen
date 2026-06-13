@@ -12,17 +12,20 @@ from app.services.ai.agent.context import (
   reset_byo_context,
   set_byo_context,
 )
-from app.services.ai.agent.multi_provider import ProviderRouteConfig
-from app.services.ai.agent.stream_adapter import (
+from app.services.ai.agent.error import (
   ERROR_CODE_AUTH,
   ERROR_CODE_INTERNAL,
+  ERROR_CODE_MAX_TURNS,
   ERROR_CODE_NETWORK,
   ERROR_CODE_NO_PROVIDER,
   ERROR_CODE_PROVIDER_UNAVAILABLE,
   ERROR_CODE_RATE_LIMIT,
   ERROR_CODE_TIMEOUT,
   ERROR_CODE_TOOL_ERROR,
+  build_error_message,
+  classify_exception,
 )
+from app.services.ai.agent.multi_provider import ProviderRouteConfig
 
 # SDK-dependent exports — imported lazily so the package loads without openai-agents
 try:
@@ -55,25 +58,24 @@ except ImportError:
 __all__ = [
   "BuiltProvider",
   "BYOContext",
-  "MultiProviderBuilder",
   "ProviderRouteConfig",
-
   # Structured error codes
   "ERROR_CODE_AUTH",
   "ERROR_CODE_INTERNAL",
+  "ERROR_CODE_MAX_TURNS",
   "ERROR_CODE_NETWORK",
   "ERROR_CODE_NO_PROVIDER",
   "ERROR_CODE_PROVIDER_UNAVAILABLE",
   "ERROR_CODE_RATE_LIMIT",
   "ERROR_CODE_TIMEOUT",
   "ERROR_CODE_TOOL_ERROR",
-
   "adapt_stream",
   "build_from_configs",
+  "build_error_message",
   "build_run_config",
   "build_run_config_for_local",
   "build_simple_run_config",
-
+  "classify_exception",
   "get_byo_context",
   "reset_byo_context",
   "set_byo_context",

@@ -57,6 +57,10 @@ def build_run_config(
   Returns:
       A configured ``RunConfig``.
   """
+  from app.services.ai.agent.sdk_patches import apply_sdk_patches
+
+  apply_sdk_patches()
+
   builder = MultiProviderBuilder()
   for cfg in provider_configs:
     if cfg.is_active:
@@ -75,6 +79,7 @@ def build_run_config(
     model_settings=ModelSettings(
       temperature=temperature,
       max_tokens=max_tokens,
+      parallel_tool_calls=False,
     ),
   )
 
@@ -114,7 +119,7 @@ def build_run_config_for_local(
 
   return RunConfig(
     model=model_name,
-    model_provider=OpenAIProvider(client=client),
+    model_provider=OpenAIProvider(openai_client=client),
     model_settings=ModelSettings(
       temperature=temperature,
       max_tokens=max_tokens,
@@ -144,7 +149,7 @@ def build_simple_run_config(
 
   return RunConfig(
     model=model,
-    model_provider=OpenAIProvider(client=client),
+    model_provider=OpenAIProvider(openai_client=client),
   )
 
 
@@ -159,8 +164,17 @@ def _resolve_model(
   if not model_hint:
     return _first_default(builder)
 
-  if builder.get_prefix_for_model(model_hint):
-    return model_hint, builder.get_prefix_for_model(model_hint)
+  prefix = builder.get_prefix_for_model(model_hint)
+  if prefix:
+    return model_hint, prefix
+
+  providers = builder.provider_list
+  match = next(
+    (p for p in providers if p.default_model == model_hint),
+    providers[0] if providers else None,
+  )
+  if match is not None:
+    return f"{match.model_prefix}{model_hint}", match.model_prefix
 
   return model_hint, None
 

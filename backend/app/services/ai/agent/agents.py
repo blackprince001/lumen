@@ -9,6 +9,7 @@ and tool bindings.
 from __future__ import annotations
 
 from app.models.paper import Paper
+from app.services.ai.agent.paper_meta import authors_str
 from app.services.ai.agent.tools.chat_history import get_chat_history
 from app.services.ai.agent.tools.discovery_tools import (
   get_author_works,
@@ -29,9 +30,11 @@ from app.services.ai.agent.tools.paper_tools import (
   get_citations,
   get_notes,
   get_paper_content,
+  get_paper_layout,
   get_paper_metadata,
   search_papers,
 )
+from app.services.ai.agent.tools.figure_tools import view_figures
 from app.services.ai.agent.tools.rag_tool import semantic_search
 
 # OpenAI Agents SDK — optional dependency
@@ -55,7 +58,14 @@ Guidelines:
 - If the user asks about something not in the paper, use your general knowledge but clarify what comes from the paper vs. what is external.
 - Be concise but thorough. Default to providing useful detail.
 - Use semantic_search when the user asks about related concepts not in this specific paper.
-- Format mathematical expressions using LaTeX notation when relevant."""
+- Format mathematical expressions using LaTeX notation when relevant.
+- Do not use emojis. Do not insert horizontal rule separators (lines of "---" or "***"); use markdown headings and plain prose to structure your answer.
+
+Use your tools to ground every answer. Before stating facts about the paper,
+call the tools to verify rather than relying on memory: read the layout/content,
+check the user's annotations and notes, look up citations, and call
+get_chat_history when the user refers to earlier turns. Prefer a quick tool
+check over a confident guess."""
 
 
 MULTI_PAPER_AGENT_INSTRUCTIONS = """You are an AI research assistant helping a user understand and compare multiple research papers at once.
@@ -70,7 +80,14 @@ Guidelines:
 - If the user's notes or annotations are relevant, reference them.
 - Use semantic_search to find additional relevant papers in the user's library.
 - Be concise but thorough.
-- Format mathematical expressions using LaTeX notation when relevant."""
+- Format mathematical expressions using LaTeX notation when relevant.
+- Do not use emojis. Do not insert horizontal rule separators (lines of "---" or "***"); use markdown headings and plain prose to structure your answer.
+
+Use your tools to ground every answer. Before comparing or asserting what a
+paper says, call the tools to verify rather than relying on memory: read each
+paper's layout/content, check annotations and notes, look up citations, and call
+get_chat_history when the user refers to earlier turns. Prefer a quick tool
+check over a confident guess."""
 
 
 DEEP_RESEARCH_INSTRUCTIONS = """You are a deep research assistant that produces comprehensive, cited reports.
@@ -87,13 +104,82 @@ Guidelines:
 - Note the strength of evidence for each claim.
 - Identify where papers agree and disagree.
 - Suggest specific papers the user should read next.
-- Be thorough and nuanced."""
+- Be thorough and nuanced.
+- Do not use emojis. Do not insert horizontal rule separators (lines of "---" or "***"); use markdown headings and plain prose to structure your report.
+
+Use your tools to ground every claim. Always cross-check with the tools before
+asserting a fact: search the library and the web, open paper details, and verify
+citations and author works rather than relying on memory. Every claim in the
+report should trace back to something a tool returned."""
 
 
 SYSTEM_PROMPT_SUFFIX = """
 \n\nAvailable papers in context:
 {paper_context}
 """
+
+# How many prior messages to replay into the agent so it keeps conversational
+# context across turns (and across a provider switch). Memory is keyed by the
+# chat session: the same DB history is replayed regardless of which provider
+# ultimately answers.
+AGENT_HISTORY_LIMIT = 20
+
+
+def build_agent_input(
+  history: list,
+  user_message: str,
+  max_messages: int = AGENT_HISTORY_LIMIT,
+) -> list[dict[str, str]]:
+  """Build the Runner input: prior turns followed by the new user message.
+
+  ``history`` is a list of message rows (``ChatMessage`` / ``MultiChatMessage``)
+  exposing ``.role`` and ``.content``. Empty messages are dropped. The new
+  ``user_message`` is always appended last.
+  """
+  items: list[dict[str, str]] = []
+  for msg in history[-max_messages:]:
+    content = (getattr(msg, "content", "") or "").strip()
+    if not content:
+      continue
+    role = "assistant" if getattr(msg, "role", "") == "assistant" else "user"
+    items.append({"role": role, "content": content})
+  items.append({"role": "user", "content": user_message})
+  return items
+
+
+def _layout_text(paper: Paper) -> str | None:
+  """Extract readable text from the paper's layout blocks, or None."""
+  blocks = paper.layout_blocks
+  if not blocks:
+    return None
+
+  parts: list[str] = []
+  char_count = 0
+  max_chars = 30000
+
+  for b in blocks:
+    if not isinstance(b, dict):
+      continue
+    btype = b.get("type")
+    if btype not in ("text", "heading"):
+      continue
+    content = (b.get("content") or "").strip()
+    if not content:
+      continue
+    meta = b.get("metadata", {}) or {}
+    page = (meta.get("page", {}) or {}).get("number")
+    prefix = f"[p{page}] " if page else ""
+    line = f"{prefix}{content}\n"
+    if char_count + len(line) > max_chars:
+      break
+    parts.append(line)
+    char_count += len(line)
+
+  if not parts:
+    return None
+
+  text = "".join(parts).strip()
+  return text
 
 
 def create_paper_agent(
@@ -110,8 +196,8 @@ def create_paper_agent(
       A configured ``Agent`` instance.
   """
   tools = [
-    get_paper_content,
-    get_paper_metadata,
+    get_paper_layout,
+    view_figures,
     get_annotations,
     get_notes,
     get_citations,
@@ -123,8 +209,13 @@ def create_paper_agent(
     tools.extend(additional_tools)
 
   paper_info = f"- [{paper.id}] {paper.title}"
-  if paper.authors:
-    paper_info += f" by {paper.authors[:100]}"
+  paper_authors = authors_str(paper)
+  if paper_authors:
+    paper_info += f" by {paper_authors[:100]}"
+
+  paper_text = _layout_text(paper)
+  if paper_text:
+    paper_info += f"\n\n## Paper Content\n\n{paper_text}"
 
   instructions = PAPER_AGENT_INSTRUCTIONS + SYSTEM_PROMPT_SUFFIX.format(
     paper_context=paper_info,
@@ -151,8 +242,8 @@ def create_multi_paper_agent(
       A configured ``Agent`` instance.
   """
   tools = [
-    get_paper_content,
-    get_paper_metadata,
+    get_paper_layout,
+    view_figures,
     get_annotations,
     get_notes,
     get_citations,
@@ -166,8 +257,12 @@ def create_multi_paper_agent(
   context_lines = [f"A user is discussing {len(papers)} paper(s):"]
   for p in papers:
     line = f"- [{p.id}] {p.title}"
-    if p.authors:
-      line += f" by {p.authors[:80]}"
+    p_authors = authors_str(p)
+    if p_authors:
+      line += f" by {p_authors[:80]}"
+    paper_text = _layout_text(p)
+    if paper_text:
+      line += f"\n\n## Paper Content\n\n{paper_text}"
     context_lines.append(line)
 
   instructions = MULTI_PAPER_AGENT_INSTRUCTIONS + SYSTEM_PROMPT_SUFFIX.format(

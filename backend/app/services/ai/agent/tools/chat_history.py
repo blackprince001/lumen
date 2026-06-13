@@ -13,14 +13,14 @@ except ImportError:
 
 from app.core.logger import get_logger
 from app.services.ai.agent.context import get_byo_context
-from app.services.ai.agent.tools import with_timeout
+from app.services.ai.agent.tools import rollback_quietly, with_timeout
 
 logger = get_logger(__name__)
 
 
 @function_tool
 @with_timeout()
-async def get_chat_history(session_id: int, limit: int = 10) -> str:
+async def get_chat_history(session_id: int = 0, limit: int = 10) -> str:
   """Retrieve recent messages from the current chat session.
 
   Use this to review what has been discussed so far in the
@@ -28,7 +28,8 @@ async def get_chat_history(session_id: int, limit: int = 10) -> str:
   user refers to previous responses.
 
   Args:
-      session_id: The chat session ID to retrieve history for.
+      session_id: The chat session ID. Leave as 0 to use the active
+          session (it is supplied automatically from request context).
       limit: Number of recent messages to return (default 10, max 50).
 
   Returns:
@@ -36,6 +37,13 @@ async def get_chat_history(session_id: int, limit: int = 10) -> str:
   """
   ctx = get_byo_context()
   db = ctx.extra.get("db_session")
+
+  # The active session is injected into context by the chat service, so the
+  # model never has to know (or guess) the numeric session id.
+  if not session_id:
+    session_id = ctx.extra.get("session_id") or 0
+  if not session_id:
+    return "Error: No active chat session to read history from."
 
   if not db:
     return "Error: No database session available."
@@ -77,6 +85,7 @@ async def get_chat_history(session_id: int, limit: int = 10) -> str:
     return "\n".join(lines).strip()
 
   except Exception as e:
+    await rollback_quietly(db)
     logger.error(
       "Error in get_chat_history",
       session_id=session_id,
@@ -109,11 +118,13 @@ async def get_chat_sessions(paper_id: int) -> str:
     from sqlalchemy import select
 
     from app.models.chat import ChatSession
+    from sqlalchemy.orm import selectinload
 
     result = await db.execute(
       select(ChatSession)
       .where(ChatSession.paper_id == paper_id)
       .order_by(ChatSession.updated_at.desc())
+      .options(selectinload(ChatSession.messages))
     )
     sessions = result.scalars().all()
 
@@ -122,12 +133,13 @@ async def get_chat_sessions(paper_id: int) -> str:
 
     lines = [f"Chat sessions for paper {paper_id}:\n"]
     for s in sessions:
-      msg_count = len(s.messages) if hasattr(s, "messages") and s.messages else 0
+      msg_count = len(s.messages) if s.messages else 0
       lines.append(f'  Session {s.id}: "{s.name}" ({msg_count} messages)')
 
     return "\n".join(lines).strip()
 
   except Exception as e:
+    await rollback_quietly(db)
     logger.error(
       "Error in get_chat_sessions",
       paper_id=paper_id,

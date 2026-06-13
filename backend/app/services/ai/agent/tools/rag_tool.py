@@ -15,7 +15,7 @@ except ImportError:
 
 from app.core.logger import get_logger
 from app.services.ai.agent.context import get_byo_context
-from app.services.ai.agent.tools import with_timeout
+from app.services.ai.agent.tools import rollback_quietly, with_timeout
 from app.services.embeddings import embedding_service
 
 logger = get_logger(__name__)
@@ -59,10 +59,11 @@ async def semantic_search(query: str, limit: int = 5) -> str:
     vector_str = "[" + ",".join(str(v) for v in embedding) + "]"
     sql = text(
       """
-      SELECT id, title, authors, 1 - (embedding <=> :vector::vector) AS similarity
+      SELECT id, title, metadata_json,
+             1 - (embedding <=> CAST(:vector AS vector)) AS similarity
       FROM papers
       WHERE embedding IS NOT NULL
-      ORDER BY embedding <=> :vector::vector
+      ORDER BY embedding <=> CAST(:vector AS vector)
       LIMIT :limit
       """
     )
@@ -77,8 +78,12 @@ async def semantic_search(query: str, limit: int = 5) -> str:
     for i, row in enumerate(rows, 1):
       score = float(row.similarity) if row.similarity is not None else 0.0
       lines.append(f"{i}. [{row.id}] {row.title} (similarity: {score:.3f})")
-      if row.authors:
-        lines.append(f"   Authors: {row.authors[:100]}")
+      meta = row.metadata_json if isinstance(row.metadata_json, dict) else {}
+      row_authors = meta.get("authors")
+      if row_authors:
+        if isinstance(row_authors, (list, tuple)):
+          row_authors = ", ".join(str(a) for a in row_authors if a)
+        lines.append(f"   Authors: {str(row_authors)[:100]}")
 
       paper = await db.get(Paper, row.id)
       if paper and paper.content_text:
@@ -90,5 +95,6 @@ async def semantic_search(query: str, limit: int = 5) -> str:
     return "\n".join(lines).strip()
 
   except Exception as e:
+    await rollback_quietly(db)
     logger.error("Error in semantic_search", query=query, error=str(e))
     return f"Error performing semantic search: {str(e)[:200]}"
