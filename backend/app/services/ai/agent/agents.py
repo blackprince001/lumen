@@ -10,6 +10,20 @@ from __future__ import annotations
 
 from app.models.paper import Paper
 from app.services.ai.agent.tools.chat_history import get_chat_history
+from app.services.ai.agent.tools.discovery_tools import (
+  get_author_works,
+  get_recommendations,
+  get_references,
+  search_authors,
+  search_discovery,
+  web_search,
+)
+from app.services.ai.agent.tools.discovery_tools import (
+  get_citations as discovery_get_citations,
+)
+from app.services.ai.agent.tools.discovery_tools import (
+  get_paper_details as discovery_get_paper_details,
+)
 from app.services.ai.agent.tools.paper_tools import (
   get_annotations,
   get_citations,
@@ -167,8 +181,6 @@ def create_multi_paper_agent(
   )
 
 
-# this one might have to include the external discovery tools as tools to be used later
-# if we get to actually use this on the app.
 def create_deep_research_agent(
   additional_tools: list | None = None,
 ) -> Agent:
@@ -186,7 +198,14 @@ def create_deep_research_agent(
     get_paper_content,
     get_paper_metadata,
     get_citations,
-    # discovery tools over here
+    search_discovery,
+    discovery_get_paper_details,
+    discovery_get_citations,
+    get_references,
+    get_recommendations,
+    web_search,
+    search_authors,
+    get_author_works,
   ]
   if additional_tools:
     tools.extend(additional_tools)
