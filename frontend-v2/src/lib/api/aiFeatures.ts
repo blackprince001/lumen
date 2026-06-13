@@ -4,6 +4,7 @@ import type { Annotation } from './annotations';
 export interface SummaryResponse {
   summary: string;
   generated_at?: string;
+  status: string;
 }
 
 export interface FindingsResponse {
@@ -14,6 +15,8 @@ export interface FindingsResponse {
     limitations?: string[];
     future_work?: string[];
   };
+  generated_at?: string;
+  status: string;
 }
 
 export interface ReadingGuideResponse {
@@ -22,6 +25,8 @@ export interface ReadingGuideResponse {
     during_reading?: string[];
     post_reading?: string[];
   };
+  generated_at?: string;
+  status: string;
 }
 
 export const aiFeaturesApi = {

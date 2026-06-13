@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { chatStreamClient } from '@/lib/ai/chatStream';
 import type { ChatReferences } from '@/lib/api/chat';
 import { logger } from '@/lib/logger';
+import { useTypewriter } from '@/hooks/use-typewriter';
 
 export type ChatStreamStatus =
   | 'idle'
@@ -38,7 +39,6 @@ export interface ChatStreamError {
 export interface ChatStreamState {
   status: ChatStreamStatus;
   content: string;
-  displayedContent: string;
   thoughts: ThoughtEvent[];
   toolCalls: ToolCallEvent[];
   toolResults: ToolResultEvent[];
@@ -51,7 +51,6 @@ export interface ChatStreamState {
 const INITIAL_STATE: ChatStreamState = {
   status: 'idle',
   content: '',
-  displayedContent: '',
   thoughts: [],
   toolCalls: [],
   toolResults: [],
@@ -62,6 +61,8 @@ const INITIAL_STATE: ChatStreamState = {
 };
 
 export interface UseChatStreamReturn extends ChatStreamState {
+  /** Smoothly-revealed view of `content` for typewriter rendering. */
+  displayedContent: string;
   /** Send a message and start streaming. */
   send: (
     paperId: number,
@@ -82,9 +83,6 @@ export interface UseChatStreamReturn extends ChatStreamState {
   pendingUserMessage: string | null;
 }
 
-const WORDS_PER_SECOND = 12;
-const WORD_REVEAL_DELAY_MS = 1000 / WORDS_PER_SECOND;
-
 export function useChatStream(): UseChatStreamReturn {
   const [state, setState] = useState<ChatStreamState>(INITIAL_STATE);
   const abortRef = useRef<AbortController | null>(null);
@@ -96,46 +94,9 @@ export function useChatStream(): UseChatStreamReturn {
     providerId?: number;
   } | null>(null);
   const pendingUserMessageRef = useRef<string | null>(null);
-  const displayTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const accumulatedContentRef = useRef('');
 
-  // ---- Word-by-word display reveal ----
-
-  useEffect(() => {
-    const content = state.content;
-    if (content.length > state.displayedContent.length) {
-      if (displayTimerRef.current) clearInterval(displayTimerRef.current);
-
-      displayTimerRef.current = setInterval(() => {
-        setState((prev) => {
-          if (prev.displayedContent.length >= prev.content.length) {
-            if (displayTimerRef.current) {
-              clearInterval(displayTimerRef.current);
-              displayTimerRef.current = null;
-            }
-            return prev;
-          }
-          const remaining = prev.content.slice(prev.displayedContent.length);
-          const wordMatch = remaining.match(/^(\s*\S+)/);
-          return {
-            ...prev,
-            displayedContent: wordMatch
-              ? prev.displayedContent + wordMatch[1]
-              : prev.content,
-          };
-        });
-      }, WORD_REVEAL_DELAY_MS);
-    }
-
-    return () => {
-      if (displayTimerRef.current) {
-        clearInterval(displayTimerRef.current);
-        displayTimerRef.current = null;
-      }
-    };
-  }, [state.content, state.displayedContent.length, state.status]);
-
-  // ---- Core send logic ----
+  const streamSettled = state.status === 'done' || state.status === 'error';
+  const displayedContent = useTypewriter(state.content, streamSettled);
 
   const runStream = useCallback(
     async (
@@ -151,13 +112,11 @@ export function useChatStream(): UseChatStreamReturn {
 
       lastSendRef.current = { paperId, message, references, sessionId, providerId };
       pendingUserMessageRef.current = message;
-      accumulatedContentRef.current = '';
 
       setState({
         ...INITIAL_STATE,
         status: 'connecting',
         content: '',
-        displayedContent: '',
       });
 
       try {
@@ -178,7 +137,6 @@ export function useChatStream(): UseChatStreamReturn {
             switch (event.type) {
               case 'chunk': {
                 const text = event.content || '';
-                accumulatedContentRef.current += text;
                 next.content = prev.content + text;
                 next.status = 'streaming';
                 break;
@@ -208,22 +166,25 @@ export function useChatStream(): UseChatStreamReturn {
                 ];
                 next.currentTool = null;
                 if (prev.toolCalls.length > prev.toolResults.length) {
-                  // Still more tools to run
                 } else {
                   next.status = 'streaming';
                 }
                 break;
 
-              case 'thought':
-                next.thoughts = [
-                  ...prev.thoughts,
-                  {
-                    content: event.content || '',
-                    timestamp: Date.now(),
-                  },
-                ];
+              case 'thought': {
+                const delta = event.content || '';
+                const last = prev.thoughts[prev.thoughts.length - 1];
+                if (last) {
+                  next.thoughts = [
+                    ...prev.thoughts.slice(0, -1),
+                    { content: last.content + delta, timestamp: last.timestamp },
+                  ];
+                } else {
+                  next.thoughts = [{ content: delta, timestamp: Date.now() }];
+                }
                 next.status = 'thinking';
                 break;
+              }
 
               case 'error':
                 next.status = 'error';
@@ -235,7 +196,6 @@ export function useChatStream(): UseChatStreamReturn {
                 break;
 
               case 'keepalive':
-                // No state change — just keeps the connection alive
                 break;
 
               case 'done':
@@ -249,7 +209,6 @@ export function useChatStream(): UseChatStreamReturn {
           });
         }
 
-        // Stream ended without explicit 'done' — synthesize one
         setState((prev) => {
           if (prev.status !== 'done' && prev.status !== 'error') {
             return { ...prev, status: 'done' };
@@ -329,16 +288,15 @@ export function useChatStream(): UseChatStreamReturn {
     lastSendRef.current = null;
   }, []);
 
-  // ---- Cleanup on unmount ----
   useEffect(() => {
     return () => {
       abortRef.current?.abort();
-      if (displayTimerRef.current) clearInterval(displayTimerRef.current);
     };
   }, []);
 
   return {
     ...state,
+    displayedContent,
     send,
     cancel,
     retry,

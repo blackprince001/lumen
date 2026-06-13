@@ -3,11 +3,12 @@ import { MarkdownMessage } from '@/components/MarkdownMessage';
 import { ToolCallIndicator } from '@/components/ai/ToolCallIndicator';
 import { ErrorBanner } from '@/components/ai/ErrorBanner';
 import { AgentThoughtPanel } from '@/components/ai/AgentThoughtPanel';
+import { MessageAuthor } from '@/components/ai/MessageAuthor';
 import { cn } from '@/lib/utils';
 import type { ChatStreamState, ToolCallEvent, ToolResultEvent } from '@/hooks/use-chat-stream';
 
 export interface StreamingMessageProps {
-  state: ChatStreamState;
+  state: ChatStreamState & { displayedContent: string };
   isStreaming: boolean;
   onRetry?: () => void;
   onDismiss?: () => void;
@@ -53,8 +54,8 @@ export function StreamingMessage({
   }
 
   return (
-    <div className={cn('relative w-full px-4 py-2.5 rounded-b-interactive bg-transparent border border-transparent', className)}>
-      <span className="absolute top-0 left-0 h-[0.125rem] w-10 bg-[rgba(76,255,169,0.5)]" />
+    <div className={cn('relative w-full px-3 py-2.5 rounded-xl bg-transparent', className)}>
+      <MessageAuthor role="assistant" />
 
       {/* Agent reasoning (thoughts) */}
       <AgentThoughtPanel thoughts={state.thoughts} />

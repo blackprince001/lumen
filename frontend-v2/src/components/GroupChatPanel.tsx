@@ -8,10 +8,11 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { MarkdownMessage } from '@/components/MarkdownMessage';
 import { StreamingMessage } from '@/components/ai/StreamingMessage';
+import { MessageAuthor } from '@/components/ai/MessageAuthor';
 import { ExpandedInput } from '@/components/ExpandedInput';
 import { ProviderPicker } from '@/components/ai/ProviderPicker';
-import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
+import { useTypewriter } from '@/hooks/use-typewriter';
 
 interface GroupChatPanelProps {
   groupId: number;
@@ -46,7 +47,6 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
   const [streamState, setStreamState] = useState<{
     status: 'idle' | 'connecting' | 'streaming' | 'thinking' | 'using_tool' | 'done' | 'error';
     content: string;
-    displayedContent: string;
     toolCalls: StreamEvent[];
     toolResults: StreamEvent[];
     thoughts: StreamEvent[];
@@ -57,7 +57,6 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
   }>({
     status: 'idle',
     content: '',
-    displayedContent: '',
     toolCalls: [],
     toolResults: [],
     thoughts: [],
@@ -98,31 +97,13 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     },
   });
 
-  // Word-by-word display
-  useEffect(() => {
-    if (!isStreaming || !streamState.content) return;
-    if (streamState.displayedContent.length >= streamState.content.length) {
-      setStreamState((prev) => ({ ...prev, displayedContent: prev.content }));
-      return;
-    }
-    const timer = setTimeout(() => {
-      setStreamState((prev) => {
-        const remaining = prev.content.slice(prev.displayedContent.length);
-        const wordMatch = remaining.match(/^(\s*\S+)/);
-        return {
-          ...prev,
-          displayedContent: wordMatch
-            ? prev.displayedContent + wordMatch[1]
-            : prev.content,
-        };
-      });
-    }, 1000 / 12);
-    return () => clearTimeout(timer);
-  }, [streamState.content, streamState.displayedContent, isStreaming]);
+  // Smooth typewriter reveal of the streamed content (flushes on settle).
+  const streamSettled = streamState.status === 'done' || streamState.status === 'error';
+  const displayedContent = useTypewriter(streamState.content, streamSettled);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [currentSession?.messages, streamState.displayedContent, pendingUserMessage]);
+  }, [currentSession?.messages, displayedContent, pendingUserMessage]);
 
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
@@ -130,7 +111,6 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     setStreamState({
       status: 'idle',
       content: '',
-      displayedContent: '',
       toolCalls: [],
       toolResults: [],
       thoughts: [],
@@ -150,7 +130,6 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     setStreamState({
       status: 'idle',
       content: '',
-      displayedContent: '',
       toolCalls: [],
       toolResults: [],
       thoughts: [],
@@ -172,7 +151,6 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     setStreamState({
       status: 'connecting',
       content: '',
-      displayedContent: '',
       toolCalls: [],
       toolResults: [],
       thoughts: [],
@@ -265,7 +243,6 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
         setStreamState({
           status: 'idle',
           content: '',
-          displayedContent: '',
           toolCalls: [],
           toolResults: [],
           thoughts: [],
@@ -331,17 +308,9 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
             {messages.map((msg) => (
               <div
                 key={msg.id}
-                className={cn(
-                  'group relative w-full px-4 py-2.5 text-code bg-transparent transition-colors border border-transparent',
-                  msg.role === 'user'
-                    ? 'hover:bg-[rgba(60,145,230,0.05)] hover:border-[rgba(60,145,230,0.25)]'
-                    : 'hover:bg-[rgba(76,255,169,0.06)] hover:border-[rgba(76,255,169,0.3)]'
-                )}
+                className="group relative w-full px-3 py-2.5 text-code rounded-xl bg-transparent transition-colors hover:bg-(--muted)/40"
               >
-                <span className={cn(
-                  'absolute top-0 left-0 h-[0.125rem] w-10',
-                  msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
-                )} />
+                <MessageAuthor role={msg.role === 'user' ? 'user' : 'assistant'} />
                 {msg.role === 'user' ? (
                   <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
@@ -352,8 +321,8 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
 
             {/* Pending user message */}
             {pendingUserMessage && (
-              <div className="relative w-full px-4 py-2.5 rounded-b-interactive text-code bg-transparent border border-transparent">
-                <span className="absolute top-0 left-0 h-[0.125rem] w-10 bg-[rgba(60,145,230,0.5)]" />
+              <div className="relative w-full px-3 py-2.5 rounded-xl text-code bg-transparent">
+                <MessageAuthor role="user" />
                 <p className="leading-relaxed whitespace-pre-wrap">{pendingUserMessage}</p>
               </div>
             )}
@@ -364,7 +333,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
                 state={{
                   status: streamState.status as any,
                   content: streamState.content,
-                  displayedContent: streamState.displayedContent,
+                  displayedContent: displayedContent,
                   toolCalls: streamState.toolCalls.map(e => ({
                     tool: e.tool as string,
                     arguments: (e.arguments as Record<string, unknown>) || {},

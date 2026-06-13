@@ -4,12 +4,12 @@ import { chatApi, type ChatMessage } from '@/lib/api/chat';
 import { chatStreamClient } from '@/lib/ai/chatStream';
 import type { StreamEvent } from '@/lib/ai/chatStream';
 import { MarkdownMessage } from './MarkdownMessage';
+import { MessageAuthor } from '@/components/ai/MessageAuthor';
 import { StreamingMessage } from './ai/StreamingMessage';
 import { ExpandedInput } from './ExpandedInput';
 import { format } from 'date-fns';
 import { Send } from 'iconsax-reactjs';
 import { Skeleton } from './ui/Skeleton';
-import { cn } from '@/lib/utils';
 import { logger } from '@/lib/logger';
 
 interface MessageThreadProps {
@@ -257,24 +257,14 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
           <>
             {threadMessages.map(msg => (
               <div key={msg.id} className="flex justify-start">
-                <div
-                  className={cn(
-                    'group relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent transition-colors border border-transparent',
-                    msg.role === 'user'
-                      ? 'hover:bg-[rgba(60,145,230,0.05)] hover:border-[rgba(60,145,230,0.25)]'
-                      : 'hover:bg-[rgba(76,255,169,0.06)] hover:border-[rgba(76,255,169,0.3)]'
-                  )}
-                >
-                  <span className={cn(
-                    'absolute top-0 left-0 h-[0.125rem] w-8',
-                    msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
-                  )} />
+                <div className="group relative w-full px-3 py-2 rounded-xl text-caption bg-transparent transition-colors hover:bg-(--muted)/40">
+                  <MessageAuthor role={msg.role === 'user' ? 'user' : 'assistant'} />
                   {msg.role === 'user' ? (
                     <div className="whitespace-pre-wrap wrap-break-word">{msg.content}</div>
                   ) : (
                     <MarkdownMessage content={msg.content} />
                   )}
-                  <span className="absolute bottom-1 right-2 text-[0.625rem] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
+                  <span className="absolute top-2 right-2 text-[0.625rem] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
                     {format(new Date(msg.created_at), 'HH:mm')}
                   </span>
                 </div>
@@ -283,8 +273,8 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
 
             {pendingUserMessage && (
               <div className="flex justify-start">
-                <div className="relative w-full px-3 py-2 rounded-b-interactive text-caption bg-transparent border border-transparent">
-                  <span className="absolute top-0 left-0 h-[0.125rem] w-8 bg-[rgba(60,145,230,0.5)]" />
+                <div className="relative w-full px-3 py-2 rounded-xl text-caption bg-transparent">
+                  <MessageAuthor role="user" />
                   <div className="whitespace-pre-wrap wrap-break-word">{pendingUserMessage}</div>
                 </div>
               </div>

@@ -65,23 +65,23 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
           <p className="text-code">Open a paper to see details</p>
         </div>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} variant="plain" className="flex flex-col h-full">
           {/* Icon-only pill bar */}
           <div className="flex items-center justify-between shrink-0 border-b border-(--panel-border) bg-(--panel-surface)">
             <TabsList className="flex items-center gap-1 px-3 py-2 border-none bg-transparent">
-              <TabsTrigger value="details" title="Details" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+              <TabsTrigger value="details" title="Details" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                 <FileText size={18} />
               </TabsTrigger>
-              <TabsTrigger value="ai" title="Insights" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+              <TabsTrigger value="ai" title="Insights" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                 <Sparkles size={18} />
               </TabsTrigger>
-              <TabsTrigger value="related" title="Related" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+              <TabsTrigger value="related" title="Related" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                 <Link size={18} />
               </TabsTrigger>
-              <TabsTrigger value="chat" title="Chat" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+              <TabsTrigger value="chat" title="Chat" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                 <MessageSquare size={18} />
               </TabsTrigger>
-              <TabsTrigger value="notes" title="Notes" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+              <TabsTrigger value="notes" title="Notes" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                 <StickyNote size={18} />
                 {noteItems.length > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 text-micro bg-(--muted) px-1 py-0.5 rounded-full tabular-nums leading-none">
@@ -89,7 +89,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="annotations" title="Annotations" className="relative inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+              <TabsTrigger value="annotations" title="Annotations" className="relative inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                 <Highlighter size={18} />
                 {annotationItems.length > 0 && (
                   <span className="absolute -top-0.5 -right-0.5 text-micro bg-(--muted) px-1 py-0.5 rounded-full tabular-nums leading-none">
@@ -97,7 +97,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
                   </span>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="bookmarks" title="Bookmarks" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border) data-[state=inactive]:hover:text-(--foreground) data-[state=inactive]:hover:border-(--foreground)/30">
+              <TabsTrigger value="bookmarks" title="Bookmarks" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                 <Bookmark size={18} />
               </TabsTrigger>
             </TabsList>
@@ -118,19 +118,19 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
             </TabsContent>
 
             <TabsContent value="ai" className="h-full overflow-hidden flex flex-col">
-              <Tabs value={aiTab} onValueChange={setAiTab} className="flex flex-col h-full">
+              <Tabs value={aiTab} onValueChange={setAiTab} variant="plain" className="flex flex-col h-full">
                 <div className="shrink-0 border-b border-(--border) px-3 py-1.5 bg-(--panel-surface)">
                   <TabsList className="gap-0.5 border-none bg-transparent">
-                    <TabsTrigger value="summary" className="px-2.5 py-1 text-caption rounded-full border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border)">
+                    <TabsTrigger value="summary" className="px-2.5 py-1 text-caption rounded-full transition-colors data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                       Summary
                     </TabsTrigger>
-                    <TabsTrigger value="insights" className="px-2.5 py-1 text-caption rounded-full border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border)">
+                    <TabsTrigger value="insights" className="px-2.5 py-1 text-caption rounded-full transition-colors data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                       Insights
                     </TabsTrigger>
-                    <TabsTrigger value="guide" className="px-2.5 py-1 text-caption rounded-full border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border)">
+                    <TabsTrigger value="guide" className="px-2.5 py-1 text-caption rounded-full transition-colors data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                       Guide
                     </TabsTrigger>
-                    <TabsTrigger value="highlights" className="px-2.5 py-1 text-caption rounded-full border data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=active]:border-(--foreground) data-[state=inactive]:bg-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:border-(--border)">
+                    <TabsTrigger value="highlights" className="px-2.5 py-1 text-caption rounded-full transition-colors data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
                       Highlights
                     </TabsTrigger>
                   </TabsList>

@@ -11,6 +11,7 @@ import { ConfirmDialog, useConfirmDialog } from '@/components/ConfirmDialog';
 import { ExpandedInput } from '@/components/ExpandedInput';
 import { MessageThread } from '@/components/MessageThread';
 import { StreamingMessage } from '@/components/ai/StreamingMessage';
+import { MessageAuthor } from '@/components/ai/MessageAuthor';
 import { ProviderPicker } from '@/components/ai/ProviderPicker';
 import { defaultPrompts } from '@/lib/constants/defaultPrompts';
 import { cn } from '@/lib/utils';
@@ -381,24 +382,14 @@ export function ChatTab({ paperId }: ChatTabProps) {
           {messages.map((msg) => (
             <div key={msg.id}>
               <div className="flex justify-start">
-                <div
-                  className={cn(
-                    'group relative w-full px-4 py-2.5 rounded-b-interactive bg-transparent transition-colors border border-transparent',
-                    msg.role === 'user'
-                      ? 'hover:bg-[rgba(60,145,230,0.05)] hover:border-[rgba(60,145,230,0.25)]'
-                      : 'hover:bg-[rgba(76,255,169,0.06)] hover:border-[rgba(76,255,169,0.3)]'
-                  )}
-                >
-                  <span className={cn(
-                    'absolute top-0 left-0 h-[0.125rem] w-10',
-                    msg.role === 'user' ? 'bg-[rgba(60,145,230,0.5)]' : 'bg-[rgba(76,255,169,0.5)]'
-                  )} />
+                <div className="group relative w-full px-3 py-2.5 rounded-xl bg-transparent transition-colors hover:bg-(--muted)/40">
+                  <MessageAuthor role={msg.role === 'user' ? 'user' : 'assistant'} />
                   {msg.role === 'user' ? (
                     <p className="text-code leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                   ) : (
                     <>
                       <MarkdownMessage content={msg.content} />
-                      <div className="absolute -bottom-6 right-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-(--card) border border-(--border) p-1 rounded-md shadow-sm z-10">
+                      <div className="absolute -bottom-5 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-(--card) border border-(--border) p-1 rounded-md z-10">
                         <Button
                           variant="ghost"
                           className="h-6! w-6! p-0!"
@@ -418,7 +409,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
                       </div>
                     </>
                   )}
-                  <span className="absolute bottom-1.5 right-2 text-[0.625rem] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
+                  <span className="absolute top-2.5 right-2 text-[0.625rem] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
                     {format(new Date(msg.created_at), 'MMM d, h:mm a')}
                   </span>
                 </div>
@@ -439,8 +430,8 @@ export function ChatTab({ paperId }: ChatTabProps) {
           {/* Pending user message */}
           {pendingUserMessage && (
             <div className="flex justify-start">
-              <div className="relative w-full px-4 py-2.5 rounded-b-interactive bg-transparent border border-transparent">
-                <span className="absolute top-0 left-0 h-[0.125rem] w-10 bg-[rgba(60,145,230,0.5)]" />
+              <div className="relative w-full px-3 py-2.5 rounded-xl bg-transparent">
+                <MessageAuthor role="user" />
                 <p className="text-code leading-relaxed whitespace-pre-wrap">{pendingUserMessage}</p>
               </div>
             </div>
@@ -480,7 +471,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
               {showScrollUp && (
                 <button
                   onClick={scrollToTop}
-                  className="w-8 h-8 rounded-full bg-(--card) border border-(--border) shadow-md flex items-center justify-center text-(--muted-foreground) hover:text-(--foreground) transition-colors"
+                  className="w-8 h-8 rounded-full bg-(--card) border border-(--border) flex items-center justify-center text-(--muted-foreground) hover:text-(--foreground) hover:border-(--foreground)/30 transition-colors"
                   title="Scroll to top"
                 >
                   <ArrowUp size={14} />
@@ -489,7 +480,7 @@ export function ChatTab({ paperId }: ChatTabProps) {
               {showScrollDown && (
                 <button
                   onClick={scrollToBottom}
-                  className="w-8 h-8 rounded-full bg-(--card) border border-(--border) shadow-md flex items-center justify-center text-(--muted-foreground) hover:text-(--foreground) transition-colors"
+                  className="w-8 h-8 rounded-full bg-(--card) border border-(--border) flex items-center justify-center text-(--muted-foreground) hover:text-(--foreground) hover:border-(--foreground)/30 transition-colors"
                   title="Scroll to bottom"
                 >
                   <ArrowDown size={14} />

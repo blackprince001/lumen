@@ -323,7 +323,8 @@ export function ExpandedInput({
   return (
     <div className={cn('flex flex-col gap-4 w-full', className)}>
       <div className={cn(
-        'flex flex-col bg-(--card) border border-(--border) shadow-lg',
+        'flex flex-col bg-(--card) border border-(--border) transition-colors',
+        'hover:border-(--foreground)/20 focus-within:border-(--foreground)/30',
         isCompact ? 'rounded-xl' : 'min-h-[7.5rem] rounded-2xl',
       )}>
         {/* Textarea container — no overflow-y so absolute mention dropdown isn't clipped */}
@@ -348,7 +349,7 @@ export function ExpandedInput({
           {showMentionDropdown && filteredMentionItems.length > 0 && (
             <div
               ref={mentionDropdownRef}
-              className="absolute z-100 left-3 right-3 bg-(--white) border border-(--border) rounded-xl shadow-lg max-h-60 overflow-y-auto"
+              className="absolute z-100 left-3 right-3 bg-(--white) border border-(--border) rounded-xl max-h-60 overflow-y-auto"
               style={{ bottom: 'calc(100% + 0.5rem)' }}
             >
               {filteredMentionItems.map((item, index) => (
