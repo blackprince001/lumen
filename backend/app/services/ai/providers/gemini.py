@@ -66,6 +66,8 @@ class GeminiProvider(AIProvider):
         config=self._build_generate_config(config),
       )
       return add_citations(response)
+    except (ConnectionError, TimeoutError, OSError):
+      raise
     except genai_errors.ServerError as e:
       error_str = str(e)
       if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
@@ -93,6 +95,8 @@ class GeminiProvider(AIProvider):
       for i in range(0, len(full_content), chunk_size):
         yield full_content[i : i + chunk_size]
         await asyncio.sleep(0.01)
+    except (ConnectionError, TimeoutError, OSError):
+      raise
     except genai_errors.ServerError as e:
       error_str = str(e)
       if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
@@ -120,6 +124,8 @@ class GeminiProvider(AIProvider):
       if result.embeddings:
         return [list(emb.values) for emb in result.embeddings]
       return []
+    except (ConnectionError, TimeoutError, OSError):
+      raise
     except genai_errors.APIError as e:
       logger.error("Error generating embeddings with Gemini", error=str(e))
       raise AIProviderError(str(e), original_error=e) from e

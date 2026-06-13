@@ -4,6 +4,8 @@ Replaces the previous BaseGoogleAIService that was hardcoded to Gemini.
 Services now resolve the user's configured provider and use it transparently.
 """
 
+from typing import Any
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logger import get_logger
@@ -65,6 +67,7 @@ class BaseAIService:
     system_instruction: str | None = None,
     temperature: float = 0.7,
     max_output_tokens: int | None = None,
+    response_format: dict[str, Any] | None = None,
   ) -> GenerateConfig:
     """Build a GenerateConfig from the resolved provider + overrides."""
     return GenerateConfig(
@@ -72,4 +75,5 @@ class BaseAIService:
       system_instruction=system_instruction,
       temperature=temperature,
       max_output_tokens=max_output_tokens,
+      response_format=response_format,
     )

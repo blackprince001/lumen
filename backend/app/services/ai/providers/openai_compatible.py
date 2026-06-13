@@ -1,4 +1,4 @@
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 from openai import APIStatusError as OpenAIAPIStatusError
 from openai import AsyncOpenAI
@@ -45,12 +45,15 @@ class OpenAICompatibleProvider(AIProvider):
     messages.append({"role": "user", "content": prompt})
 
     try:
-      response = await self._client.chat.completions.create(
-        model=config.model,
-        messages=messages,
-        temperature=config.temperature,
-        max_tokens=config.max_output_tokens or 4096,
-      )
+      kwargs: dict[str, Any] = {
+        "model": config.model,
+        "messages": messages,
+        "temperature": config.temperature,
+        "max_tokens": config.max_output_tokens or 4096,
+      }
+      if config.response_format:
+        kwargs["response_format"] = config.response_format
+      response = await self._client.chat.completions.create(**kwargs)
       content = response.choices[0].message.content or ""
       return content
     except OpenAIRateLimitError as e:
@@ -71,13 +74,16 @@ class OpenAICompatibleProvider(AIProvider):
     messages.append({"role": "user", "content": prompt})
 
     try:
-      stream = await self._client.chat.completions.create(
-        model=config.model,
-        messages=messages,
-        temperature=config.temperature,
-        max_tokens=config.max_output_tokens or 4096,
-        stream=True,
-      )
+      kwargs: dict[str, Any] = {
+        "model": config.model,
+        "messages": messages,
+        "temperature": config.temperature,
+        "max_tokens": config.max_output_tokens or 4096,
+        "stream": True,
+      }
+      if config.response_format:
+        kwargs["response_format"] = config.response_format
+      stream = await self._client.chat.completions.create(**kwargs)
       async for chunk in stream:
         delta = chunk.choices[0].delta if chunk.choices else None
         if delta and delta.content:

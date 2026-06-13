@@ -1,4 +1,6 @@
+import asyncio
 import re
+from datetime import datetime, timezone
 from typing import Any
 
 import httpx
@@ -11,6 +13,7 @@ from app.core.logger import get_logger
 from app.models.group import Group
 from app.models.paper import Paper
 from app.services.embeddings import embedding_service
+from app.services.layout_extractor import extract_layout, layout_to_text
 from app.services.pdf_parser import pdf_parser
 from app.services.storage import storage_service
 from app.services.url_parser import url_parser
@@ -122,9 +125,33 @@ class IngestionService:
     )
     return result.scalar_one_or_none()
 
-  async def generate_embedding(self, title: str, content: str) -> list[float]:
-    embedding_text = f"{title}\n\n{content[:1000]}"
-    return await embedding_service.generate_embedding_async(embedding_text)
+  async def generate_embedding(self, title: str, content: str) -> list[float] | None:
+    """Embed the paper, returning ``None`` when embedding is unavailable.
+
+    A ``None`` result is stored as a NULL embedding so the retry sweep
+    regenerates it later; it never blocks ingestion. The zero-vector
+    sentinel that ``embedding_service`` returns when Google is not
+    configured is also treated as "missing".
+    """
+    embedding_text = f"{title}\n\n{content[:20000]}".strip()
+    if not embedding_text:
+      return None
+    try:
+      embedding = await embedding_service.generate_embedding_async(embedding_text)
+    except Exception as e:
+      logger.warning("Embedding failed at ingest; will retry later", error=str(e))
+      return None
+    if not embedding or not any(embedding):
+      return None
+    return embedding
+
+  async def extract_layout_blocks(self, pdf_content: bytes) -> list[dict[str, Any]]:
+    """Run layout extraction off the event loop; ``[]`` on failure."""
+    try:
+      return await asyncio.to_thread(extract_layout, pdf_content)
+    except Exception as e:
+      logger.warning("Layout extraction failed at ingest", error=str(e))
+      return []
 
   async def assign_groups(
     self, db_session: AsyncSession, paper: Paper, group_ids: list[int] | None
@@ -141,9 +168,10 @@ class IngestionService:
     url: str,
     file_path: str,
     text_content: str,
-    embedding: list[float],
+    embedding: list[float] | None,
     metadata: dict[str, Any] | None,
     user_id: int | None = None,
+    layout_blocks: list[dict[str, Any]] | None = None,
   ) -> Paper:
     return Paper(
       title=title,
@@ -154,6 +182,8 @@ class IngestionService:
       embedding=embedding,
       metadata_json=metadata,
       uploaded_by_id=user_id,
+      layout_blocks=layout_blocks or None,
+      layout_extracted_at=datetime.now(timezone.utc) if layout_blocks else None,
       volume=normalize_optional_field(metadata.get("volume") if metadata else None),
       issue=normalize_optional_field(metadata.get("issue") if metadata else None),
       pages=normalize_optional_field(metadata.get("pages") if metadata else None),
@@ -198,17 +228,28 @@ class IngestionService:
     filename = storage_service.save_file(pdf_content, url, doi)
     file_path = str(storage_service.get_file_path(filename))
 
-    text_content = sanitize_text(
-      await pdf_parser.extract_text(pdf_content, max_pages=5)
+    # Layout is the single source of the paper's text: extract the full
+    # block structure once, then flatten it into content_text.
+    layout_blocks = await self.extract_layout_blocks(pdf_content)
+    text_content = sanitize_text(layout_to_text(layout_blocks))
+    metadata = sanitize_metadata(
+      await pdf_parser.extract_metadata(pdf_content, user_id)
     )
-    metadata = sanitize_metadata(await pdf_parser.extract_metadata(pdf_content))
 
     title = self.resolve_title(title, url, metadata)
     doi = self.resolve_doi(doi, metadata)
     embedding = await self.generate_embedding(title, text_content)
 
     paper = self.create_paper(
-      title, doi, url, file_path, text_content, embedding, metadata, user_id
+      title,
+      doi,
+      url,
+      file_path,
+      text_content,
+      embedding,
+      metadata,
+      user_id,
+      layout_blocks=layout_blocks,
     )
     await self.assign_groups(db_session, paper, group_ids)
 
@@ -249,10 +290,11 @@ class IngestionService:
     stored_filename = storage_service.save_file(file_content, url, doi)
     file_path = str(storage_service.get_file_path(stored_filename))
 
-    text_content = sanitize_text(
-      await pdf_parser.extract_text(file_content, max_pages=5)
+    layout_blocks = await self.extract_layout_blocks(file_content)
+    text_content = sanitize_text(layout_to_text(layout_blocks))
+    metadata = sanitize_metadata(
+      await pdf_parser.extract_metadata(file_content, user_id)
     )
-    metadata = sanitize_metadata(await pdf_parser.extract_metadata(file_content))
 
     if not title:
       fallback = filename.rsplit(".", 1)[0] if "." in filename else filename
@@ -266,7 +308,15 @@ class IngestionService:
     embedding = await self.generate_embedding(title, text_content)
 
     paper = self.create_paper(
-      title, doi, url, file_path, text_content, embedding, metadata, user_id
+      title,
+      doi,
+      url,
+      file_path,
+      text_content,
+      embedding,
+      metadata,
+      user_id,
+      layout_blocks=layout_blocks,
     )
     await self.assign_groups(db_session, paper, group_ids)
 

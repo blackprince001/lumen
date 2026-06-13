@@ -10,7 +10,12 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.annotation import Annotation
 from app.models.paper import Paper
-from app.services.ai.providers.base import EmbeddingConfig, GenerateConfig
+from app.services.ai.helpers import get_provider_for_user_sync
+from app.services.ai.providers.base import (
+  EmbeddingConfig,
+  GenerateConfig,
+  ProviderConfig,
+)
 from app.tasks.base import BaseAITask, get_sync_session
 from app.utils.json_extractor import extract_json_from_text
 
@@ -97,9 +102,9 @@ def _build_prompt_with_content(
   content = ""
   if paper.content_text:
     content = cast(str, paper.content_text)
-    max_content_length = 15000
+    max_content_length = 80000
     if len(content) > max_content_length:
-      content = content[:max_content_length] + "..."
+      content = content[:max_content_length]
 
   system = f"Paper Context:\n{paper_title}\n\n"
   if content:
@@ -123,8 +128,8 @@ def _normalize_highlight_type(raw_type: str | None) -> str | None:
 # page-unit bounding boxes; annotations store normalized 0-1 rects, so the
 # conversion happens here at annotation-write time.
 
-LAYOUT_DIGEST_MAX_CHARS = 30000
-LAYOUT_BLOCK_SNIPPET_CHARS = 300
+LAYOUT_DIGEST_MAX_CHARS = 80000
+LAYOUT_BLOCK_SNIPPET_CHARS = 2000
 FUZZY_MATCH_THRESHOLD = 0.6
 
 
@@ -219,11 +224,14 @@ def generate_summary_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    p = self.provider
+    # Use the paper owner's configured provider (BYO key). There is no
+    # environment fallback: with no provider the step is skipped and the
+    # retry sweep leaves it to run once one is configured.
+    p = get_provider_for_user_sync(paper.uploaded_by_id)
     if not p:
       return {
-        "status": "error",
-        "error": "No AI provider available",
+        "status": "skipped",
+        "reason": "no provider configured",
         "paper_id": paper_id,
       }
 
@@ -248,7 +256,9 @@ def generate_summary_task(self, paper_id: int) -> dict[str, Any]:
   except Exception as e:
     session.rollback()
     logger.error("Error generating summary", paper_id=paper_id, error=str(e))
-    raise
+    # Don't raise: let the processing chord complete with partial results.
+    # The retry sweep re-runs this step later (field stays NULL).
+    return {"status": "failed", "error": str(e)[:200], "paper_id": paper_id}
   finally:
     session.close()
 
@@ -262,11 +272,14 @@ def extract_findings_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    p = self.provider
+    # Use the paper owner's configured provider (BYO key). There is no
+    # environment fallback: with no provider the step is skipped and the
+    # retry sweep leaves it to run once one is configured.
+    p = get_provider_for_user_sync(paper.uploaded_by_id)
     if not p:
       return {
-        "status": "error",
-        "error": "No AI provider available",
+        "status": "skipped",
+        "reason": "no provider configured",
         "paper_id": paper_id,
       }
 
@@ -293,7 +306,7 @@ def extract_findings_task(self, paper_id: int) -> dict[str, Any]:
   except Exception as e:
     session.rollback()
     logger.error("Error extracting findings", paper_id=paper_id, error=str(e))
-    raise
+    return {"status": "failed", "error": str(e)[:200], "paper_id": paper_id}
   finally:
     session.close()
 
@@ -307,11 +320,14 @@ def generate_reading_guide_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    p = self.provider
+    # Use the paper owner's configured provider (BYO key). There is no
+    # environment fallback: with no provider the step is skipped and the
+    # retry sweep leaves it to run once one is configured.
+    p = get_provider_for_user_sync(paper.uploaded_by_id)
     if not p:
       return {
-        "status": "error",
-        "error": "No AI provider available",
+        "status": "skipped",
+        "reason": "no provider configured",
         "paper_id": paper_id,
       }
 
@@ -338,7 +354,7 @@ def generate_reading_guide_task(self, paper_id: int) -> dict[str, Any]:
   except Exception as e:
     session.rollback()
     logger.error("Error generating reading guide", paper_id=paper_id, error=str(e))
-    raise
+    return {"status": "failed", "error": str(e)[:200], "paper_id": paper_id}
   finally:
     session.close()
 
@@ -352,11 +368,14 @@ def generate_highlights_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    p = self.provider
+    # Use the paper owner's configured provider (BYO key). There is no
+    # environment fallback: with no provider the step is skipped and the
+    # retry sweep leaves it to run once one is configured.
+    p = get_provider_for_user_sync(paper.uploaded_by_id)
     if not p:
       return {
-        "status": "error",
-        "error": "No AI provider available",
+        "status": "skipped",
+        "reason": "no provider configured",
         "paper_id": paper_id,
       }
 
@@ -469,19 +488,31 @@ def generate_embedding_task(self, paper_id: int) -> dict[str, Any]:
     if not paper:
       return {"status": "error", "error": "Paper not found", "paper_id": paper_id}
 
-    p = self.provider
-    if not p:
+    # Embeddings always use Google's models via GOOGLE_API_KEY env var,
+    # regardless of the user's configured chat provider.
+    if not settings.GOOGLE_API_KEY:
       return {
         "status": "error",
-        "error": "No AI provider available",
+        "error": "GOOGLE_API_KEY not set — cannot generate embeddings. Set it in your environment.",
         "paper_id": paper_id,
       }
+
+    from app.services.ai.providers.gemini import GeminiProvider
+
+    p = GeminiProvider(
+      ProviderConfig(
+        provider="gemini",
+        api_key=settings.GOOGLE_API_KEY,
+        embedding_model=settings.EMBEDDING_MODEL,
+        embedding_dimension=settings.EMBEDDING_DIMENSION,
+      )
+    )
 
     text_to_embed = paper.content_text or paper.title or ""
     if not text_to_embed:
       return {"status": "error", "error": "No text to embed", "paper_id": paper_id}
 
-    max_chars = 20000
+    max_chars = 80000
     import asyncio
 
     config = EmbeddingConfig(
@@ -505,7 +536,17 @@ def generate_embedding_task(self, paper_id: int) -> dict[str, Any]:
 
   except Exception as e:
     session.rollback()
-    logger.error("Error generating embedding", paper_id=paper_id, error=str(e))
-    raise
+    if (
+      isinstance(e, (ConnectionError, TimeoutError, OSError))
+      and self.request.retries < self.max_retries
+    ):
+      logger.warning(
+        "Transient embedding error, retrying", paper_id=paper_id, error=str(e)
+      )
+      raise self.retry(exc=e)
+    logger.warning(
+      "Skipping embedding — generation failed", paper_id=paper_id, error=str(e)
+    )
+    return {"status": "skipped", "error": str(e), "paper_id": paper_id}
   finally:
     session.close()

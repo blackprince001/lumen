@@ -1,7 +1,7 @@
-"""Provider-agnostic embedding service.
+"""Google-only embedding service.
 
-Resolves the user's configured AI provider and uses it to
-generate embeddings for text content.
+Always uses Google's embedding models via GOOGLE_API_KEY env var,
+regardless of what chat provider the user has configured.
 """
 
 from typing import Any
@@ -10,12 +10,13 @@ from pgvector.sqlalchemy import Vector
 
 from app.core.config import settings
 from app.core.logger import get_logger
-from app.services.ai.helpers import get_provider_for_user
 from app.services.ai.providers.base import (
   AIProvider,
   AIProviderError,
   EmbeddingConfig,
+  ProviderConfig,
 )
+from app.services.ai.providers.gemini import GeminiProvider
 
 logger = get_logger(__name__)
 
@@ -24,20 +25,30 @@ TASK_TYPE_QUERY = "RETRIEVAL_QUERY"
 
 
 class EmbeddingService:
-  """Generates vector embeddings using the configured AI provider."""
+  """Generates vector embeddings using Google's embedding models."""
 
   def __init__(self) -> None:
     self._provider: AIProvider | None = None
 
   async def _get_provider(self) -> AIProvider | None:
-    """Get or create the AI provider for embeddings.
+    """Create or return a cached Google Gemini provider for embeddings.
 
-    Uses the default provider (from env settings) since embeddings
-    are typically generated in system context (Celery tasks, paper ingest).
+    Requires ``GOOGLE_API_KEY`` to be set in the environment.
+    Returns ``None`` (zero embeddings) when the key is absent — no fallback
+    to other providers.
     """
     if self._provider is not None:
       return self._provider
-    self._provider = await get_provider_for_user()
+    if not settings.GOOGLE_API_KEY:
+      logger.warning("GOOGLE_API_KEY not set — cannot generate embeddings")
+      return None
+    config = ProviderConfig(
+      provider="gemini",
+      api_key=settings.GOOGLE_API_KEY,
+      embedding_model=settings.EMBEDDING_MODEL,
+      embedding_dimension=settings.EMBEDDING_DIMENSION,
+    )
+    self._provider = GeminiProvider(config)
     return self._provider
 
   def set_provider(self, provider: AIProvider) -> None:

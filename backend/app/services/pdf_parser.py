@@ -4,33 +4,30 @@ import json
 import re
 from typing import Any
 
-from google import genai
-from google.genai import errors as genai_errors
-from google.genai import types
 from pypdf import PdfReader
 
 from app.core.config import settings
 from app.core.logger import get_logger
 from app.schemas.paper import PaperMetadata
+from app.services.ai.providers.base import AIProvider, GenerateConfig
 
 logger = get_logger(__name__)
 
 METADATA_EXTRACTION_PROMPT = """You are extracting metadata from a research paper. \
-Below are the layout blocks extracted from the PDF, organized by page. Each block \
-has a type (heading / text / figure), its content, and its position on the page.
+Below is the text content extracted from the PDF.
 
 {blocks}
 
 Extract the following information:
-- Title: The exact paper title (usually the first heading on page 1, often the largest text)
-- Authors: List of all author names (usually right below the title on page 1)
+- Title: The exact paper title (usually the first heading on page 1)
+- Authors: List of all author names (usually right below the title)
 - Publication Date: Publication date in YYYY-MM-DD format if available
 - Journal: Journal or conference name if mentioned
 - Volume: Journal volume number if available
 - Issue: Journal issue number if available
-- Pages: Page numbers (e.g., "1-10" or "123-145") if available
-- DOI: Digital Object Identifier if mentioned (often near the header/footer or abstract)
-- Abstract: The abstract text if present (usually follows a heading like "Abstract")
+- Pages: Page numbers (e.g., "1-10") if available
+- DOI: Digital Object Identifier if mentioned
+- Abstract: The abstract text if present (usually after the title/authors)
 - Keywords: List of keywords if mentioned (often after the abstract)
 
 IMPORTANT: Return ONLY a valid JSON object with this structure:
@@ -119,31 +116,29 @@ def find_abstract_index(lines: list[str]) -> int | None:
 
 class PDFParser:
   @staticmethod
-  def _format_layout_blocks(blocks: list[dict[str, Any]], max_chars: int = 15000) -> str:
-    """Format layout blocks into a structured text representation for the prompt."""
+  def _format_layout_blocks(
+    blocks: list[dict[str, Any]], max_chars: int = 30000
+  ) -> str:
+    """Format layout blocks into clean plain text for the metadata prompt."""
     lines: list[str] = []
-    current_page = 0
     char_count = 0
+
     for block in blocks:
-      meta = block.get("metadata", {})
-      page_num = meta.get("page", {}).get("number", 0)
-      if page_num != current_page:
-        current_page = page_num
-        header = f"\nPage {page_num}:"
-        lines.append(header)
-        char_count += len(header)
-      btype = block.get("type", "text")
-      content = block.get("content", "")[:300]
-      bbox = block.get("boundingBox", {})
-      top = bbox.get("top", 0)
-      left = bbox.get("left", 0)
-      entry = f"  [{btype}] (top={top:.0f}, left={left:.0f}) {content}"
-      if char_count + len(entry) > max_chars:
-        lines.append("  ... (remaining blocks omitted)")
+      btype = block.get("type")
+      if btype == "figure":
+        continue
+
+      content = (block.get("content") or "").strip()
+      if not content:
+        continue
+
+      line = f"{content}\n"
+      if char_count + len(line) > max_chars:
         break
-      lines.append(entry)
-      char_count += len(entry)
-    return "\n".join(lines)
+      lines.append(line)
+      char_count += len(line)
+
+    return "".join(lines)
 
   def _extract_layout_sync(self, pdf_content: bytes) -> list[dict[str, Any]] | None:
     from app.services.layout_extractor import extract_layout
@@ -201,34 +196,35 @@ class PDFParser:
     except Exception:
       return None
 
-  async def _call_metadata_api(self, client: genai.Client, prompt: str) -> str | None:
+  async def _call_metadata_api(self, provider: AIProvider, prompt: str) -> str | None:
     try:
-      loop = asyncio.get_event_loop()
-      response = await loop.run_in_executor(
-        None,
-        lambda: client.models.generate_content(
-          model=settings.GENAI_MODEL,
-          contents=types.Part.from_text(text=prompt),
-        ),
+      config = GenerateConfig(
+        model=provider.config.model or settings.GENAI_MODEL,
+        temperature=0.1,
       )
-      if hasattr(response, "text") and response.text:
-        return response.text
-      return None
-    except genai_errors.APIError as e:
-      logger.warning("API error in metadata extraction", error=str(e))
+      response = await provider.generate(prompt, config)
+      return response if response else None
+    except Exception as e:
+      logger.warning("Provider error in metadata extraction", error=str(e))
       return None
 
   async def extract_metadata_structured(
-    self, pdf_content: bytes
+    self, pdf_content: bytes, user_id: int | None = None
   ) -> PaperMetadata | None:
-    if not settings.GOOGLE_API_KEY:
+    """Extract structured metadata using the user's configured AI provider.
+
+    Falls back gracefully when no provider is available (returns ``None``,
+    which callers handle by producing an empty metadata dict).
+    """
+    from app.services.ai.helpers import get_provider_for_user_sync
+
+    provider = get_provider_for_user_sync(user_id) if user_id is not None else None
+    if not provider:
       return None
 
     try:
       loop = asyncio.get_event_loop()
-      blocks = await loop.run_in_executor(
-        None, self._extract_layout_sync, pdf_content
-      )
+      blocks = await loop.run_in_executor(None, self._extract_layout_sync, pdf_content)
       if blocks:
         block_text = self._format_layout_blocks(blocks)
         prompt = METADATA_EXTRACTION_PROMPT.format(blocks=block_text)
@@ -239,12 +235,9 @@ class PDFParser:
         )
         if not first_pages_text:
           return None
-        prompt = METADATA_EXTRACTION_PROMPT.format(
-          blocks=f"Page 1:\n  [text] {first_pages_text}"
-        )
+        prompt = METADATA_EXTRACTION_PROMPT.format(blocks=first_pages_text)
 
-      client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-      response_text = await self._call_metadata_api(client, prompt)
+      response_text = await self._call_metadata_api(provider, prompt)
 
       if not response_text:
         return None
@@ -253,7 +246,9 @@ class PDFParser:
       logger.error("Error in structured metadata extraction", error=str(e))
       return None
 
-  async def extract_metadata(self, pdf_content: bytes) -> dict[str, Any]:
+  async def extract_metadata(
+    self, pdf_content: bytes, user_id: int | None = None
+  ) -> dict[str, Any]:
     extracted: dict[str, Any] = {}
 
     try:
@@ -262,7 +257,7 @@ class PDFParser:
     except Exception:
       pass
 
-    structured = await self.extract_metadata_structured(pdf_content)
+    structured = await self.extract_metadata_structured(pdf_content, user_id)
     if not structured:
       return extracted
 
@@ -358,26 +353,31 @@ class PDFParser:
 
     return self._extract_title_fallback(lines)
 
-  def _extract_title_llm(self, first_pages_text: str) -> str | None:
-    if not settings.GOOGLE_API_KEY:
+  def _extract_title_llm(
+    self, first_pages_text: str, user_id: int | None = None
+  ) -> str | None:
+    from app.services.ai.helpers import get_provider_for_user_sync
+
+    provider = get_provider_for_user_sync(user_id) if user_id is not None else None
+    if not provider:
       return None
 
     try:
-      client = genai.Client(api_key=settings.GOOGLE_API_KEY)
       text_preview = first_pages_text[:2000]
       if len(first_pages_text) > 2000:
         text_preview += "..."
 
       prompt = TITLE_EXTRACTION_PROMPT.format(text=text_preview)
-      response = client.models.generate_content(
-        model=settings.GENAI_MODEL,
-        contents=types.Part.from_text(text=prompt),
+      config = GenerateConfig(
+        model=provider.config.model or settings.GENAI_MODEL,
+        temperature=0.1,
       )
+      response = asyncio.run(provider.generate(prompt, config))
 
-      if not (hasattr(response, "text") and response.text):
+      if not response:
         return None
 
-      title = response.text.strip()
+      title = response.strip()
       title = re.sub(r'^["\']|["\']$', "", title).strip()
 
       word_count = len(title.split())

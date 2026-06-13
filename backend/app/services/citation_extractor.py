@@ -4,8 +4,6 @@ import json
 import re
 from typing import Any, cast
 
-from google import genai
-from google.genai import types
 from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.paper import Paper
+from app.services.ai.providers.base import GenerateConfig
 from app.models.paper_citation import PaperCitation
 
 logger = get_logger(__name__)
@@ -223,29 +222,22 @@ class CitationExtractor:
       return None
 
   @staticmethod
-  async def _call_citation_api(prompt: str) -> str | None:
-    """Call GenAI API for citation extraction."""
-    if not settings.GOOGLE_API_KEY:
-      logger.warning("Google API key not available for citation parsing")
+  async def _call_citation_api(prompt: str, user_id: int | None = None) -> str | None:
+    """Call the user's configured AI provider for citation extraction."""
+    from app.services.ai.helpers import get_provider_for_user_sync
+
+    provider = get_provider_for_user_sync(user_id) if user_id is not None else None
+    if not provider:
+      logger.warning("No provider configured for citation parsing")
       return None
 
     try:
-      client = genai.Client(api_key=settings.GOOGLE_API_KEY)
-      loop = asyncio.get_event_loop()
-
-      response = await loop.run_in_executor(
-        None,
-        lambda: client.models.generate_content(
-          model=settings.GENAI_MODEL,
-          contents=types.Part.from_text(text=prompt),
-        ),
+      config = GenerateConfig(
+        model=provider.config.model or settings.GENAI_MODEL,
+        temperature=0.1,
+        max_output_tokens=32768,
       )
-
-      if hasattr(response, "text") and response.text:
-        return response.text
-
-      return None
-
+      return await provider.generate(prompt, config)
     except Exception as e:
       logger.error("Error calling citation API", error=str(e))
       return None
@@ -253,10 +245,10 @@ class CitationExtractor:
   @staticmethod
   def _parse_citations_response(response_text: str) -> list[dict[str, Any]]:
     """Parse API response into list of citation dicts."""
-    try:
-      cleaned = _clean_json_response(response_text)
-      citations_data = json.loads(cleaned)
+    from app.utils.json_extractor import extract_json_from_text
 
+    try:
+      citations_data = extract_json_from_text(response_text)
       if not isinstance(citations_data, list):
         return []
 
@@ -268,25 +260,20 @@ class CitationExtractor:
 
       return parsed
 
-    except (json.JSONDecodeError, ValueError, TypeError) as e:
+    except (ValueError, json.JSONDecodeError, TypeError) as e:
       logger.warning("Error parsing citations JSON", error=str(e))
       return []
 
   @staticmethod
-  async def parse_citations(references_text: str) -> list[dict[str, Any]]:
+  async def parse_citations(
+    references_text: str, user_id: int | None = None
+  ) -> list[dict[str, Any]]:
     """Parse individual citations from references text using AI."""
     if not references_text or not references_text.strip():
       return []
 
-    max_chars = 20000
-    text_to_parse = (
-      references_text[-max_chars:]
-      if len(references_text) > max_chars
-      else references_text
-    )
-
-    prompt = CITATION_EXTRACTION_PROMPT.format(text=text_to_parse)
-    response_text = await CitationExtractor._call_citation_api(prompt)
+    prompt = CITATION_EXTRACTION_PROMPT.format(text=references_text)
+    response_text = await CitationExtractor._call_citation_api(prompt, user_id)
 
     if not response_text:
       return []
@@ -478,7 +465,10 @@ class CitationExtractor:
 
   @staticmethod
   async def extract_and_store_citations(
-    db_session: AsyncSession, paper_id: int, pdf_content: bytes
+    db_session: AsyncSession,
+    paper_id: int,
+    pdf_content: bytes,
+    user_id: int | None = None,
   ) -> int:
     """Extract citations from PDF and store them in database."""
     try:
@@ -501,7 +491,9 @@ class CitationExtractor:
         logger.info("No references section found", paper_id=paper_id)
         return 0
 
-      parsed_citations = await CitationExtractor.parse_citations(references_text)
+      parsed_citations = await CitationExtractor.parse_citations(
+        references_text, user_id
+      )
       if not parsed_citations:
         logger.info("No citations parsed", paper_id=paper_id)
         return 0

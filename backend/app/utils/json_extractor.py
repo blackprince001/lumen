@@ -1,121 +1,158 @@
 """Utility functions for extracting JSON from AI responses."""
 
 import json
+import re
 from typing import Any
 
 
-def extract_json_from_text(text: str) -> Any:
-  """
-  Extract and parse JSON from text that may contain markdown code blocks or extra text.
-
-  This function handles cases where:
-  - JSON is wrapped in markdown code blocks (```json ... ```)
-  - There's explanatory text before or after the JSON
-  - The response contains only JSON
-
-  Args:
-      text: The text containing JSON to extract
-
-  Returns:
-      The parsed JSON object (dict or list)
-
-  Raises:
-      json.JSONDecodeError: If no valid JSON can be extracted or parsed
-      ValueError: If the text is empty or contains no JSON-like content
-  """
-  if not text:
-    raise ValueError("Text is empty")
-
-  # Strip leading/trailing whitespace
-  text = text.strip()
-
-  if not text:
-    raise ValueError("Text contains only whitespace")
-
-  # Remove markdown code blocks if present
-  # Handle ```json ... ``` or ``` ... ```
+def _strip_markdown(text: str) -> str:
+  """Remove markdown code fences (```json ... ``` or ``` ... ```)."""
   if text.startswith("```"):
-    # Find the first newline after ```
-    first_newline = text.find("\n")
-    if first_newline != -1:
-      # Remove the opening ``` and language specifier (e.g., ```json)
-      text = text[first_newline + 1 :]
+    nl = text.find("\n")
+    if nl != -1:
+      text = text[nl + 1 :]
     else:
-      # No newline, just remove the ```
       text = text[3:]
+  if text.endswith("```"):
+    text = text[:-3]
+  return text.strip()
 
-    # Remove closing ```
-    if text.endswith("```"):
-      text = text[:-3]
 
-    text = text.strip()
+def _remove_trailing_commas(json_text: str) -> str:
+  """Remove trailing commas before ] or } — a common LLM mistake."""
+  # Remove comma right before closing bracket/brace
+  text = re.sub(r",\s*([}\]])", r"\1", json_text)
+  # Remove a bare trailing comma at end of string
+  text = re.sub(r",\s*$", "", text)
+  return text
 
-  # Also handle cases where there's a language specifier on its own line
-  # e.g., "json\n{...}" or "json\n[...]"
-  if text.startswith("json\n"):
-    text = text[5:]
-  elif text.startswith("json\r\n"):
-    text = text[6:]
 
-  text = text.strip()
+def _close_unclosed_structures(text: str) -> str:
+  """Append missing closing braces, brackets, and quotes to truncated JSON."""
+  # Count open vs closed
+  open_braces = text.count("{") - text.count("}")
+  open_brackets = text.count("[") - text.count("]")
 
-  # Find JSON boundaries by looking for first { or [
-  json_start = -1
-  json_char = None
+  # Detect if the text ends mid-string
+  in_string = False
+  escape = False
+  for ch in text:
+    if escape:
+      escape = False
+      continue
+    if ch == "\\":
+      escape = True
+      continue
+    if ch == '"':
+      in_string = not in_string
 
-  for i, char in enumerate(text):
-    if char == "{":
-      json_start = i
-      json_char = "{"
-      break
-    elif char == "[":
-      json_start = i
-      json_char = "["
-      break
+  if in_string:
+    text += '"'
 
-  if json_start == -1:
-    # No JSON-like structure found, try parsing the whole text
-    # This handles cases where the text is already clean JSON
-    try:
-      return json.loads(text)
-    except json.JSONDecodeError as e:
-      raise ValueError(
-        f"No JSON structure found in text. First 200 chars: {text[:200]}"
-      ) from e
+  # Close arrays before objects (outermost first)
+  if open_brackets > 0:
+    text += "]" * open_brackets
+  if open_braces > 0:
+    text += "}" * open_braces
 
-  # Find the matching closing bracket
-  bracket_count = 0
-  json_end = -1
-  closing_char = "}" if json_char == "{" else "]"
+  return text
 
-  for i in range(json_start, len(text)):
-    char = text[i]
-    if char == json_char:
-      bracket_count += 1
-    elif char == closing_char:
-      bracket_count -= 1
-      if bracket_count == 0:
-        json_end = i + 1
-        break
 
-  if json_end == -1:
-    # Couldn't find matching closing bracket
-    # Try parsing from json_start to end anyway
-    json_end = len(text)
+def _extract_json_block(text: str) -> str | None:
+  """Find the first {…} or […] block with balanced brackets."""
+  for i, ch in enumerate(text):
+    if ch not in ("{", "["):
+      continue
+    open_ch = ch
+    close_ch = "}" if ch == "{" else "]"
+    depth = 0
+    for j in range(i, len(text)):
+      c = text[j]
+      if c == open_ch:
+        depth += 1
+      elif c == close_ch:
+        depth -= 1
+        if depth == 0:
+          return text[i : j + 1]
+    # unbalanced — nothing we can extract cleanly
+    return None
+  return None
 
-  # Extract the JSON substring
-  json_text = text[json_start:json_end].strip()
 
-  if not json_text:
-    raise ValueError("Extracted JSON text is empty")
-
-  # Parse the JSON
+def _try_parse_with_repairs(json_text: str) -> Any:
+  """Try progressively more aggressive repairs to parse JSON."""
+  # 1. Try raw
   try:
     return json.loads(json_text)
-  except json.JSONDecodeError as e:
-    # Provide more context in the error
-    raise json.JSONDecodeError(
-      f"Failed to parse extracted JSON. Text preview: {json_text[:200]}",
-      json_text,
-      e.pos,
-    ) from e
+  except json.JSONDecodeError:
+    pass
+
+  # 2. Remove trailing commas
+  fixed = _remove_trailing_commas(json_text)
+  if fixed != json_text:
+    try:
+      return json.loads(fixed)
+    except json.JSONDecodeError:
+      pass
+
+  # 3. Close unclosed structures (truncated output)
+  fixed = _close_unclosed_structures(json_text)
+  if fixed != json_text:
+    try:
+      return json.loads(fixed)
+    except json.JSONDecodeError:
+      pass
+
+  # 4. Both
+  fixed = _close_unclosed_structures(_remove_trailing_commas(json_text))
+  if fixed != json_text:
+    try:
+      return json.loads(fixed)
+    except json.JSONDecodeError:
+      pass
+
+  raise
+
+
+def extract_json_from_text(text: str) -> Any:
+  """Extract and parse JSON from AI response text.
+
+  Handles:
+  - Clean JSON, markdown-wrapped JSON, JSON mixed with prose
+  - Trailing commas, unclosed strings/braces (truncated output)
+
+  Returns the parsed value (dict or list).
+  Raises ValueError if no valid JSON can be extracted.
+  """
+  if not text or not text.strip():
+    raise ValueError("Text is empty")
+
+  text = text.strip()
+
+  # Strategy A: Whole text is clean JSON
+  try:
+    return json.loads(text)
+  except json.JSONDecodeError:
+    pass
+
+  # Strategy B: Strip markdown fences first
+  cleaned = _strip_markdown(text)
+  if cleaned != text:
+    try:
+      return _try_parse_with_repairs(cleaned)
+    except json.JSONDecodeError:
+      pass
+
+  # Strategy C: Extract the JSON block from within prose
+  block = _extract_json_block(cleaned)
+  if block:
+    try:
+      return _try_parse_with_repairs(block)
+    except json.JSONDecodeError as e:
+      raise json.JSONDecodeError(
+        f"Failed to parse extracted JSON block. Preview: {block[:200]}",
+        block,
+        e.pos if hasattr(e, "pos") else 0,
+      ) from e
+
+  raise ValueError(f"No valid JSON found in text. First 200 chars: {text[:200]}")

@@ -146,9 +146,11 @@ def ai_enhance_task(
   include_overview: bool,
   include_clustering: bool,
   include_relevance: bool,
+  user_id: int | None = None,
 ) -> None:
   from app.services.discovery.ai_search_service import ai_search_service
   from app.services.discovery.base_provider import ExternalPaperResult
+  from app.services.ai.helpers import get_provider_for_user_sync
 
   r = _get_redis()
 
@@ -174,24 +176,35 @@ def ai_enhance_task(
     for p in all_papers
   ]
 
+  provider = get_provider_for_user_sync(user_id)
+
   async def _run_enhancements():
+    nonlocal provider
+    if provider is None:
+      return
+
     tasks: dict[str, Any] = {}
     if include_overview:
       tasks["overview"] = asyncio.create_task(
-        ai_search_service.generate_search_overview(query, paper_results)
+        ai_search_service.generate_search_overview(
+          query, paper_results, provider=provider
+        )
       )
     if include_clustering and len(paper_results) >= 3:
       tasks["clustering"] = asyncio.create_task(
-        ai_search_service.cluster_papers(paper_results)
+        ai_search_service.cluster_papers(paper_results, provider=provider)
       )
     if include_relevance:
       tasks["relevance"] = asyncio.create_task(
-        ai_search_service.explain_relevance(query, paper_results)
+        ai_search_service.explain_relevance(query, paper_results, provider=provider)
       )
 
-    for key, task in tasks.items():
+    if not tasks:
+      return
+
+    async def _run_one(key: str, coro_task) -> None:
       try:
-        result = await asyncio.wait_for(task, timeout=25.0)
+        result = await asyncio.wait_for(coro_task, timeout=60.0)
         if result:
           r.set(
             f"discovery:{search_id}:ai:{key}",
@@ -199,8 +212,28 @@ def ai_enhance_task(
             ex=REDIS_TTL,
           )
           _push_progress(r, search_id, {"type": key})
+        else:
+          logger.warning("AI enhancement returned no result", enhancement=key)
+          _push_progress(
+            r, search_id, {"type": key, "error": "no result", "incomplete": True}
+          )
+      except asyncio.TimeoutError:
+        logger.error("AI enhancement timed out", enhancement=key, timeout_s=60)
+        _push_progress(
+          r, search_id, {"type": key, "error": "timed out", "incomplete": True}
+        )
       except Exception as e:
-        logger.error(f"AI enhancement '{key}' failed", error=str(e))
+        logger.error(
+          "AI enhancement failed",
+          enhancement=key,
+          error=str(e),
+          error_type=type(e).__name__,
+        )
+        _push_progress(
+          r, search_id, {"type": key, "error": str(e)[:200], "incomplete": True}
+        )
+
+    await asyncio.gather(*(_run_one(k, t) for k, t in tasks.items()))
 
   asyncio.run(_run_enhancements())
   _push_progress(r, search_id, {"type": "complete"})

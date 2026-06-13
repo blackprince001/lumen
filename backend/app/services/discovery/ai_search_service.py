@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from app.core.logger import get_logger
 from app.services.ai.base_ai_service import BaseAIService
+from app.services.ai.providers.base import AIProvider
 from app.services.discovery.base_provider import ExternalPaperResult
 from app.utils.json_extractor import extract_json_from_text
 
@@ -182,9 +183,10 @@ class AISearchService(BaseAIService):
     self,
     prompt: str,
     context: str,
+    provider: "AIProvider | None" = None,
   ) -> Optional[str]:
     """Generate text using the provider and extract the response."""
-    provider = await self._get_provider()
+    provider = provider or await self._get_provider()
     if not provider:
       logger.warning("No AI provider available for %s", context)
       return None
@@ -202,9 +204,11 @@ class AISearchService(BaseAIService):
       )
       return None
 
-  async def understand_query(self, query: str) -> Optional[Dict[str, Any]]:
+  async def understand_query(
+    self, query: str, provider: "AIProvider | None" = None
+  ) -> Optional[Dict[str, Any]]:
     """Analyze a natural language query to extract search intent."""
-    provider = await self._get_provider()
+    provider = provider or await self._get_provider()
     if not provider:
       logger.warning("No AI provider available for query understanding")
       return None
@@ -213,7 +217,7 @@ class AISearchService(BaseAIService):
 
     try:
       logger.debug("Calling AI for query understanding", query=query[:100])
-      config = self._build_config(provider, temperature=0.3)
+      config = self._build_config(provider, temperature=0.3, max_output_tokens=4096)
       text = await provider.generate(prompt, config)
 
       if not text:
@@ -252,17 +256,18 @@ class AISearchService(BaseAIService):
     self,
     query: str,
     papers: List[ExternalPaperResult],
+    provider: "AIProvider | None" = None,
   ) -> Optional[Dict[str, Any]]:
     """Generate an overview/summary of search results."""
     if not papers:
       return None
 
-    provider = await self._get_provider()
+    provider = provider or await self._get_provider()
     if not provider:
       logger.warning("No AI provider available for search overview")
       return None
 
-    papers_summary = self._build_papers_summary(papers[:20])
+    papers_summary = self._build_papers_summary(papers[:50])
 
     prompt = SEARCH_OVERVIEW_PROMPT.format(
       query=query,
@@ -272,7 +277,11 @@ class AISearchService(BaseAIService):
 
     try:
       logger.debug("Calling AI for search overview", paper_count=len(papers))
-      config = self._build_config(provider, temperature=0.3)
+      config = self._build_config(
+        provider,
+        temperature=0.3,
+        max_output_tokens=16384,
+      )
       text = await provider.generate(prompt, config)
 
       if not text:
@@ -298,22 +307,27 @@ class AISearchService(BaseAIService):
   async def cluster_papers(
     self,
     papers: List[ExternalPaperResult],
+    provider: "AIProvider | None" = None,
   ) -> Optional[Dict[str, Any]]:
     """Cluster papers by topic using AI."""
     if not papers or len(papers) < 3:
       return None
 
-    provider = await self._get_provider()
+    provider = provider or await self._get_provider()
     if not provider:
       logger.warning("No AI provider available for clustering")
       return None
 
-    papers_json = self._build_papers_json(papers[:30])
+    papers_json = self._build_papers_json(papers[:50])
     prompt = TOPIC_CLUSTERING_PROMPT.format(papers_json=papers_json)
 
     try:
       logger.debug("Calling AI for clustering", paper_count=len(papers))
-      config = self._build_config(provider, temperature=0.3)
+      config = self._build_config(
+        provider,
+        temperature=0.3,
+        max_output_tokens=16384,
+      )
       text = await provider.generate(prompt, config)
 
       if not text:
@@ -340,22 +354,27 @@ class AISearchService(BaseAIService):
     self,
     query: str,
     papers: List[ExternalPaperResult],
+    provider: "AIProvider | None" = None,
   ) -> Optional[Dict[str, Any]]:
     """Generate relevance explanations for each paper."""
     if not papers:
       return None
 
-    provider = await self._get_provider()
+    provider = provider or await self._get_provider()
     if not provider:
       logger.warning("No AI provider available for relevance explanation")
       return None
 
-    papers_json = self._build_papers_json(papers[:20])
+    papers_json = self._build_papers_json(papers[:50])
     prompt = RELEVANCE_EXPLANATION_PROMPT.format(query=query, papers_json=papers_json)
 
     try:
       logger.debug("Calling AI for relevance explanation", paper_count=len(papers))
-      config = self._build_config(provider, temperature=0.3)
+      config = self._build_config(
+        provider,
+        temperature=0.3,
+        max_output_tokens=16384,
+      )
       text = await provider.generate(prompt, config)
 
       if not text:
@@ -386,6 +405,7 @@ class AISearchService(BaseAIService):
     include_clustering: bool = True,
     include_relevance: bool = True,
     timeout_seconds: float = 30.0,
+    provider: "AIProvider | None" = None,
   ) -> Dict[str, Any]:
     """Enhance search results with AI-powered analysis."""
     import asyncio
@@ -405,7 +425,7 @@ class AISearchService(BaseAIService):
 
     try:
       qu_result = await asyncio.wait_for(
-        self.understand_query(query), timeout=timeout_seconds / 4
+        self.understand_query(query, provider=provider), timeout=timeout_seconds / 4
       )
       if qu_result:
         result["query_understanding"] = qu_result
@@ -423,7 +443,8 @@ class AISearchService(BaseAIService):
       if include_overview:
         try:
           overview_result = await asyncio.wait_for(
-            self.generate_search_overview(query, papers), timeout=timeout_seconds / 4
+            self.generate_search_overview(query, papers, provider=provider),
+            timeout=timeout_seconds / 4,
           )
           if overview_result:
             result["overview"] = overview_result
@@ -440,7 +461,7 @@ class AISearchService(BaseAIService):
       if include_clustering and len(papers) >= 3:
         try:
           clustering_result = await asyncio.wait_for(
-            self.cluster_papers(papers), timeout=timeout_seconds / 4
+            self.cluster_papers(papers, provider=provider), timeout=timeout_seconds / 4
           )
           if clustering_result:
             result["clustering"] = clustering_result
@@ -457,7 +478,8 @@ class AISearchService(BaseAIService):
       if include_relevance:
         try:
           relevance_result = await asyncio.wait_for(
-            self.explain_relevance(query, papers), timeout=timeout_seconds / 4
+            self.explain_relevance(query, papers, provider=provider),
+            timeout=timeout_seconds / 4,
           )
           if relevance_result:
             result["relevance_explanations"] = relevance_result
@@ -488,8 +510,8 @@ class AISearchService(BaseAIService):
       year = f" ({paper.year})" if paper.year else ""
       citations = f" [cited: {paper.citation_count}]" if paper.citation_count else ""
       abstract = paper.abstract or "No abstract"
-      if len(abstract) > 200:
-        abstract = abstract[:200] + "..."
+      if len(abstract) > 2000:
+        abstract = abstract[:2000] + "..."
       lines.append(f"{i + 1}. {paper.title}{year}")
       lines.append(f"   Authors: {authors}{citations}")
       lines.append(f"   {abstract}")
@@ -501,9 +523,10 @@ class AISearchService(BaseAIService):
 
     papers_data = []
     for i, paper in enumerate(papers):
+      authors = ", ".join(paper.authors[:5]) if paper.authors else "Unknown"
       abstract = paper.abstract or ""
-      if len(abstract) > 300:
-        abstract = abstract[:300] + "..."
+      if len(abstract) > 2000:
+        abstract = abstract[:2000] + "..."
       papers_data.append(
         {
           "index": i,

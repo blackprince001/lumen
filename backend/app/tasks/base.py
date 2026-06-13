@@ -1,21 +1,36 @@
 """Base task classes for Celery workers.
 
-Provider-agnostic design — tasks resolve the appropriate AI provider
-from environment defaults rather than being hardcoded to Gemini.
+Tasks resolve the AI provider per paper owner (``get_provider_for_user_sync``)
+— there is no environment-default provider.
 """
 
 from contextlib import contextmanager
-from typing import Generator
+from typing import TYPE_CHECKING, Generator
 
 from celery import Task
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.core.database import SyncSessionLocal
 from app.core.logger import get_logger
-from app.services.ai.provider_factory import create_default_provider
-from app.services.ai.providers.base import AIProvider
+
+if TYPE_CHECKING:
+  import redis as _redis
 
 logger = get_logger(__name__)
+
+
+def get_redis() -> "_redis.Redis":
+  """Return a Redis client (decoded responses) for task-side coordination."""
+  import redis
+
+  return redis.Redis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    password=settings.REDIS_PASSWORD or None,
+    decode_responses=True,
+  )
 
 
 class PermanentTaskError(Exception):
@@ -67,8 +82,8 @@ class BaseTask(Task):
 class BaseAITask(BaseTask):
   """Base task for AI operations with rate limiting and retry support.
 
-  Tasks resolve the AI provider from environment defaults (backward
-  compatible with GOOGLE_API_KEY) or from a configured provider.
+  Tasks resolve the provider per paper owner via
+  ``get_provider_for_user_sync``; there is no environment-default provider.
   """
 
   abstract = True
@@ -79,42 +94,6 @@ class BaseAITask(BaseTask):
   rate_limit = "10/m"
   soft_time_limit = 240
   time_limit = 300
-
-  def __init__(self) -> None:
-    super().__init__()
-    self._provider_instance: AIProvider | None = None
-
-  @property
-  def provider(self) -> AIProvider | None:
-    """Get or create an AI provider instance for this task.
-
-    Uses the default provider resolution (from env settings).
-    """
-    if self._provider_instance is not None:
-      return self._provider_instance
-
-    # For Celery tasks (sync context), create default provider directly
-    # without the async DB lookup
-    self._provider_instance = create_default_provider()
-    if not self._provider_instance:
-      logger.warning("No AI provider available for Celery task")
-    return self._provider_instance
-
-  @provider.setter
-  def provider(self, value: AIProvider | None) -> None:
-    self._provider_instance = value
-
-  @property
-  def client(self) -> None:
-    """Deprecated. Use ``provider`` instead.
-
-    This property exists only to catch old code still calling ``.client``
-    on tasks.  It will raise a clear error directing to the new API.
-    """
-    raise AttributeError(
-      "BaseAITask.client is deprecated. Use BaseAITask.provider instead. "
-      "Call provider.generate() or provider.embed() directly."
-    )
 
 
 def get_sync_session() -> Session:

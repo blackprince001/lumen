@@ -85,6 +85,17 @@ celery_app.conf.update(
   # Retry policy defaults
   task_default_retry_delay=60,  # 1 minute default retry delay
   task_max_retries=3,
+  # Periodic schedule (Celery beat). The retry sweep is the "retry pool":
+  # it re-dispatches AI steps (summary, findings, reading guide, embedding,
+  # layout) for papers still missing them, recovering steps that failed or
+  # were skipped at ingest time.
+  beat_schedule={
+    "retry-incomplete-ai": {
+      "task": "processing.retry_incomplete_ai",
+      "schedule": 600.0,  # every 10 minutes
+      "options": {"queue": "processing"},
+    },
+  },
 )
 
 # Auto-discover tasks from the tasks module

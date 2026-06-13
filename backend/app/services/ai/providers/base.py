@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import AsyncIterator
+from typing import Any, AsyncIterator
 
 
 @dataclass
@@ -19,6 +19,7 @@ class GenerateConfig:
   system_instruction: str | None = None
   temperature: float = 0.7
   max_output_tokens: int | None = None
+  response_format: dict[str, Any] | None = None
 
 
 @dataclass
