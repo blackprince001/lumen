@@ -146,7 +146,11 @@ const DEFAULT_PAGE_RENDER_BUFFER = 4
 const FAST_SCROLL_VELOCITY_PX_PER_MS = 1
 const SCROLL_IDLE_TIMEOUT_MS = 180
 const PAGE_VIRTUALIZER_PADDING = 24
-const PAGE_VIRTUALIZER_GAP = 24
+// Continuous scroll: pages flow with a hairline separation instead of a wide gap.
+const PAGE_VIRTUALIZER_GAP = 0
+// While the user is actively zooming, raster at DPR 1 for instant feedback, then
+// sharpen back to full resolution once zooming settles.
+const ZOOM_SETTLE_TIMEOUT_MS = 220
 const THUMBNAIL_VIRTUALIZER_PADDING = 16
 const THUMBNAIL_ITEM_CHROME_HEIGHT = 48
 const THUMBNAIL_ITEM_GAP = 12
@@ -540,6 +544,7 @@ function getPageRenderPriority({
 
 function PDFViewerPage({
   devicePixelRatioLimit,
+  trackLowResolution,
   effectiveRotation,
   reactPdf,
   pageNumber,
@@ -557,6 +562,7 @@ function PDFViewerPage({
   onPagePointerCancel,
 }: {
   devicePixelRatioLimit: number
+  trackLowResolution: boolean
   effectiveRotation: number
   reactPdf: ReactPdfModule
   pageNumber: number
@@ -567,7 +573,11 @@ function PDFViewerPage({
   searchQuery: string
   pageClassName?: (pageNumber: number) => string | undefined
   renderPageOverlay?: (props: PDFViewerPageOverlayProps) => React.ReactNode
-  onPageSettled: (pageNumber: number, devicePixelRatioLimit: number) => void
+  onPageSettled: (
+    pageNumber: number,
+    devicePixelRatioLimit: number,
+    trackLowResolution: boolean
+  ) => void
   onPagePointerDown?: (
     event: React.PointerEvent<HTMLDivElement>,
     pageNumber: number
@@ -684,7 +694,9 @@ function PDFViewerPage({
             rotate={effectiveRotation}
             className="overflow-hidden border bg-background shadow-xs"
             renderAnnotationLayer={false}
-            renderTextLayer={hasSearchQuery}
+            // Always render the selectable text layer so the reader can capture
+            // selections for highlights/annotations (search highlighting reuses it).
+            renderTextLayer
             devicePixelRatio={
               typeof window === "undefined"
                 ? 1
@@ -696,11 +708,11 @@ function PDFViewerPage({
               </div>
             }
             onRenderSuccess={() =>
-              onPageSettled(pageNumber, devicePixelRatioLimit)
+              onPageSettled(pageNumber, devicePixelRatioLimit, trackLowResolution)
             }
             onRenderTextLayerSuccess={updateSearchHighlights}
             onRenderError={() =>
-              onPageSettled(pageNumber, devicePixelRatioLimit)
+              onPageSettled(pageNumber, devicePixelRatioLimit, trackLowResolution)
             }
           />
           {searchHighlights.length ? (
@@ -778,6 +790,9 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
     const [numPages, setNumPages] = React.useState(0)
     const [activePage, setActivePage] = React.useState(1)
     const [zoom, setZoom] = React.useState(defaultZoom)
+    const [isZooming, setIsZooming] = React.useState(false)
+    const zoomSettleTimeoutRef = React.useRef(0)
+    const zoomEffectPrimedRef = React.useRef(false)
     const [pageRotationDeltas, setPageRotationDeltas] =
       React.useState<PageRotationDeltas>(() => new Map())
     const [pageMetrics, setPageMetrics] = React.useState<
@@ -867,6 +882,23 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
         }
       }
     }, [uploadedPdfUrl])
+
+    // Drop to DPR 1 while zooming for instant feedback, then re-raster sharp
+    // once the zoom level settles. Skip the very first run (initial zoom).
+    React.useEffect(() => {
+      if (!zoomEffectPrimedRef.current) {
+        zoomEffectPrimedRef.current = true
+        return
+      }
+
+      setIsZooming(true)
+      window.clearTimeout(zoomSettleTimeoutRef.current)
+      zoomSettleTimeoutRef.current = window.setTimeout(() => {
+        setIsZooming(false)
+      }, ZOOM_SETTLE_TIMEOUT_MS)
+
+      return () => window.clearTimeout(zoomSettleTimeoutRef.current)
+    }, [zoom])
 
     const renderedPageNumbers = React.useMemo(() => {
       if (pageNumbers?.length) return pageNumbers
@@ -1039,7 +1071,10 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
     const downloadDisabled = controlsDisabled || isPreparingDownload
     const isLoading =
       hasPdfFile && (!reactPdf || isDocumentLoading || isFirstPageRendering)
-    const sidebarInline = useInlineThumbnailSidebar(viewerShellWidth)
+    // Thumbnails always overlay the page (floating panel) rather than pushing
+    // the document to the side. `viewerShellWidth` is still tracked for layout.
+    void useInlineThumbnailSidebar(viewerShellWidth)
+    const sidebarInline = false
     const thumbnailSidebarVisible = Boolean(
       sidebarOpen && !isLoading && !loadError
     )
@@ -1575,7 +1610,11 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
     }, [])
 
     const handlePageSettled = React.useCallback(
-      (pageNumber: number, devicePixelRatioLimit: number) => {
+      (
+        pageNumber: number,
+        devicePixelRatioLimit: number,
+        trackLowResolution: boolean
+      ) => {
         setSettledPageNumbers((currentPageNumbers) => {
           if (currentPageNumbers.has(pageNumber)) return currentPageNumbers
 
@@ -1584,8 +1623,10 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
           return nextPageNumbers
         })
         setLowResolutionPageNumbers((currentPageNumbers) => {
+          // A zoom-transient low-res render is not recorded as "low resolution",
+          // so the page re-rasters at full DPR once zooming settles.
           const isLowResolutionRender =
-            devicePixelRatioLimit < MAX_DEVICE_PIXEL_RATIO
+            trackLowResolution && devicePixelRatioLimit < MAX_DEVICE_PIXEL_RATIO
           const alreadyLowResolution = currentPageNumbers.has(pageNumber)
 
           if (isLowResolutionRender && alreadyLowResolution) {
@@ -1928,7 +1969,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
         ) : null}
         <div
           ref={viewerShellRef}
-          className="relative flex min-h-0 flex-1 overflow-hidden bg-muted/30"
+          className="relative flex min-h-0 flex-1 overflow-hidden bg-(--background)"
         >
           {!hasPdfFile ? (
             <div className="absolute inset-0 z-20 grid place-items-center bg-background p-6 text-center text-sm text-muted-foreground">
@@ -2083,6 +2124,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                         settledPageNumbers.has(pageNumber) ||
                         queuedPageNumbers.has(pageNumber)
                       const devicePixelRatioLimit =
+                        isZooming ||
                         (scrollState.isFastScrolling &&
                           !settledPageNumbers.has(pageNumber)) ||
                         lowResolutionPageNumbers.has(pageNumber)
@@ -2101,7 +2143,10 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                       return (
                         <div
                           key={virtualPage.key}
-                          className="absolute top-0 left-1/2 contain-[layout_paint]"
+                          // PAPERS-FORK: layout-only containment (no paint) so
+                          // annotation markers/popovers can render beyond the
+                          // page box without being clipped.
+                          className="absolute top-0 left-1/2 contain-layout"
                           style={{
                             height: pageStyle.height,
                             transform: `translateX(-50%) translateY(${virtualPage.start}px)`,
@@ -2110,6 +2155,7 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                         >
                           <PDFViewerPage
                             devicePixelRatioLimit={devicePixelRatioLimit}
+                            trackLowResolution={!isZooming}
                             effectiveRotation={effectiveRotation}
                             reactPdf={reactPdf}
                             pageNumber={pageNumber}
