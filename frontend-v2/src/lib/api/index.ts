@@ -79,6 +79,8 @@ export type {
 
 export { userAiSettingsApi } from './userAiSettings';
 export type { UserAiSettings, UserAiSettingsUpdate, ProviderInfo } from './userAiSettings';
+export { userAiProvidersApi } from './userAiProviders';
+export type { UserAiProvider, UserAiProviderCreate, UserAiProviderUpdate } from './userAiProviders';
 
 export { discoveryApi } from './discovery';
 export type {

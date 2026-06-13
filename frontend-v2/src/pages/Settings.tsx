@@ -10,13 +10,21 @@ import {
   Logout as LogOut,
   Trash as Trash2,
   Cpu,
+  Add as Plus,
+  Edit2 as Pencil,
+  TickCircle,
 } from 'iconsax-reactjs';
 import { useTheme } from '@/lib/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
-import { userAiSettingsApi, type ProviderInfo, type UserAiSettings } from '@/lib/api';
+import {
+  userAiSettingsApi,
+  userAiProvidersApi,
+  type ProviderInfo,
+  type UserAiProvider,
+} from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const SECTIONS = [
@@ -317,137 +325,103 @@ function SecuritySection() {
 
 // ── AI section ─────────────────────────────────────────────────────────────────
 
-function AiSettingsSection() {
-  const [settings, setSettings] = useState<UserAiSettings | null>(null);
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [status, setStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+type ProviderDraft = {
+  label: string;
+  provider: string;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  embeddingModel: string;
+  isDefault: boolean;
+};
 
-  // Form fields
-  const [provider, setProvider] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [baseUrl, setBaseUrl] = useState('');
-  const [model, setModel] = useState('');
-  const [embeddingModel, setEmbeddingModel] = useState('');
+const EMPTY_DRAFT: ProviderDraft = {
+  label: '',
+  provider: '',
+  apiKey: '',
+  baseUrl: '',
+  model: '',
+  embeddingModel: '',
+  isDefault: false,
+};
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const [sett, provs] = await Promise.all([
-          userAiSettingsApi.get(),
-          userAiSettingsApi.listProviders(),
-        ]);
-        setSettings(sett);
-        setProviders(provs);
-        setProvider(sett.provider ?? '');
-        setBaseUrl(sett.base_url ?? '');
-        setModel(sett.model ?? '');
-        setEmbeddingModel(sett.embedding_model ?? '');
-      } catch {
-        // noop — no settings yet is fine
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
+function modelPlaceholder(provider: string): string {
+  return provider === 'gemini' ? 'gemini-2.0-flash'
+    : provider === 'anthropic' ? 'claude-sonnet-4-20250514'
+    : provider === 'deepseek' ? 'deepseek-chat'
+    : 'gpt-4o';
+}
 
-  const selectedProvider = providers.find((p) => p.type === provider);
-
-  const handleSave = async () => {
-    setSaving(true);
-    setStatus(null);
-    try {
-      const updated = await userAiSettingsApi.upsert({
-        provider: provider || null,
-        api_key: apiKey || null,
-        base_url: baseUrl || null,
-        model: model || null,
-        embedding_model: embeddingModel || null,
-      });
-      setSettings(updated);
-      setStatus({ kind: 'ok', text: 'AI settings saved' });
-    } catch (e) {
-      setStatus({ kind: 'err', text: e instanceof Error ? e.message : 'Save failed' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleReset = async () => {
-    setStatus(null);
-    try {
-      await userAiSettingsApi.delete();
-      setSettings(null);
-      setProvider('');
-      setApiKey('');
-      setBaseUrl('');
-      setModel('');
-      setEmbeddingModel('');
-      setStatus({ kind: 'ok', text: 'AI settings reset to defaults' });
-    } catch (e) {
-      setStatus({ kind: 'err', text: e instanceof Error ? e.message : 'Reset failed' });
-    }
-  };
-
-  if (loading) {
-    return <p className="text-code text-(--muted-foreground)">Loading…</p>;
-  }
+function ProviderForm({
+  draft, setDraft, providers, editing, onSave, onCancel, saving,
+}: {
+  draft: ProviderDraft;
+  setDraft: (d: ProviderDraft) => void;
+  providers: ProviderInfo[];
+  editing: boolean;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  const set = (patch: Partial<ProviderDraft>) => setDraft({ ...draft, ...patch });
+  const selectedProvider = providers.find((p) => p.type === draft.provider);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-subheading font-semibold text-(--foreground) mb-1">AI Provider</h2>
-        <p className="text-code text-(--muted-foreground)">
-          Configure which AI provider powers chat, discovery, and other AI features
-        </p>
+    <div className="border border-(--border) rounded-xl p-4 space-y-4 bg-(--card)">
+      <p className="text-caption font-semibold uppercase tracking-wide text-(--muted-foreground)">
+        {editing ? 'Edit provider' : 'Add provider'}
+      </p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+            Name
+          </label>
+          <Input
+            value={draft.label}
+            onChange={(e) => set({ label: e.target.value })}
+            placeholder="e.g. Personal OpenAI"
+          />
+        </div>
+        <div>
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+            Provider
+          </label>
+          <Select
+            value={draft.provider}
+            onChange={(e) => set({ provider: e.target.value })}
+            placeholder="Select a provider"
+          >
+            <option value="">Select a provider</option>
+            {providers.map((p) => (
+              <option key={p.type} value={p.type}>{p.display_name}</option>
+            ))}
+          </Select>
+        </div>
       </div>
 
-      {/* Provider */}
-      <div>
-        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
-          Provider
-        </label>
-        <Select
-          value={provider}
-          onChange={(e) => setProvider(e.target.value)}
-          placeholder="Select a provider"
-        >
-          <option value="">None (use server default)</option>
-          {providers.map((p) => (
-            <option key={p.type} value={p.type}>
-              {p.display_name}
-            </option>
-          ))}
-        </Select>
-      </div>
-
-      {/* API key */}
       <div>
         <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
           API key
         </label>
         <Input
           type="password"
-          value={apiKey}
-          onChange={(e) => setApiKey(e.target.value)}
-          placeholder={settings?.api_key ? '•••••••• (stored)' : 'Enter API key'}
+          value={draft.apiKey}
+          onChange={(e) => set({ apiKey: e.target.value })}
+          placeholder={editing ? '•••••••• (leave blank to keep)' : 'Enter API key'}
         />
         <p className="text-caption text-(--muted-foreground) mt-1">
-          {settings?.api_key
-            ? 'Replace the value above to change the stored key'
-            : 'Your key is encrypted at rest'}
+          Your key is encrypted at rest
         </p>
       </div>
 
-      {/* Base URL — shown only for openai-compatible */}
       <div>
         <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
           Base URL
         </label>
         <Input
-          value={baseUrl}
-          onChange={(e) => setBaseUrl(e.target.value)}
+          value={draft.baseUrl}
+          onChange={(e) => set({ baseUrl: e.target.value })}
           placeholder={selectedProvider?.display_name ?? 'https://api.openai.com/v1'}
         />
         <p className="text-caption text-(--muted-foreground) mt-1">
@@ -455,36 +429,172 @@ function AiSettingsSection() {
         </p>
       </div>
 
-      {/* Model */}
-      <div>
-        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
-          Model
-        </label>
-        <Input
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          placeholder={
-            provider === 'gemini' ? 'gemini-2.0-flash' :
-            provider === 'anthropic' ? 'claude-sonnet-4-20250514' :
-            provider === 'deepseek' ? 'deepseek-chat' :
-            'gpt-4o'
-          }
-        />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+            Model
+          </label>
+          <Input
+            value={draft.model}
+            onChange={(e) => set({ model: e.target.value })}
+            placeholder={modelPlaceholder(draft.provider)}
+          />
+        </div>
+        <div>
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+            Embedding model
+          </label>
+          <Input
+            value={draft.embeddingModel}
+            onChange={(e) => set({ embeddingModel: e.target.value })}
+            placeholder={draft.provider === 'gemini' ? 'text-embedding-004' : 'text-embedding-3-small'}
+          />
+        </div>
       </div>
 
-      {/* Embedding model */}
-      <div>
-        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
-          Embedding model
-        </label>
-        <Input
-          value={embeddingModel}
-          onChange={(e) => setEmbeddingModel(e.target.value)}
-          placeholder={
-            provider === 'gemini' ? 'text-embedding-004' :
-            'text-embedding-3-small'
-          }
+      <label className="flex items-center gap-2 text-code text-(--foreground) cursor-pointer">
+        <input
+          type="checkbox"
+          checked={draft.isDefault}
+          onChange={(e) => set({ isDefault: e.target.checked })}
+          className="accent-(--foreground)"
         />
+        Make this my default provider
+      </label>
+
+      <div className="flex items-center gap-3 pt-1">
+        <Button variant="primary" onClick={onSave} disabled={saving || !draft.provider}>
+          {saving ? 'Saving…' : editing ? 'Save changes' : 'Add provider'}
+        </Button>
+        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+      </div>
+    </div>
+  );
+}
+
+function AiSettingsSection() {
+  const [items, setItems] = useState<UserAiProvider[]>([]);
+  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [status, setStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
+
+  const [editingId, setEditingId] = useState<number | 'new' | null>(null);
+  const [draft, setDraft] = useState<ProviderDraft>(EMPTY_DRAFT);
+
+  const refresh = async () => {
+    const list = await userAiProvidersApi.list();
+    setItems(list);
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [list, provs] = await Promise.all([
+          userAiProvidersApi.list(),
+          userAiSettingsApi.listProviders(),
+        ]);
+        setItems(list);
+        setProviders(provs);
+      } catch {
+        // noop — empty is fine
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const startAdd = () => {
+    setDraft({ ...EMPTY_DRAFT, isDefault: items.length === 0 });
+    setEditingId('new');
+    setStatus(null);
+  };
+
+  const startEdit = (p: UserAiProvider) => {
+    setDraft({
+      label: p.label,
+      provider: p.provider,
+      apiKey: '',
+      baseUrl: p.base_url ?? '',
+      model: p.model,
+      embeddingModel: p.embedding_model,
+      isDefault: p.is_default,
+    });
+    setEditingId(p.id);
+    setStatus(null);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    setStatus(null);
+    try {
+      const payload = {
+        label: draft.label,
+        provider: draft.provider,
+        base_url: draft.baseUrl || null,
+        model: draft.model,
+        embedding_model: draft.embeddingModel,
+        is_default: draft.isDefault,
+        ...(draft.apiKey ? { api_key: draft.apiKey } : {}),
+      };
+      if (editingId === 'new') {
+        await userAiProvidersApi.create(payload);
+      } else if (typeof editingId === 'number') {
+        await userAiProvidersApi.update(editingId, payload);
+      }
+      await refresh();
+      setEditingId(null);
+      setStatus({ kind: 'ok', text: 'Provider saved' });
+    } catch (e) {
+      setStatus({ kind: 'err', text: e instanceof Error ? e.message : 'Save failed' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    setStatus(null);
+    try {
+      await userAiProvidersApi.delete(id);
+      await refresh();
+      setStatus({ kind: 'ok', text: 'Provider deleted' });
+    } catch (e) {
+      setStatus({ kind: 'err', text: e instanceof Error ? e.message : 'Delete failed' });
+    }
+  };
+
+  const handleSetDefault = async (id: number) => {
+    setStatus(null);
+    try {
+      await userAiProvidersApi.setDefault(id);
+      await refresh();
+    } catch (e) {
+      setStatus({ kind: 'err', text: e instanceof Error ? e.message : 'Failed to set default' });
+    }
+  };
+
+  if (loading) {
+    return <p className="text-code text-(--muted-foreground)">Loading…</p>;
+  }
+
+  const providerLabel = (type: string) =>
+    providers.find((p) => p.type === type)?.display_name ?? type;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-subheading font-semibold text-(--foreground) mb-1">AI Providers</h2>
+          <p className="text-code text-(--muted-foreground)">
+            Save multiple providers and switch between them in chat. The default powers
+            discovery and other AI features.
+          </p>
+        </div>
+        {editingId === null && (
+          <Button variant="primary" icon={<Plus size={14} />} onClick={startAdd}>
+            Add
+          </Button>
+        )}
       </div>
 
       {status && (
@@ -498,13 +608,76 @@ function AiSettingsSection() {
         </p>
       )}
 
-      <div className="flex items-center gap-3">
-        <Button variant="primary" onClick={handleSave} disabled={saving}>
-          {saving ? 'Saving…' : 'Save changes'}
-        </Button>
-        <Button variant="ghost" onClick={handleReset}>
-          Reset to defaults
-        </Button>
+      {editingId !== null && (
+        <ProviderForm
+          draft={draft}
+          setDraft={setDraft}
+          providers={providers}
+          editing={editingId !== 'new'}
+          onSave={handleSave}
+          onCancel={() => setEditingId(null)}
+          saving={saving}
+        />
+      )}
+
+      {items.length === 0 && editingId === null && (
+        <div className="border border-dashed border-(--border) rounded-xl p-8 text-center">
+          <p className="text-code text-(--muted-foreground)">
+            No providers yet. Add one to use your own API key, or the server default applies.
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {items.map((p) => (
+          <div
+            key={p.id}
+            className="flex items-center justify-between gap-3 border border-(--border) rounded-xl p-3.5 bg-(--card)"
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-body font-medium text-(--foreground) truncate">
+                  {p.label || providerLabel(p.provider)}
+                </p>
+                {p.is_default && (
+                  <span className="inline-flex items-center gap-1 text-caption text-(--success-green) font-medium">
+                    <TickCircle size={12} variant="Bold" /> Default
+                  </span>
+                )}
+                {!p.is_active && (
+                  <span className="text-caption text-(--muted-foreground)">Inactive</span>
+                )}
+              </div>
+              <p className="text-caption text-(--muted-foreground) truncate">
+                {providerLabel(p.provider)}
+                {p.model ? ` · ${p.model}` : ''}
+                {p.has_api_key ? ' · key set' : ' · no key'}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              {!p.is_default && (
+                <Button variant="ghost" onClick={() => handleSetDefault(p.id)}>
+                  Set default
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Edit provider"
+                icon={<Pencil size={14} />}
+                onClick={() => startEdit(p)}
+              />
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Delete provider"
+                icon={<Trash2 size={14} />}
+                className="text-(--destructive)!"
+                onClick={() => handleDelete(p.id)}
+              />
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
