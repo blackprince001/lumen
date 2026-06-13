@@ -3,10 +3,6 @@ import { cn } from '@/lib/utils';
 import { highlightLabel, highlightTheme } from './highlight-colors';
 import type { Annotation } from '@/lib/api/annotations';
 
-/**
- * One annotation card, shared by the margin gutter and the side panel.
- * Theme tint follows the highlight type so card and highlight match.
- */
 export function AnnotationCard({
   annotation,
   active = false,
@@ -29,6 +25,8 @@ export function AnnotationCard({
   const showQuote =
     annotation.highlighted_text && annotation.highlighted_text !== annotation.content;
 
+  const expandText = active;
+
   return (
     <div
       role={onClick ? 'button' : undefined}
@@ -38,13 +36,23 @@ export function AnnotationCard({
         if (onClick && event.key === 'Enter') onClick();
       }}
       className={cn(
-        'group/card rounded-lg border p-2.5 text-left transition-shadow',
+        'group/card rounded-lg border p-2.5 text-left transition-all duration-150',
         onClick && 'cursor-pointer',
-        active ? 'shadow-(--shadow-elevated)' : 'shadow-(--shadow-subtle)',
+        compact
+          ? cn(
+              'ring-1 ring-black/5 backdrop-blur-[2px]',
+              active
+                ? 'z-10 scale-[1.03] shadow-(--shadow-elevated) ring-2'
+                : 'shadow-(--shadow-elevated) hover:scale-[1.01]',
+            )
+          : active
+            ? 'shadow-(--shadow-elevated)'
+            : 'shadow-(--shadow-subtle)',
       )}
       style={{
         backgroundColor: `var(--theme-${theme}-bg)`,
         borderColor: active ? `var(--theme-${theme}-action)` : `var(--theme-${theme}-border)`,
+        ...(active && compact ? { ['--tw-ring-color' as string]: `var(--theme-${theme}-action)` } : {}),
       }}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
@@ -78,7 +86,7 @@ export function AnnotationCard({
         <p
           className={cn(
             'mb-1 border-l-2 pl-1.5 text-micro italic opacity-70',
-            compact ? 'line-clamp-2' : 'line-clamp-3',
+            expandText ? 'whitespace-pre-wrap' : compact ? 'line-clamp-2' : 'line-clamp-3',
           )}
           style={{
             color: `var(--theme-${theme}-text)`,
@@ -92,7 +100,7 @@ export function AnnotationCard({
       <p
         className={cn(
           'text-caption leading-relaxed',
-          compact ? 'line-clamp-4' : 'whitespace-pre-wrap',
+          expandText || !compact ? 'whitespace-pre-wrap' : 'line-clamp-4',
         )}
         style={{ color: `var(--theme-${theme}-text)` }}
       >

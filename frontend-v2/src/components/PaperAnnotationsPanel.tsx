@@ -51,13 +51,13 @@ export function PaperAnnotationsPanel({
     const isOnCurrentPage = page === currentPage;
 
     return (
-      <div 
+      <div
         key={ann.id}
         onClick={() => onAnnotationClick(ann)}
         className={cn(
           "group relative p-4 rounded-2xl border transition-all cursor-pointer",
-          isOnCurrentPage 
-            ? "bg-(--white) border-(--foreground)/20 shadow-sm" 
+          isOnCurrentPage
+            ? "bg-(--white) border-(--foreground)/20 shadow-sm"
             : "bg-(--muted)/20 border-transparent hover:bg-(--muted)/40"
         )}
       >
@@ -78,15 +78,15 @@ export function PaperAnnotationsPanel({
             )}
           </div>
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button 
-              variant="ghost" 
-              className="h-6 w-6 p-0" 
+            <Button
+              variant="ghost"
+              className="h-6 w-6 p-0"
               onClick={(e) => { e.stopPropagation(); onEditAnnotation(ann); }}
             >
               <Edit2 size={12} />
             </Button>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               className="h-6 w-6 p-0 text-(--destructive) hover:bg-(--destructive)/10"
               onClick={(e) => { e.stopPropagation(); onDeleteAnnotation(ann.id); }}
             >
@@ -138,17 +138,17 @@ export function PaperAnnotationsPanel({
               Cite & Export
             </Button>
           )}
-          <button 
-          onClick={() => onFilterByPageChange(!filterByPage)}
-          className={cn(
-            "text-caption font-medium px-2 py-1 rounded-lg border transition-all",
-            filterByPage 
-              ? "bg-(--foreground) text-(--white) border-(--foreground)" 
-              : "text-(--muted-foreground) border-(--border) hover:border-(--muted-foreground)/50"
-          )}
-        >
-          {filterByPage ? `Page ${currentPage} only` : 'All pages'}
-        </button>
+          <button
+            onClick={() => onFilterByPageChange(!filterByPage)}
+            className={cn(
+              "text-caption font-medium px-2 py-1 rounded-lg border transition-all",
+              filterByPage
+                ? "bg-(--foreground) text-(--white) border-(--foreground)"
+                : "text-(--muted-foreground) border-(--border) hover:border-(--muted-foreground)/50"
+            )}
+          >
+            {filterByPage ? `Page ${currentPage} only` : 'All pages'}
+          </button>
         </div>
       </div>
 
@@ -168,8 +168,8 @@ export function PaperAnnotationsPanel({
       {noteItems.length > 0 && (
         <div className="pt-8 border-t border-(--border)">
           <div className="flex items-center gap-2 mb-4">
-             <h3 className="text-body font-bold text-(--foreground)">General Notes</h3>
-             <span className="text-caption bg-(--muted) px-1.5 py-0.5 rounded-full text-(--muted-foreground) tabular-nums">
+            <h3 className="text-body font-bold text-(--foreground)">General Notes</h3>
+            <span className="text-caption bg-(--muted) px-1.5 py-0.5 rounded-full text-(--muted-foreground) tabular-nums">
               {noteItems.length}
             </span>
           </div>

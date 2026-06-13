@@ -122,6 +122,8 @@ export interface PaperListFilters {
   sort_by?: 'date_added' | 'viewed' | 'title' | 'authors' | 'last_read_at';
   sort_order?: 'asc' | 'desc';
   group_id?: number;
+  /** Only papers that belong to no group (mutually exclusive with group_id). */
+  ungrouped?: boolean;
   tag_id?: number;
   has_file?: boolean;
   date_from?: string;
@@ -161,6 +163,7 @@ export const papersApi = {
       if (filters.sort_by) params.append('sort_by', filters.sort_by);
       if (filters.sort_order) params.append('sort_order', filters.sort_order);
       if (filters.group_id !== undefined) params.append('group_id', filters.group_id.toString());
+      if (filters.ungrouped) params.append('ungrouped', 'true');
       if (filters.has_file !== undefined) params.append('has_file', filters.has_file.toString());
       if (filters.tag_id !== undefined) params.append('tag_id', filters.tag_id.toString());
       if (filters.date_from) params.append('date_from', filters.date_from);

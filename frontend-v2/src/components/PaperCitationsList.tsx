@@ -52,7 +52,7 @@ export function PaperCitationsList({ citations, isLoading, error, className }: P
             isInternal ? (
               <Link 
                 to={url}
-                className="text-code font-medium text-(--foreground) hover:text-(--sky-blue) transition-colors line-clamp-2 flex-1"
+                className="text-code font-medium text-(--foreground) hover:text-(--sky-blue) transition-colors flex-1 break-words"
               >
                 {title || 'Untitled Paper'}
               </Link>
@@ -61,13 +61,13 @@ export function PaperCitationsList({ citations, isLoading, error, className }: P
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-code font-medium text-(--foreground) hover:text-(--sky-blue) transition-colors line-clamp-2 flex-1"
+                className="text-code font-medium text-(--foreground) hover:text-(--sky-blue) transition-colors flex-1 break-words"
               >
                 {title || 'Untitled Paper'}
               </a>
             )
           ) : (
-            <span className="text-code font-medium text-(--foreground) line-clamp-2 flex-1">
+            <span className="text-code font-medium text-(--foreground) flex-1 break-words">
               {title || 'Untitled Paper'}
             </span>
           )}
@@ -86,13 +86,13 @@ export function PaperCitationsList({ citations, isLoading, error, className }: P
         </div>
 
         {authors && (
-          <p className="mt-1 text-caption text-(--muted-foreground) truncate">
+          <p className="mt-1 text-caption text-(--muted-foreground) break-words">
             {authors}
           </p>
         )}
 
         {citation.citation_context && (
-          <p className="mt-2 text-caption text-(--muted-foreground) opacity-80 line-clamp-2 bg-(--muted)/20 p-1.5 rounded">
+          <p className="mt-2 text-caption text-(--muted-foreground) opacity-80 break-words whitespace-pre-wrap bg-(--muted)/20 p-1.5 rounded">
             "{citation.citation_context}"
           </p>
         )}

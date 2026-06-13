@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export type SourceId = 'arxiv' | 'semantic_scholar' | 'google_scholar' | 'acl' | 'openreview';
+export type SourceId = 'arxiv' | 'semantic_scholar' | 'google_scholar' | 'openalex' | 'acl' | 'openreview';
 
 interface Source {
   id: SourceId;
@@ -11,6 +11,7 @@ const SOURCES: Source[] = [
   { id: 'arxiv', label: 'arXiv' },
   { id: 'semantic_scholar', label: 'Semantic Scholar' },
   { id: 'google_scholar', label: 'Google Scholar' },
+  { id: 'openalex', label: 'OpenAlex' },
 ];
 
 interface SourceSelectorProps {

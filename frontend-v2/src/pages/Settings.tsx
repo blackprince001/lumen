@@ -28,15 +28,14 @@ import {
 import { cn } from '@/lib/utils';
 
 const SECTIONS = [
-  { id: 'profile',    label: 'Profile',    icon: User    },
-  { id: 'ai',         label: 'AI',         icon: Cpu     },
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'ai', label: 'AI', icon: Cpu },
   { id: 'appearance', label: 'Appearance', icon: Palette },
-  { id: 'security',   label: 'Security',   icon: Shield  },
+  { id: 'security', label: 'Security', icon: Shield },
 ] as const;
 
 type SectionId = typeof SECTIONS[number]['id'];
 
-// ── Appearance section ────────────────────────────────────────────────────────
 
 type ThemeMode = 'light' | 'dark' | 'system';
 
@@ -48,8 +47,8 @@ function ThemeCard({
   onSelect: (m: ThemeMode) => void;
 }) {
   const LABELS: Record<ThemeMode, { label: string; icon: React.ElementType }> = {
-    light:  { label: 'Light',  icon: Sun     },
-    dark:   { label: 'Dark',   icon: Moon    },
+    light: { label: 'Light', icon: Sun },
+    dark: { label: 'Dark', icon: Moon },
     system: { label: 'System', icon: Monitor },
   };
   const { label, icon: Icon } = LABELS[mode];
@@ -57,7 +56,7 @@ function ThemeCard({
 
   // Tiny preview swatch
   const Preview = () => {
-    const bg     = mode === 'dark' ? '#111111' : mode === 'light' ? '#ffffff' : 'linear-gradient(135deg,#fff 50%,#111 50%)';
+    const bg = mode === 'dark' ? '#111111' : mode === 'light' ? '#ffffff' : 'linear-gradient(135deg,#fff 50%,#111 50%)';
     const border = mode === 'dark' ? '#2e2e2e' : '#e5e5e5';
     return (
       <div
@@ -102,8 +101,6 @@ function ThemeCard({
     </button>
   );
 }
-
-// ── Section panels ────────────────────────────────────────────────────────────
 
 function ProfileSection() {
   const { user, updateProfile } = useAuth();
@@ -323,15 +320,12 @@ function SecuritySection() {
   );
 }
 
-// ── AI section ─────────────────────────────────────────────────────────────────
-
 type ProviderDraft = {
   label: string;
   provider: string;
   apiKey: string;
   baseUrl: string;
   model: string;
-  embeddingModel: string;
   isDefault: boolean;
 };
 
@@ -341,15 +335,14 @@ const EMPTY_DRAFT: ProviderDraft = {
   apiKey: '',
   baseUrl: '',
   model: '',
-  embeddingModel: '',
   isDefault: false,
 };
 
 function modelPlaceholder(provider: string): string {
   return provider === 'gemini' ? 'gemini-2.0-flash'
     : provider === 'anthropic' ? 'claude-sonnet-4-20250514'
-    : provider === 'deepseek' ? 'deepseek-chat'
-    : 'gpt-4o';
+      : provider === 'deepseek' ? 'deepseek-chat'
+        : 'gpt-4o';
 }
 
 function ProviderForm({
@@ -429,27 +422,15 @@ function ProviderForm({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
-            Model
-          </label>
-          <Input
-            value={draft.model}
-            onChange={(e) => set({ model: e.target.value })}
-            placeholder={modelPlaceholder(draft.provider)}
-          />
-        </div>
-        <div>
-          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
-            Embedding model
-          </label>
-          <Input
-            value={draft.embeddingModel}
-            onChange={(e) => set({ embeddingModel: e.target.value })}
-            placeholder={draft.provider === 'gemini' ? 'text-embedding-004' : 'text-embedding-3-small'}
-          />
-        </div>
+      <div>
+        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+          Model
+        </label>
+        <Input
+          value={draft.model}
+          onChange={(e) => set({ model: e.target.value })}
+          placeholder={modelPlaceholder(draft.provider)}
+        />
       </div>
 
       <label className="flex items-center gap-2 text-code text-(--foreground) cursor-pointer">
@@ -517,7 +498,6 @@ function AiSettingsSection() {
       apiKey: '',
       baseUrl: p.base_url ?? '',
       model: p.model,
-      embeddingModel: p.embedding_model,
       isDefault: p.is_default,
     });
     setEditingId(p.id);
@@ -533,7 +513,6 @@ function AiSettingsSection() {
         provider: draft.provider,
         base_url: draft.baseUrl || null,
         model: draft.model,
-        embedding_model: draft.embeddingModel,
         is_default: draft.isDefault,
         ...(draft.apiKey ? { api_key: draft.apiKey } : {}),
       };
@@ -684,13 +663,11 @@ function AiSettingsSection() {
 }
 
 const PANELS: Record<SectionId, React.ComponentType> = {
-  profile:    ProfileSection,
-  ai:         AiSettingsSection,
+  profile: ProfileSection,
+  ai: AiSettingsSection,
   appearance: AppearanceSection,
-  security:   SecuritySection,
+  security: SecuritySection,
 };
-
-// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Settings() {
   const [active, setActive] = useState<SectionId>('profile');

@@ -8,12 +8,6 @@ import type { NormalizedRect } from './annotation-geometry';
 
 const CARD_WIDTH = 256;
 
-/**
- * Inline anchored note: a small marker sitting at the end of a highlight.
- * Hovering previews the note; clicking pins it open (so moving the cursor over
- * highlights won't dismiss it). A close button or clicking the marker again
- * dismisses it. Used when the panel is too narrow for margin cards.
- */
 export function AnnotationMarker({
   annotation,
   rect,
@@ -54,7 +48,7 @@ export function AnnotationMarker({
 
   return (
     <div
-      className={cn('absolute', open ? 'z-30' : 'z-20')}
+      className={cn('absolute', active ? 'z-40' : open ? 'z-30' : 'z-20')}
       style={{ left: `${anchorLeft * 100}%`, top: `${anchorTop * 100}%` }}
       onMouseEnter={previewOn}
       onMouseLeave={previewOff}

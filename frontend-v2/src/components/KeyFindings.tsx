@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Lamp as Lightbulb, Refresh as RefreshCw, Edit as Edit2, Save2 as Save, Warning2 as AlertCircle } from 'iconsax-reactjs';
 import ReactMarkdown from 'react-markdown';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { aiFeaturesApi } from '@/lib/api/aiFeatures';
 import { cn } from '@/lib/utils';
+import { toastInfo } from '@/lib/utils/toast';
 
 interface KeyFindingsProps {
   paperId: number;
@@ -19,19 +20,32 @@ export function KeyFindings({ paperId }: KeyFindingsProps) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [editedFindings, setEditedFindings] = useState<string>('');
+  const [isPolling, setIsPolling] = useState(false);
+
+  useEffect(() => {
+    if (!isPolling) return;
+    const timer = setTimeout(() => setIsPolling(false), 60000);
+    return () => clearTimeout(timer);
+  }, [isPolling]);
 
   const { data: findings, isLoading, error } = useQuery({
     queryKey: ['ai-findings', paperId],
     queryFn: () => aiFeaturesApi.getFindings(paperId),
     retry: 1,
+    refetchInterval: isPolling ? 3000 : false,
   });
 
   const generateMutation = useMutation({
     mutationFn: () => aiFeaturesApi.extractFindings(paperId),
+    onMutate: () => {
+      setIsPolling(true);
+      toastInfo('Extracting insights…', 'It will be updated shortly.');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-findings', paperId] });
       queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
     },
+    onError: () => setIsPolling(false),
   });
 
   const updateMutation = useMutation({

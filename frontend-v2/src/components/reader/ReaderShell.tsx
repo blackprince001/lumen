@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
-import { Warning2 as AlertCircle } from 'iconsax-reactjs';
+import {
+  Warning2 as AlertCircle,
+  Maximize4 as MaximizeIcon,
+  CloseSquare as MinimizeIcon,
+} from 'iconsax-reactjs';
 import { annotationsApi, type Annotation } from '@/lib/api/annotations';
 import { aiFeaturesApi, type AIActionKind } from '@/lib/api/aiFeatures';
 import { type Paper } from '@/lib/api/papers';
@@ -32,8 +36,9 @@ const PDF_DOCUMENT_OPTIONS = {
   standardFontDataUrl: '/pdfjs/standard_fonts/',
 };
 
-/** Gutter cards need this much room beyond the page edge to render. */
-const MARGIN_CARD_WIDTH = 248;
+
+const MARGIN_CARD_MAX_WIDTH = 280;
+const MARGIN_CARD_MIN_WIDTH = 188;
 const MARGIN_CARD_GAP = 12;
 const MARGIN_CARD_MIN_HEIGHT = 76;
 
@@ -69,8 +74,29 @@ export function ReaderShell({
   const [highlighterActive, setHighlighterActive] = useState(false);
   const [highlighterColor, setHighlighterColor] = useState<ThemeName>('yellow' as ThemeName);
 
-  // Measure the reader width so note rendering can adapt as the resizable panel
-  // changes: wide enough → margin cards with leader lines; otherwise inline.
+  const [zen, setZen] = useState(false);
+  const ZEN_ZOOM = 1.5;
+  const preZenZoomRef = useRef<number | null>(null);
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+    if (zen) {
+      preZenZoomRef.current = viewer.getZoom();
+      viewer.setZoom(Math.max(viewer.getZoom(), ZEN_ZOOM));
+    } else if (preZenZoomRef.current !== null) {
+      viewer.setZoom(preZenZoomRef.current);
+      preZenZoomRef.current = null;
+    }
+  }, [zen]);
+  useEffect(() => {
+    if (!zen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [zen]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
   useEffect(() => {
@@ -279,14 +305,13 @@ export function ReaderShell({
       const renderedWidth = pageWidth * scale;
       const renderedHeight = pageHeight * scale;
 
-      // Responsive: the page is centred, so each gutter is half the leftover
-      // width. When a gutter can host a card we float notes in the margin with
-      // leader lines; otherwise we fall back to inline anchored popovers.
       const sideGutter = (containerWidth - renderedWidth) / 2;
-      const marginMode = sideGutter >= MARGIN_CARD_WIDTH + MARGIN_CARD_GAP * 2;
+      const marginMode = sideGutter >= MARGIN_CARD_MIN_WIDTH + MARGIN_CARD_GAP * 2;
+      const cardWidth = Math.min(
+        MARGIN_CARD_MAX_WIDTH,
+        Math.max(MARGIN_CARD_MIN_WIDTH, Math.floor(sideGutter - MARGIN_CARD_GAP * 2)),
+      );
 
-      // Stack margin cards down each gutter at their anchor y, pushing
-      // collisions down, balancing across the two sides.
       const cursorY = { left: 0, right: 0 };
       const placed = marginMode
         ? pageAnnotations
@@ -365,7 +390,8 @@ export function ReaderShell({
                   className="absolute"
                   style={{
                     top,
-                    width: MARGIN_CARD_WIDTH,
+                    width: cardWidth,
+                    zIndex: activeAnnotationId === ann.id ? 40 : 20,
                     ...(side === 'right'
                       ? { left: renderedWidth + MARGIN_CARD_GAP }
                       : { right: renderedWidth + MARGIN_CARD_GAP }),
@@ -422,7 +448,15 @@ export function ReaderShell({
   }
 
   return (
-    <div ref={containerRef} className="relative h-full w-full pb-3">
+    <div
+      ref={containerRef}
+      className={cn(
+        'relative w-full',
+        zen
+          ? 'fixed inset-0 z-50 h-screen bg-(--background) p-2'
+          : 'h-full pb-3',
+      )}
+    >
       {fileUrl ? (
         <div className="h-full" data-reader-dark={isDark || undefined}>
           <PDFViewer
@@ -471,6 +505,22 @@ export function ReaderShell({
             onColorChange={setHighlighterColor}
           />
         </div>
+      )}
+
+      {fileUrl && (
+        <button
+          type="button"
+          onClick={() => setZen((v) => !v)}
+          aria-label={zen ? 'Exit zen reading mode' : 'Enter zen reading mode'}
+          title={zen ? 'Exit zen mode (Esc)' : 'Zen reading mode'}
+          className={cn(
+            'absolute bottom-6 left-6 z-40 flex size-10 items-center justify-center',
+            'rounded-full border border-(--border) bg-(--popover) text-(--muted-foreground)',
+            'shadow-(--shadow-elevated) transition-colors hover:text-(--foreground)',
+          )}
+        >
+          {zen ? <MinimizeIcon size={18} /> : <MaximizeIcon size={18} />}
+        </button>
       )}
 
       {selection && (

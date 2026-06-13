@@ -15,6 +15,7 @@ import {
   Trash,
 } from 'iconsax-reactjs';
 import { groupsApi, type Group } from '@/lib/api/groups';
+import { papersApi } from '@/lib/api/papers';
 import { useAuth } from '@/contexts/AuthContext';
 import { fetchApi } from '@/lib/api/client';
 import {
@@ -153,7 +154,21 @@ export default function GroupsFinder() {
     queryFn: () => groupsApi.list(),
   });
 
-  const manifest = useMemo(() => buildManifest(groups, user?.id), [groups, user?.id]);
+  const { data: ungroupedData } = useQuery({
+    queryKey: ['papers', 'ungrouped'],
+    queryFn: () =>
+      papersApi.list(1, 100, undefined, {
+        ungrouped: true,
+        sort_by: 'date_added',
+        sort_order: 'desc',
+      }),
+  });
+  const ungroupedPapers = useMemo(() => ungroupedData?.papers ?? [], [ungroupedData]);
+
+  const manifest = useMemo(
+    () => buildManifest(groups, user?.id, ungroupedPapers),
+    [groups, user?.id, ungroupedPapers],
+  );
   const { items, index } = manifest;
 
   // The component owns navigation; we mirror it into ?path= for deep links.
@@ -182,9 +197,11 @@ export default function GroupsFinder() {
   const [quickLook, setQuickLook] = useState<{ title: string; url: string } | null>(null);
   const quickLookUrlRef = useRef<string | null>(null);
 
-  /* ------------------------------ mutations ------------------------------ */
-
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['groups'] });
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ['groups'] });
+    // Membership changes move papers in/out of the ungrouped root set.
+    queryClient.invalidateQueries({ queryKey: ['papers', 'ungrouped'] });
+  };
 
   const createMutation = useMutation({
     mutationFn: ({ name, parentId }: { name: string; parentId: number | null }) =>
@@ -487,8 +504,6 @@ export default function GroupsFinder() {
       )}
     </div>
   );
-
-  /* ------------------------------- render -------------------------------- */
 
   if (isLoading) {
     return (

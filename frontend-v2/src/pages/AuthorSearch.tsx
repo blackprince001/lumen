@@ -100,7 +100,7 @@ function SearchBox({ initial, onSubmit }: { initial: string; onSubmit: (q: strin
       }}
       className="mb-8"
     >
-      <div className="flex items-center gap-2 rounded-card border border-(--border) bg-(--card) px-3 py-2 shadow-(--shadow-subtle) focus-within:border-(--foreground)/30">
+      <div className="flex items-center gap-2 rounded-card border border-(--border) bg-(--card) px-3 py-2 transition-colors hover:border-(--foreground)/20 focus-within:border-(--foreground)/30">
         <SearchNormal1 size={16} className="shrink-0 text-(--muted-foreground)" />
         <input
           value={input}
@@ -126,7 +126,7 @@ function AuthorCard({ author }: { author: AuthorProfile }) {
   return (
     <Link
       to={`/author/${author.openalex_id}`}
-      className="paper-card-hover group block rounded-card border border-(--border) bg-(--card) p-4 no-underline shadow-(--shadow-subtle)"
+      className="paper-card-hover group block rounded-card border border-(--border) bg-(--card) p-4 no-underline"
     >
       <div className="flex items-start gap-3">
         <AuthorAvatar name={author.display_name} size="md" />

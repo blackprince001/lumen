@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Book1 as BookOpen, Refresh as RefreshCw, Edit as Edit2, Save2 as Save, Warning2 as AlertCircle, TickCircle as CheckCircle2, MessageQuestion as HelpCircle, ArrowRight } from 'iconsax-reactjs';
 import ReactMarkdown from 'react-markdown';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import { aiFeaturesApi } from '@/lib/api/aiFeatures';
 import { cn } from '@/lib/utils';
+import { toastInfo } from '@/lib/utils/toast';
 
 interface ReadingGuideProps {
   paperId: number;
@@ -19,19 +20,32 @@ export function ReadingGuide({ paperId }: ReadingGuideProps) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [editedGuide, setEditedGuide] = useState<string>('');
+  const [isPolling, setIsPolling] = useState(false);
+
+  useEffect(() => {
+    if (!isPolling) return;
+    const timer = setTimeout(() => setIsPolling(false), 60000);
+    return () => clearTimeout(timer);
+  }, [isPolling]);
 
   const { data: guide, isLoading, error } = useQuery({
     queryKey: ['ai-reading-guide', paperId],
     queryFn: () => aiFeaturesApi.getReadingGuide(paperId),
     retry: 1,
+    refetchInterval: isPolling ? 3000 : false,
   });
 
   const generateMutation = useMutation({
     mutationFn: () => aiFeaturesApi.generateReadingGuide(paperId),
+    onMutate: () => {
+      setIsPolling(true);
+      toastInfo('Regenerating reading guide…', 'It will be updated shortly.');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ai-reading-guide', paperId] });
       queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
     },
+    onError: () => setIsPolling(false),
   });
 
   const updateMutation = useMutation({

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toastInfo } from '@/lib/utils/toast';
 import { Trash as Trash2, Edit as Pencil, TickCircle as Check, CloseCircle as X, ExportSquare as ExternalLink, Calendar, Link as LinkIcon, FingerScan as Fingerprint, Refresh, Share } from 'iconsax-reactjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type Paper, papersApi } from '@/lib/api/papers';
@@ -51,6 +52,9 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
 
   const extractCitationsMutation = useMutation({
     mutationFn: () => papersApi.extractCitations(paperId),
+    onMutate: () => {
+      toastInfo('Regenerating citations…', 'They will be updated shortly.');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['citations-list', paperId] });
     },

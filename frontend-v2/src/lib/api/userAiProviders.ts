@@ -8,8 +8,6 @@ export interface UserAiProvider {
   has_api_key: boolean;
   base_url: string | null;
   model: string;
-  embedding_model: string;
-  embedding_dimension: number;
   is_default: boolean;
   is_active: boolean;
   created_at: string;
@@ -22,8 +20,6 @@ export interface UserAiProviderCreate {
   api_key?: string;
   base_url?: string | null;
   model?: string;
-  embedding_model?: string;
-  embedding_dimension?: number;
   is_default?: boolean;
 }
 
@@ -33,8 +29,6 @@ export interface UserAiProviderUpdate {
   api_key?: string;
   base_url?: string | null;
   model?: string;
-  embedding_model?: string;
-  embedding_dimension?: number;
   is_default?: boolean;
   is_active?: boolean;
 }

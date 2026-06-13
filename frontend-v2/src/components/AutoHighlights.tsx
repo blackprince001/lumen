@@ -1,8 +1,9 @@
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Magicpen as Highlighter, Refresh as RefreshCw, Warning2 as AlertCircle, TickCircle as CheckCircle2 } from 'iconsax-reactjs';
 import { Button } from '@/components/ui/Button';
 import { aiFeaturesApi } from '@/lib/api/aiFeatures';
-// import { cn } from '@/lib/utils';
+import { toastInfo } from '@/lib/utils/toast';
 
 interface AutoHighlightsProps {
   paperId: number;
@@ -10,13 +11,34 @@ interface AutoHighlightsProps {
 
 export function AutoHighlights({ paperId }: AutoHighlightsProps) {
   const queryClient = useQueryClient();
+  const [isPolling, setIsPolling] = useState(false);
+
+  useEffect(() => {
+    if (!isPolling) return;
+    const timeout = setTimeout(() => setIsPolling(false), 60000);
+    return () => clearTimeout(timeout);
+  }, [isPolling]);
+
+  useEffect(() => {
+    if (!isPolling) return;
+    const interval = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['annotations', paperId] });
+      queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [isPolling, paperId, queryClient]);
 
   const generateMutation = useMutation({
     mutationFn: () => aiFeaturesApi.generateHighlights(paperId),
+    onMutate: () => {
+      setIsPolling(true);
+      toastInfo('Spawning AI agent…', 'It will identify highlights shortly.');
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['annotations', paperId] });
       queryClient.invalidateQueries({ queryKey: ['paper', paperId] });
     },
+    onError: () => setIsPolling(false),
   });
 
   return (

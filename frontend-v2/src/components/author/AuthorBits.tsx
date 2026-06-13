@@ -47,7 +47,7 @@ export function StatCard({
   value?: number | null;
 }) {
   return (
-    <div className="rounded-card border border-(--border) bg-(--card) px-4 py-3 shadow-(--shadow-subtle)">
+    <div className="rounded-card border border-(--border) bg-(--card) px-4 py-3 transition-colors hover:border-(--foreground)/20">
       <div className="mb-1 flex items-center gap-1.5 text-(--muted-foreground)">
         <Icon size={13} />
         <span className="text-micro uppercase tracking-wider">{label}</span>

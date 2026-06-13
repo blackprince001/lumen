@@ -12,6 +12,8 @@ export type FileThumbnailProps = {
   className?: string
   previewAspectRatio?: number
   previewClassName?: string
+  /** Inline styles for the preview frame (e.g. a paper-theme border color). */
+  previewStyle?: React.CSSProperties
   previewContent?: React.ReactNode
   previewImageUrl?: string | null
   isLoading?: boolean
@@ -44,6 +46,7 @@ export function FileThumbnail({
   className,
   previewAspectRatio,
   previewClassName,
+  previewStyle,
   previewContent,
   previewImageUrl,
   isLoading = false,
@@ -135,11 +138,12 @@ export function FileThumbnail({
           "relative aspect-square overflow-hidden bg-muted contain-[layout_paint]",
           previewClassName
         )}
-        style={
-          previewAspectRatio
+        style={{
+          ...(previewAspectRatio
             ? { aspectRatio: String(previewAspectRatio) }
-            : undefined
-        }
+            : undefined),
+          ...previewStyle,
+        }}
       >
         {previewImageUrl ? (
           <img

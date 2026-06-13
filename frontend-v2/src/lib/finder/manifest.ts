@@ -11,6 +11,7 @@ import type { FileSystemItem } from '@/components/shadcn/file-system';
  *   shared root:   shared/                   virtual folder, not a real group
  *   shared group:  shared/g{id}-{slug}/
  *   paper:         {folder}p{id}-{slug}.pdf  one file item per group membership
+ *   ungrouped:     p{id}-{slug}.pdf          papers with no group live at the root
  *
  * Slugs are cosmetic: lookups always parse the numeric id, so renames,
  * duplicate names, and "/" inside group names never break paths.
@@ -74,7 +75,11 @@ export function isOwnGroup(group: Group, userId: number | undefined): boolean {
   return !group.user_id || group.user_id === userId;
 }
 
-export function buildManifest(groups: Group[], userId: number | undefined): Manifest {
+export function buildManifest(
+  groups: Group[],
+  userId: number | undefined,
+  ungroupedPapers: Paper[] = [],
+): Manifest {
   const items: FileSystemItem[] = [];
   const index: PathIndex = {
     groupByPath: new Map(),
@@ -96,13 +101,16 @@ export function buildManifest(groups: Group[], userId: number | undefined): Mani
   const ownRoots = (byParent.get(null) ?? []).filter((g) => isOwnGroup(g, userId));
   const sharedRoots = groups.filter((g) => g.user_id != null && g.user_id !== userId && g.parent_id == null);
 
-  const addPaper = (paper: Paper, folderPath: string, groupId: number) => {
+  const addPaper = (paper: Paper, folderPath: string, groupId: number | null) => {
     const path = `${folderPath}p${paper.id}-${slugify(paper.title)}.pdf`;
     index.paperByPath.set(path, paper.id);
     if (!index.papers.has(paper.id)) index.papers.set(paper.id, paper);
-    const memberships = index.groupsByPaper.get(paper.id) ?? [];
-    memberships.push(groupId);
-    index.groupsByPaper.set(paper.id, memberships);
+    // Ungrouped papers (groupId null) live at the root and have no membership.
+    if (groupId != null) {
+      const memberships = index.groupsByPaper.get(paper.id) ?? [];
+      memberships.push(groupId);
+      index.groupsByPaper.set(paper.id, memberships);
+    }
 
     const metadata: PaperFileMetadata = {
       paperId: paper.id,
@@ -150,6 +158,13 @@ export function buildManifest(groups: Group[], userId: number | undefined): Mani
   };
 
   for (const root of ownRoots) addGroupTree(root, '');
+
+  // Ungrouped papers sit at the root alongside the top-level group folders.
+  // Skip any that already appeared under a group (defensive against stale data).
+  for (const paper of ungroupedPapers) {
+    if (index.papers.has(paper.id)) continue;
+    addPaper(paper, '', null);
+  }
 
   if (sharedRoots.length > 0) {
     index.groupByPath.set(SHARED_ROOT, null);

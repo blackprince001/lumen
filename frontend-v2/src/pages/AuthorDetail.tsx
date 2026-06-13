@@ -24,15 +24,12 @@ export default function AuthorDetail() {
   const { id } = useParams<{ id: string }>();
   const [sort, setSort] = useState<WorkSort>('cited');
 
-  // Works are keyed by OpenAlex id and also carry the author's display name.
   const worksQuery = useQuery({
     queryKey: ['author-works', id],
     queryFn: () => discoveryApi.getAuthorWorks(id!, 50),
     enabled: !!id,
   });
 
-  // The rich profile endpoint only searches by name, so look it up by the name
-  // from the works response and match the entry back to this OpenAlex id.
   const authorName = worksQuery.data?.display_name;
   const profileQuery = useQuery({
     queryKey: ['author-profile', authorName],
@@ -224,7 +221,7 @@ function WorkRow({ work, rank }: { work: AuthorWork; rank?: number }) {
       : undefined;
 
   return (
-    <div className="paper-card-hover group flex items-start gap-3 rounded-card border border-(--border) bg-(--card) p-4 shadow-(--shadow-subtle)">
+    <div className="paper-card-hover group flex items-start gap-3 rounded-card border border-(--border) bg-(--card) p-4">
       {rank != null && (
         <span className="mt-0.5 w-5 shrink-0 text-right text-caption tabular-nums text-(--muted-foreground)/60">
           {rank}

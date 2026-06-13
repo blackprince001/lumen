@@ -6,7 +6,6 @@ export interface UserAiSettings {
   api_key: string | null;
   base_url: string | null;
   model: string | null;
-  embedding_model: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -16,7 +15,6 @@ export interface UserAiSettingsUpdate {
   api_key?: string | null;
   base_url?: string | null;
   model?: string | null;
-  embedding_model?: string | null;
 }
 
 export interface ProviderInfo {

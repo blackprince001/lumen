@@ -72,6 +72,9 @@ export type PDFViewerHandle = {
     options?: ScrollToOptions
   ) => void
   getViewportElement: () => HTMLDivElement | null
+  // PAPERS-FORK: let callers drive zoom (e.g. zen reading mode).
+  setZoom: (zoom: number) => void
+  getZoom: () => number
 }
 
 export type PDFViewerScrollDirection = "forward" | "backward" | "none"
@@ -1435,6 +1438,13 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
           })
         },
         getViewportElement: () => viewportRef.current,
+        // PAPERS-FORK: clamp to the supported zoom range and apply.
+        setZoom: (next: number) => {
+          const min = ZOOM_OPTIONS[0]
+          const max = ZOOM_OPTIONS[ZOOM_OPTIONS.length - 1]
+          setZoom(Math.max(min, Math.min(max, next)))
+        },
+        getZoom: () => zoom,
       }),
       [
         getPageMetrics,
@@ -2143,9 +2153,6 @@ export const PDFViewer = React.forwardRef<PDFViewerHandle, PDFViewerProps>(
                       return (
                         <div
                           key={virtualPage.key}
-                          // PAPERS-FORK: layout-only containment (no paint) so
-                          // annotation markers/popovers can render beyond the
-                          // page box without being clipped.
                           className="absolute top-0 left-1/2 contain-layout"
                           style={{
                             height: pageStyle.height,

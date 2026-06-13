@@ -1182,12 +1182,27 @@ function FileVisual({
   const customPreview =
     !previewUrl && !isLazyPagePending ? renderFilePreview?.(file) : null
   const showPager = pageable && totalPages > 1
+  // PAPERS-FORK: paper covers carry a theme. Tint the thumbnail frame (a themed
+  // border + load-state background) so a loaded cover stays visually paired with
+  // its themed folder/placeholder instead of reading as a bare white tile.
+  const fileTheme = file.metadata?.theme
   const thumbnail = (
     <FileThumbnail
       file={{ name: file.name, type: file.contentType ?? "" }}
       className={cn("@container", !showPager && className)}
       previewAspectRatio={resolvedAspectRatio}
-      previewClassName={cn("bg-white dark:bg-neutral-100", previewClassName)}
+      previewClassName={cn(
+        fileTheme ? "border-2" : "bg-white dark:bg-neutral-100",
+        previewClassName,
+      )}
+      previewStyle={
+        fileTheme
+          ? {
+              borderColor: `var(--theme-${fileTheme}-border)`,
+              backgroundColor: `var(--theme-${fileTheme}-bg)`,
+            }
+          : undefined
+      }
       previewImageUrl={previewUrl ?? undefined}
       isLoading={isLazyPagePending}
       previewContent={

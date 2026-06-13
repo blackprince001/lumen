@@ -298,8 +298,8 @@ export default function Discovery() {
       {/* Results */}
       {hasResults && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
               <h3 className="text-body font-bold">
                 {displayPapers.length} Papers Found
                 {loadedSession && <span className="text-caption font-normal text-(--muted-foreground) ml-2">(loaded from saved)</span>}
@@ -328,6 +328,7 @@ export default function Discovery() {
               icon={<Save size={14} />}
               onClick={handleSaveSession}
               disabled={saveSessionMutation.isPending || !!loadedSession}
+              className="self-start shrink-0 sm:self-auto"
             >
               {saveSessionMutation.isPending ? 'Saving...' : saveSessionMutation.isSuccess ? 'Saved!' : 'Save Session'}
             </Button>
