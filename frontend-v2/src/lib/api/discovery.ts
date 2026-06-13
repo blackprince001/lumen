@@ -197,6 +197,54 @@ export interface DiscoverySessionDetail extends DiscoverySession {
   relevance_explanations?: PaperRelevanceExplanation[] | null;
 }
 
+// ── Author Discovery Types (OpenAlex) ─────────────────────────────────
+
+export interface AuthorInstitution {
+  name?: string;
+  country?: string;
+  type?: string;
+}
+
+export interface AuthorTopic {
+  name?: string;
+  subfield?: string;
+  field?: string;
+}
+
+export interface AuthorProfile {
+  openalex_id: string;
+  display_name: string;
+  works_count?: number;
+  cited_by_count?: number;
+  h_index?: number;
+  i10_index?: number;
+  orcid?: string;
+  institutions: AuthorInstitution[];
+  topics: AuthorTopic[];
+}
+
+export interface AuthorSearchResponse {
+  query: string;
+  results: AuthorProfile[];
+  total: number;
+}
+
+export interface AuthorWork {
+  openalex_id: string;
+  title: string;
+  publication_year?: number;
+  cited_by_count?: number;
+  doi?: string;
+  authors: string[];
+}
+
+export interface AuthorWorksResponse {
+  author_id: string;
+  display_name: string;
+  results: AuthorWork[];
+  total: number;
+}
+
 export const discoveryApi = {
   getSources: (): Promise<DiscoverySourcesResponse> =>
     api.get<DiscoverySourcesResponse>('/discovery/sources'),
@@ -250,6 +298,14 @@ export const discoveryApi = {
 
   updateSession: (sessionId: number, name?: string): Promise<DiscoverySession> =>
     api.put<DiscoverySession>(`/discovery/sessions/${sessionId}`, undefined, { params: { name } }),
+
+  // ── Author Discovery (OpenAlex) ──────────────────────────────────────
+
+  searchAuthors: (name: string, limit = 10): Promise<AuthorSearchResponse> =>
+    api.get<AuthorSearchResponse>('/discovery/authors/search', { params: { name, limit } }),
+
+  getAuthorWorks: (authorId: string, limit = 20): Promise<AuthorWorksResponse> =>
+    api.get<AuthorWorksResponse>(`/discovery/authors/${encodeURIComponent(authorId)}/works`, { params: { limit } }),
 };
 
 export default discoveryApi;

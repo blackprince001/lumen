@@ -7,12 +7,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type Paper, papersApi } from '@/lib/api/papers';
 import { Button } from '@/components/ui/Button';
 import { TagInput } from '@/components/TagInput';
-import { TagList } from '@/components/TagList';
 import { PaperCitationsList } from '@/components/PaperCitationsList';
 import { ShareDialog } from '@/components/ShareDialog';
 import { isOwner } from '@/lib/utils/permissions';
 import { paperSharingApi } from '@/lib/api/sharing';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 interface PaperDetailsProps {
   paper: Paper;
@@ -205,16 +204,8 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
           </div>
         )}
 
-        {/* Tags */}
+        {/* Tags — TagInput renders the selected chips (with remove) itself */}
         <div className="space-y-2">
-          <TagList
-            tags={paper.tags || []}
-            showRemove
-            onRemove={(tagId) => {
-              const newTags = (paper.tags || []).filter(t => t.id !== tagId).map(t => t.id);
-              updateMutation.mutate({ tag_ids: newTags });
-            }}
-          />
           <TagInput
             selectedTags={paper.tags || []}
             onTagsChange={(tags) => updateMutation.mutate({ tag_ids: tags.map(t => t.id) })}
@@ -233,9 +224,13 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
               </h4>
               <div className="flex flex-wrap gap-1.5">
                 {authors.map((author, i) => (
-                  <span key={i} className="text-code px-2 py-0.5 bg-(--muted)/50 rounded text-(--foreground)">
+                  <Link
+                    key={i}
+                    to={`/author/search?name=${encodeURIComponent(author)}`}
+                    className="text-code px-2 py-0.5 bg-(--muted)/50 rounded text-(--foreground) hover:bg-(--accent)/20 hover:text-(--accent) transition-colors no-underline"
+                  >
                     {author}
-                  </span>
+                  </Link>
                 ))}
               </div>
             </div>

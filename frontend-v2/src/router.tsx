@@ -25,6 +25,8 @@ import HuggingFacePapers from './pages/HuggingFacePapers';
 import Settings from './pages/Settings';
 import UserManagement from './pages/UserManagement';
 import ErrorPage from './pages/ErrorPage';
+import AuthorDetail from './pages/AuthorDetail';
+import AuthorSearch from './pages/AuthorSearch';
 
 export const router = createBrowserRouter([
   { path: '/login', element: <Login /> },
@@ -61,6 +63,9 @@ export const router = createBrowserRouter([
       { path: 'discovery-archive', element: <DiscoveryArchive /> },
       { path: 'huggingface-papers', element: <HuggingFacePapers /> },
       { path: 'settings', element: <Settings /> },
+      { path: 'author', element: <AuthorSearch /> },
+      { path: 'author/search', element: <AuthorSearch /> },
+      { path: 'author/:id', element: <AuthorDetail /> },
       {
         path: 'admin/users',
         element: (

@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'motion/react';
-import { Home, Chart as BarChart3, Gps as Compass, Notepad2 as Newspaper, MagicStar as Sparkles, Book1 as Library, DocumentText as FileText, Hierarchy as GitBranch, Archive, Folder, ArrowDown2 as ChevronDown, SidebarLeft as PanelLeftClose, SidebarLeft as PanelLeftOpen, Shield } from 'iconsax-reactjs';
+import { Home, Chart as BarChart3, Gps as Compass, Notepad2 as Newspaper, MagicStar as Sparkles, Book1 as Library, DocumentText as FileText, Hierarchy as GitBranch, People as Users, Archive, Folder, ArrowDown2 as ChevronDown, SidebarLeft as PanelLeftClose, SidebarLeft as PanelLeftOpen, Shield } from 'iconsax-reactjs';
 import { groupsApi, type Group } from '@/lib/api/groups';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/utils';
@@ -103,6 +103,7 @@ const CORE_NAV = [
 
 const DISCOVER_NAV = [
   { href: '/discovery', icon: Compass, label: 'Discovery' },
+  { href: '/author', icon: Users, label: 'Authors' },
   { href: '/huggingface-papers', icon: Newspaper, label: 'HF Papers' },
   { href: '/recommendations', icon: Sparkles, label: 'For You' },
 ];
