@@ -487,6 +487,7 @@ def init_discovery_service() -> DiscoveryService:
   """Initialize discovery service with providers."""
   from app.services.discovery.arxiv_provider import ArxivProvider
   from app.services.discovery.google_scholar_provider import GoogleScholarProvider
+  from app.services.discovery.openalex_provider import OpenAlexProvider
   from app.services.discovery.semantic_scholar_provider import SemanticScholarProvider
 
   # Register providers
@@ -495,6 +496,7 @@ def init_discovery_service() -> DiscoveryService:
     SemanticScholarProvider, api_key=settings.SEMANTIC_SCHOLAR_API_KEY
   )
   provider_registry.register(GoogleScholarProvider, api_key=settings.SERPAPI_KEY)
+  provider_registry.register(OpenAlexProvider)
 
   return DiscoveryService()
 
