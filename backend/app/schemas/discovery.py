@@ -327,3 +327,61 @@ class AISearchResponse(BaseModel):
   overview: Optional[SearchOverview] = None
   clustering: Optional[ClusteringResult] = None
   relevance_explanations: Optional[RelevanceExplanations] = None
+
+
+class AuthorInstitution(BaseModel):
+  """Institution from an author profile."""
+
+  name: Optional[str] = None
+  country: Optional[str] = None
+  type: Optional[str] = None
+
+
+class AuthorTopic(BaseModel):
+  """Topic from an author profile."""
+
+  name: Optional[str] = None
+  subfield: Optional[str] = None
+  field: Optional[str] = None
+
+
+class AuthorProfile(BaseModel):
+  """Author profile from OpenAlex."""
+
+  openalex_id: str = ""
+  display_name: str = ""
+  works_count: Optional[int] = None
+  cited_by_count: Optional[int] = None
+  h_index: Optional[int] = None
+  i10_index: Optional[int] = None
+  orcid: Optional[str] = None
+  institutions: List[AuthorInstitution] = []
+  topics: List[AuthorTopic] = []
+
+
+class AuthorWork(BaseModel):
+  """A single work by an author."""
+
+  openalex_id: str = ""
+  title: str = ""
+  publication_year: Optional[int] = None
+  cited_by_count: Optional[int] = None
+  doi: Optional[str] = None
+  authors: List[str] = []
+
+
+class AuthorSearchResponse(BaseModel):
+  """Response from author search."""
+
+  query: str
+  results: List[AuthorProfile]
+  total: int
+
+
+class AuthorWorksResponse(BaseModel):
+  """Response from author works lookup."""
+
+  author_id: str
+  display_name: str = ""
+  results: List[AuthorWork]
+  total: int

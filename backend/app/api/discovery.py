@@ -24,6 +24,10 @@ from app.schemas.discovery import (
   AddToLibraryResponse,
   AISearchRequest,
   AISearchResponse,
+  AuthorProfile,
+  AuthorSearchResponse,
+  AuthorWork,
+  AuthorWorksResponse,
   BatchAddToLibraryRequest,
   BatchAddToLibraryResponse,
   CitationExplorerRequest,
@@ -1152,4 +1156,121 @@ async def update_discovery_session(
     created_at=cast(datetime, discovery_session.created_at),
     updated_at=cast(datetime, discovery_session.updated_at),
     paper_count=paper_count,
+  )
+
+
+@router.get(
+  "/authors/search",
+  response_model=AuthorSearchResponse,
+  summary="Search author profiles by name",
+  description="Search for researcher profiles across all disciplines via OpenAlex. "
+  "Returns name, institution, h-index, publication count, and citation stats.",
+)
+async def search_authors_endpoint(
+  name: str = Query(..., description="Author name to search for"),
+  limit: int = Query(default=10, ge=1, le=50, description="Max results"),
+  current_user: CurrentUser = None,
+) -> AuthorSearchResponse:
+  """Search for author profiles by name."""
+  from typing import cast as typing_cast
+
+  from app.services.discovery.provider_registry import provider_registry
+
+  provider = provider_registry.get("openalex")
+  if not provider:
+    raise HTTPException(status_code=503, detail="OpenAlex provider not available")
+
+  raw_results = await typing_cast(Any, provider).search_authors(query=name, limit=limit)
+
+  results = []
+  for a in raw_results:
+    institutions = []
+    for inst in a.get("last_known_institutions", []) or []:
+      institutions.append(
+        {
+          "name": inst.get("display_name"),
+          "country": inst.get("country_code"),
+          "type": inst.get("type"),
+        }
+      )
+    topics = []
+    for topic in a.get("topics", []) or []:
+      topics.append(
+        {
+          "name": topic.get("display_name"),
+          "subfield": (topic.get("subfield") or {}).get("display_name"),
+          "field": (topic.get("field") or {}).get("display_name"),
+        }
+      )
+    oaid = a.get("id", "").rstrip("/")
+    if "/" in oaid:
+      oaid = oaid.rsplit("/", 1)[-1]
+
+    results.append(
+      AuthorProfile(
+        openalex_id=oaid,
+        display_name=a.get("display_name", ""),
+        works_count=a.get("works_count"),
+        cited_by_count=a.get("cited_by_count"),
+        h_index=a.get("h_index"),
+        i10_index=a.get("i10_index"),
+        orcid=a.get("orcid"),
+        institutions=institutions,
+        topics=topics,
+      )
+    )
+
+  return AuthorSearchResponse(
+    query=name,
+    results=results,
+    total=len(results),
+  )
+
+
+@router.get(
+  "/authors/{author_id}/works",
+  response_model=AuthorWorksResponse,
+  summary="Get papers by author",
+  description="Get the most-cited papers by a specific author using their OpenAlex ID.",
+)
+async def get_author_works_endpoint(
+  author_id: str,
+  limit: int = Query(default=20, ge=1, le=100, description="Max papers"),
+  current_user: CurrentUser = None,
+) -> AuthorWorksResponse:
+  """Get papers by a specific author."""
+  from typing import cast as typing_cast
+
+  from app.services.discovery.provider_registry import provider_registry
+
+  provider = provider_registry.get("openalex")
+  if not provider:
+    raise HTTPException(status_code=503, detail="OpenAlex provider not available")
+
+  typed = typing_cast(Any, provider)
+
+  # First get the author profile for the display name
+  profile = await typed.get_author_details(author_id)
+  display_name = profile.get("display_name", "") if profile else ""
+
+  works = await typed.get_author_works(author_id, limit=limit)
+
+  results = []
+  for w in works:
+    results.append(
+      AuthorWork(
+        openalex_id=w.external_id,
+        title=w.title,
+        publication_year=w.year,
+        cited_by_count=w.citation_count,
+        doi=w.doi,
+        authors=w.authors,
+      )
+    )
+
+  return AuthorWorksResponse(
+    author_id=author_id,
+    display_name=display_name,
+    results=results,
+    total=len(results),
   )
