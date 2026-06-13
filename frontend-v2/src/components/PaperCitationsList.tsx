@@ -48,13 +48,24 @@ export function PaperCitationsList({ citations, isLoading, error, className }: P
     return (
       <div key={citation.id} className="group p-4 rounded-xl border border-(--border) bg-(--card) hover:border-(--muted-foreground)/30 transition-all">
         <div className="flex items-start justify-between gap-2">
-          {isInternal && url ? (
-            <Link 
-              to={url}
-              className="text-code font-medium text-(--foreground) hover:text-(--sky-blue) transition-colors line-clamp-2 flex-1"
-            >
-              {title || 'Untitled Paper'}
-            </Link>
+          {url ? (
+            isInternal ? (
+              <Link 
+                to={url}
+                className="text-code font-medium text-(--foreground) hover:text-(--sky-blue) transition-colors line-clamp-2 flex-1"
+              >
+                {title || 'Untitled Paper'}
+              </Link>
+            ) : (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-code font-medium text-(--foreground) hover:text-(--sky-blue) transition-colors line-clamp-2 flex-1"
+              >
+                {title || 'Untitled Paper'}
+              </a>
+            )
           ) : (
             <span className="text-code font-medium text-(--foreground) line-clamp-2 flex-1">
               {title || 'Untitled Paper'}
