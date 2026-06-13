@@ -5,30 +5,29 @@ tools.  Falls back to legacy ``provider.generate()`` for providers
 that are not yet OpenAI-compatible (e.g. Gemini).
 """
 
+import asyncio
 from typing import Any, AsyncGenerator, cast
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.multi_chat import MultiChatMessage, MultiChatSession
 from app.models.paper import Paper
 from app.services.ai.agent import (
-  ERROR_CODE_AUTH,
   ERROR_CODE_INTERNAL,
-  ERROR_CODE_NETWORK,
   ERROR_CODE_NO_PROVIDER,
-  ERROR_CODE_PROVIDER_UNAVAILABLE,
-  ERROR_CODE_RATE_LIMIT,
-  ERROR_CODE_TIMEOUT,
   adapt_stream,
+  build_error_message,
   build_run_config,
+  classify_exception,
 )
-from app.services.ai.agent.agents import create_multi_paper_agent
+from app.services.ai.agent.agents import build_agent_input, create_multi_paper_agent
 from app.services.ai.agent.context import (
   BYOContext,
-  get_byo_context,
+  reset_byo_context,
   set_byo_context,
 )
 from app.services.ai.agent.fallback_runner import stream_agent_with_fallback
@@ -38,22 +37,8 @@ from app.services.ai.agent.provider_resolver import (
   resolve_providers,
 )
 from app.services.ai.base_ai_service import BaseAIService
-from app.services.ai.providers.base import AIProviderError, AuthError, RateLimitError
-from app.services.content_provider import content_provider
 
 logger = get_logger(__name__)
-
-MAX_FILE_PARTS = 10
-TOTAL_TEXT_BUDGET = 6000
-
-RATE_LIMIT_ERROR_MESSAGE = (
-  "I apologize, but I've hit the API rate limit. Please wait a moment and try again."
-)
-
-API_KEY_ERROR_MESSAGE = (
-  "I apologize, but there's an issue with the API key configuration. "
-  "Please check your AI provider settings and ensure the key is valid."
-)
 
 AGENT_PROVIDER_TYPES = {
   "openai-compatible",
@@ -80,44 +65,8 @@ def _get_runner():
     return None
 
 
-def _build_error_message(error: Exception) -> str:
-  if isinstance(error, RateLimitError):
-    return RATE_LIMIT_ERROR_MESSAGE
-  if isinstance(error, AuthError):
-    return API_KEY_ERROR_MESSAGE
-  if isinstance(error, AIProviderError):
-    return f"I apologize, but I encountered an error: {str(error)[:200]}"
-  return f"I apologize, but I encountered an error: {str(error)[:200]}"
-
-
-def _classify_exception(error: Exception) -> tuple[str, bool]:
-  """Classify an exception into (error_code, recoverable)."""
-  if isinstance(error, RateLimitError):
-    return ERROR_CODE_RATE_LIMIT, True
-  if isinstance(error, AuthError):
-    return ERROR_CODE_AUTH, False
-
-  error_str = str(error).lower()
-  error_name = type(error).__name__.lower()
-
-  if any(k in error_str + error_name for k in ("429", "rate", "ratelimit")):
-    return ERROR_CODE_RATE_LIMIT, True
-  if any(k in error_str + error_name for k in ("auth", "api key", "unauthorized", "401", "403")):
-    return ERROR_CODE_AUTH, False
-  if any(k in error_str + error_name for k in ("timeout", "timed out")):
-    return ERROR_CODE_TIMEOUT, True
-  if any(k in error_str + error_name for k in ("5", "502", "503", "unavailable")):
-    return ERROR_CODE_PROVIDER_UNAVAILABLE, True
-  if any(k in error_str for k in ("connect", "network", "econnrefused", "econnreset")):
-    return ERROR_CODE_NETWORK, True
-
-  return ERROR_CODE_INTERNAL, False
-
-
 class MultiChatService(BaseAIService):
   """Service for chat functionality with multiple research papers."""
-
-  # ---- Session Management (unchanged) ----
 
   async def create_session(
     self,
@@ -134,7 +83,6 @@ class MultiChatService(BaseAIService):
     chat_session.papers = papers
     db_session.add(chat_session)
     await db_session.commit()
-    await db_session.refresh(chat_session)
     return chat_session
 
   async def get_session(
@@ -145,6 +93,8 @@ class MultiChatService(BaseAIService):
       .options(
         selectinload(MultiChatSession.messages),
         selectinload(MultiChatSession.papers),
+        selectinload(MultiChatSession.user),
+        selectinload(MultiChatSession.group),
       )
       .where(MultiChatSession.id == session_id)
     )
@@ -159,6 +109,8 @@ class MultiChatService(BaseAIService):
       .options(
         selectinload(MultiChatSession.messages),
         selectinload(MultiChatSession.papers),
+        selectinload(MultiChatSession.user),
+        selectinload(MultiChatSession.group),
       )
       .where(MultiChatSession.group_id == group_id)
     )
@@ -191,14 +143,20 @@ class MultiChatService(BaseAIService):
         return None, str(e)
     return chat_session, None
 
-  # ---- Paper Fetching (unchanged) ----
-
   async def _fetch_papers(
     self, db_session: AsyncSession, paper_ids: list[int]
   ) -> list[Paper]:
     if not paper_ids:
       return []
-    query = select(Paper).where(Paper.id.in_(paper_ids))
+    query = (
+      select(Paper)
+      .where(Paper.id.in_(paper_ids))
+      .options(
+        selectinload(Paper.tags),
+        selectinload(Paper.groups),
+        selectinload(Paper.annotations),
+      )
+    )
     result = await db_session.execute(query)
     return list(result.scalars().all())
 
@@ -212,8 +170,6 @@ class MultiChatService(BaseAIService):
     )
     result = await db_session.execute(query)
     return [row[0] for row in result.fetchall()]
-
-  # ---- Message Persistence (unchanged) ----
 
   async def _save_user_message(
     self,
@@ -246,7 +202,6 @@ class MultiChatService(BaseAIService):
     )
     db_session.add(assistant_msg)
     await db_session.commit()
-    await db_session.refresh(assistant_msg)
     return assistant_msg
 
   async def _get_chat_history(
@@ -260,8 +215,6 @@ class MultiChatService(BaseAIService):
     result = await db_session.execute(query)
     return list(result.scalars().all())
 
-  # ---- Provider Resolution (shared with ChatService pattern) ----
-
   async def _resolve_providers(
     self,
     db_session: AsyncSession,
@@ -270,139 +223,52 @@ class MultiChatService(BaseAIService):
   ) -> list[ResolvedProvider]:
     return await resolve_providers(db_session, user_id, preferred_provider_id)
 
-  async def _resolve_provider_configs(
-    self,
-    db_session: AsyncSession,
-    user_id: int | None,
-    preferred_provider_id: int | None = None,
-  ) -> list[ProviderRouteConfig]:
-    resolved = await self._resolve_providers(
-      db_session, user_id, preferred_provider_id
-    )
-    return [r.route for r in resolved]
-
   def _setup_byo_context(
     self,
     db_session: AsyncSession,
     user_id: int | None,
     provider_configs: list[ProviderRouteConfig],
+    session_id: int | None = None,
   ) -> None:
-    ctx = get_byo_context()
-    if ctx.user_id is None:
-      set_byo_context(
-        BYOContext(
-          user_id=user_id,
-          provider_configs=provider_configs,
-          extra={"db_session": db_session},
-        )
+    """Set up the BYOContext for the current request (always overwrites)."""
+    set_byo_context(
+      BYOContext(
+        user_id=user_id,
+        provider_configs=provider_configs,
+        extra={"db_session": db_session, "session_id": session_id},
       )
+    )
 
   async def _persist_session_provider(
     self,
     db_session: AsyncSession,
-    chat_session: MultiChatSession,
+    session_pk: int,
+    current_provider_id: int | None,
     used_holder: list[ResolvedProvider],
   ) -> None:
-    """Remember which provider produced the response on the session."""
+    """Remember which provider produced the response on the session.
+
+    Uses an explicit UPDATE by primary key rather than mutating the ORM
+    object: after a tool-triggered rollback the ``MultiChatSession`` instance
+    may be expired, and touching its attributes would fire an implicit lazy
+    reload — which async SQLAlchemy cannot do from attribute access and which
+    surfaces as ``MissingGreenlet``.
+    """
     if not used_holder:
       return
     used = used_holder[-1]
-    if used.provider_id is not None and chat_session.provider_id != used.provider_id:
-      chat_session.provider_id = used.provider_id
+    if used.provider_id is not None and current_provider_id != used.provider_id:
+      from sqlalchemy import update
+
+      await db_session.execute(
+        update(MultiChatSession)
+        .where(MultiChatSession.id == session_pk)
+        .values(provider_id=used.provider_id)
+      )
       await db_session.commit()
 
   def _can_use_agent(self, provider_type: str) -> bool:
     return provider_type.lower() in AGENT_PROVIDER_TYPES
-
-  # ---- Legacy Context Building ----
-
-  def _build_multi_context_header(self, papers: list[Paper]) -> list[str]:
-    parts = [
-      "You are an AI assistant helping a user learn from a collection of "
-      "research papers. Provide clear, educational responses that draw on "
-      "the provided papers. When referring to specific papers, mention them "
-      "by title.",
-      f"\n## Papers in Context ({len(papers)}):",
-    ]
-    for i, paper in enumerate(papers, 1):
-      doi_info = f" (DOI: {paper.doi})" if paper.doi else ""
-      has_file = bool(paper.file_path)
-      context_type = "[Full PDF]" if has_file else "[Text excerpt]"
-      parts.append(f'{i}. "{paper.title}"{doi_info} — {context_type}')
-    return parts
-
-  def _build_multi_context_content(
-    self,
-    papers: list[Paper],
-    file_paper_ids: set[int],
-  ) -> list[str]:
-    text_papers = [p for p in papers if cast(int, p.id) not in file_paper_ids]
-    if not text_papers:
-      return []
-    parts = ["\n## Paper Contents:"]
-    budget_per_paper = max(500, TOTAL_TEXT_BUDGET // len(text_papers))
-    for paper in text_papers:
-      if not paper.content_text:
-        parts.append(f'\n### "{paper.title}"')
-        parts.append("[No text content available]")
-        continue
-      content = cast(str, paper.content_text)
-      if len(content) > budget_per_paper:
-        content = content[:budget_per_paper] + "..."
-      parts.append(f'\n### "{paper.title}"')
-      parts.append(content)
-    return parts
-
-  def _build_multi_context_history(
-    self, chat_history: list[MultiChatMessage]
-  ) -> list[str]:
-    if not chat_history:
-      return []
-    parts = ["\n## Conversation:"]
-    for msg in chat_history[-5:]:
-      role_label = "U" if msg.role == "user" else "A"
-      msg_content = msg.content[:500]
-      if len(msg.content) > 500:
-        msg_content += "..."
-      parts.append(f"\n{role_label}: {msg_content}")
-    return parts
-
-  def build_multi_context(
-    self,
-    papers: list[Paper],
-    chat_history: list[MultiChatMessage],
-    file_paper_ids: set[int] | None = None,
-  ) -> str:
-    context_parts = self._build_multi_context_header(papers)
-    context_parts.extend(
-      self._build_multi_context_content(papers, file_paper_ids or set())
-    )
-    context_parts.extend(self._build_multi_context_history(chat_history))
-    return "\n".join(context_parts)
-
-  async def _get_multi_content_parts(
-    self, papers: list[Paper]
-  ) -> tuple[list[Any], set[int]]:
-    content_parts: list[Any] = []
-    file_paper_ids: set[int] = set()
-    papers_with_files = [p for p in papers if p.file_path]
-    for paper in papers_with_files[:MAX_FILE_PARTS]:
-      try:
-        parts = await content_provider.get_content_parts(
-          paper, include_text_fallback=False
-        )
-        if parts:
-          content_parts.extend(parts)
-          file_paper_ids.add(cast(int, paper.id))
-      except Exception as e:
-        logger.warning(
-          "Failed to get content parts for paper",
-          paper_id=paper.id,
-          error=str(e),
-        )
-    return content_parts, file_paper_ids
-
-  # ---- Streaming ----
 
   async def stream_message(
     self,
@@ -451,150 +317,115 @@ class MultiChatService(BaseAIService):
       }
       return
 
-    preferred_provider_id = provider_id or cast(
-      "int | None", chat_session.provider_id
-    )
-    resolved = await self._resolve_providers(
-      db_session, user_id, preferred_provider_id
-    )
+    # Capture primitives up front: once the agent run starts, a tool error may
+    # roll back the session and expire ``chat_session``. Re-reading its
+    # attributes afterwards would fire an implicit lazy load (MissingGreenlet),
+    # so everything below works off these plain ints instead of the ORM object.
+    session_pk = cast(int, chat_session.id)
+    current_provider_id = cast("int | None", chat_session.provider_id)
 
-    # ---- Agent path ----
-    if resolved and self._can_use_agent(resolved[0].route.provider_type):
-      _Runner = _get_runner()
-      if _Runner is None:
-        yield {
-          "type": "error",
-          "error": "OpenAI Agents SDK not installed. Please install openai-agents to use this provider.",
-          "error_code": ERROR_CODE_NO_PROVIDER,
-          "recoverable": False,
-        }
-        return
-      try:
-        self._setup_byo_context(
-          db_session, user_id, [r.route for r in resolved]
-        )
-        agent = create_multi_paper_agent(papers)
+    preferred_provider_id = provider_id or current_provider_id
+    resolved = await self._resolve_providers(db_session, user_id, preferred_provider_id)
 
-        await self._save_user_message(
-          db_session, cast(int, chat_session.id), user_message
-        )
-
-        full_content: list[str] = []
-        had_error = False
-        used_holder: list[ResolvedProvider] = []
-        async for adapted in stream_agent_with_fallback(
-          runner=_Runner,
-          agent=agent,
-          user_message=user_message,
-          providers=resolved,
-          session_id=chat_session.id,
-          used_holder=used_holder,
-        ):
-          if adapted["type"] == "chunk":
-            full_content.append(adapted.get("content", ""))
-          elif adapted["type"] == "error":
-            had_error = True
-          yield adapted
-
-        if not had_error:
-          response_text = "".join(full_content)
-          assistant_msg = await self._save_assistant_message(
-            db_session, cast(int, chat_session.id), response_text
-          )
-          await self._persist_session_provider(
-            db_session, chat_session, used_holder
-          )
-          yield {
-            "type": "done",
-            "content": response_text,
-            "message_id": assistant_msg.id,
-            "session_id": chat_session.id,
-          }
-
-      except Exception as e:
-        logger.error(
-          "Agent error in multi-chat stream_message",
-          error_type=type(e).__name__,
-          error_message=str(e),
-        )
-        error_content = _build_error_message(e)
-        error_code, recoverable = _classify_exception(e)
-        await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), error_content
-        )
-        yield {
-          "type": "error",
-          "error": error_content,
-          "error_code": error_code,
-          "recoverable": recoverable,
-        }
-      return
-
-    # ---- Legacy path ----
-    provider = await self._get_provider(
-      db_session, user_id, preferred_provider_id=preferred_provider_id
-    )
-    if not provider:
+    if not resolved:
       yield {
         "type": "error",
-        "error": "AI provider not configured. Please configure your AI provider in settings.",
+        "error": "No AI provider configured. Add one in your settings to chat.",
+        "error_code": ERROR_CODE_NO_PROVIDER,
+        "recoverable": False,
+      }
+      return
+    if not self._can_use_agent(resolved[0].route.provider_type):
+      yield {
+        "type": "error",
+        "error": (
+          f"Provider '{resolved[0].route.provider_type}' is not supported for chat. "
+          "Configure an OpenAI-compatible provider."
+        ),
+        "error_code": ERROR_CODE_NO_PROVIDER,
+        "recoverable": False,
+      }
+      return
+
+    _Runner = _get_runner()
+    if _Runner is None:
+      yield {
+        "type": "error",
+        "error": "OpenAI Agents SDK not installed. Please install openai-agents to use this provider.",
         "error_code": ERROR_CODE_NO_PROVIDER,
         "recoverable": False,
       }
       return
 
     try:
-      _, file_paper_ids = await self._get_multi_content_parts(papers)
-    except Exception as e:
-      logger.error("Failed to get content parts", error=str(e))
-      file_paper_ids = set()
+      # Replay session history so the group chat keeps context across turns
+      # and across a provider switch — memory keyed by the chat session.
+      history = await self._get_chat_history(db_session, session_pk)
+      agent_input = build_agent_input(history, user_message)
 
-    chat_history = await self._get_chat_history(db_session, cast(int, chat_session.id))
-    context = self.build_multi_context(papers, chat_history, file_paper_ids)
-
-    await self._save_user_message(
-      db_session, cast(int, chat_session.id), user_message, references
-    )
-
-    full_prompt = f"{context}\n\n## User Question:\n{user_message}"
-
-    try:
-      config = self._build_config(provider)
-      full_content = await provider.generate(full_prompt, config)
-
-      chunk_size = 50
-      for i in range(0, len(full_content), chunk_size):
-        chunk = full_content[i : i + chunk_size]
-        yield {"type": "chunk", "content": chunk}
-
-      assistant_msg = await self._save_assistant_message(
-        db_session, cast(int, chat_session.id), full_content
+      self._setup_byo_context(
+        db_session, user_id, [r.route for r in resolved], session_id=session_pk
       )
-      yield {
-        "type": "done",
-        "message_id": assistant_msg.id,
-        "session_id": chat_session.id,
-      }
+      agent = create_multi_paper_agent(papers)
 
+      await self._save_user_message(db_session, session_pk, user_message, references)
+
+      full_content: list[str] = []
+      had_error = False
+      used_holder: list[ResolvedProvider] = []
+      async for adapted in stream_agent_with_fallback(
+        runner=_Runner,
+        agent=agent,
+        agent_input=agent_input,
+        providers=resolved,
+        session_id=session_pk,
+        used_holder=used_holder,
+      ):
+        if adapted["type"] == "chunk":
+          full_content.append(adapted.get("content", ""))
+        elif adapted["type"] == "error":
+          had_error = True
+        yield adapted
+
+      response_text = "".join(full_content)
+      if not had_error:
+        assistant_msg = await self._save_assistant_message(
+          db_session, session_pk, response_text
+        )
+        await self._persist_session_provider(
+          db_session, session_pk, current_provider_id, used_holder
+        )
+        yield {
+          "type": "done",
+          "content": response_text,
+          "message_id": assistant_msg.id,
+          "session_id": session_pk,
+        }
+      elif response_text.strip():
+        await self._save_assistant_message(db_session, session_pk, response_text)
+
+    except asyncio.CancelledError:
+      raise
     except Exception as e:
       logger.error(
-        "AI provider error in multi-chat stream_message",
+        "Agent error in multi-chat stream_message",
         error_type=type(e).__name__,
         error_message=str(e),
       )
-      error_content = _build_error_message(e)
-      error_code, recoverable = _classify_exception(e)
-      await self._save_assistant_message(
-        db_session, cast(int, chat_session.id), error_content
-      )
+      error_content = build_error_message(e)
+      error_code, recoverable = classify_exception(e)
+      # The session may be in an aborted transaction after a tool error; clear
+      # it so this assistant-message insert can commit.
+      await db_session.rollback()
+      await self._save_assistant_message(db_session, session_pk, error_content)
       yield {
         "type": "error",
         "error": error_content,
         "error_code": error_code,
         "recoverable": recoverable,
       }
-
-  # ---- Non-Streaming ----
+    finally:
+      reset_byo_context()
 
   async def send_message(
     self,
@@ -625,89 +456,65 @@ class MultiChatService(BaseAIService):
     if not papers:
       raise ValueError("No papers found for the given IDs.")
 
-    preferred_provider_id = provider_id or cast(
-      "int | None", chat_session.provider_id
-    )
-    resolved = await self._resolve_providers(
-      db_session, user_id, preferred_provider_id
-    )
+    session_pk = cast(int, chat_session.id)
+    current_provider_id = cast("int | None", chat_session.provider_id)
 
-    # ---- Agent path ----
-    if resolved and self._can_use_agent(resolved[0].route.provider_type):
-      _Runner = _get_runner()
-      if _Runner is None:
-        raise ValueError("OpenAI Agents SDK not installed. Please install openai-agents to use this provider.")
-      try:
-        self._setup_byo_context(
-          db_session, user_id, [r.route for r in resolved]
-        )
-        agent = create_multi_paper_agent(papers)
-        primary = resolved[0]
-        rc = build_run_config(
-          provider_configs=[primary.route],
-          model_hint=primary.route.default_model or None,
-        )
+    preferred_provider_id = provider_id or current_provider_id
+    resolved = await self._resolve_providers(db_session, user_id, preferred_provider_id)
 
-        await self._save_user_message(
-          db_session, cast(int, chat_session.id), user_message
-        )
-
-        result = await _Runner.run(agent, input=user_message, run_config=rc)
-        response_text = result.final_output
-
-        await self._persist_session_provider(db_session, chat_session, [primary])
-        return await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), response_text
-        )
-
-      except Exception as e:
-        logger.error(
-          "Agent error in multi-chat send_message",
-          error_type=type(e).__name__,
-          error_message=str(e),
-        )
-        error_content = _build_error_message(e)
-        await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), error_content
-        )
-        raise ValueError(f"Failed to get AI response: {str(e)[:200]}") from e
-
-    # ---- Legacy path ----
-    provider = await self._get_provider(
-      db_session, user_id, preferred_provider_id=preferred_provider_id
-    )
-    if not provider:
+    if not resolved:
+      raise ValueError("No AI provider configured. Add one in your settings to chat.")
+    if not self._can_use_agent(resolved[0].route.provider_type):
       raise ValueError(
-        "AI provider not configured. Please configure your AI provider in settings."
+        f"Provider '{resolved[0].route.provider_type}' is not supported for chat. "
+        "Configure an OpenAI-compatible provider."
       )
 
-    _, file_paper_ids = await self._get_multi_content_parts(papers)
-    chat_history = await self._get_chat_history(db_session, cast(int, chat_session.id))
-    context = self.build_multi_context(papers, chat_history, file_paper_ids)
-
-    await self._save_user_message(
-      db_session, cast(int, chat_session.id), user_message, references
-    )
-
-    full_prompt = f"{context}\n\n## User Question:\n{user_message}"
-
+    _Runner = _get_runner()
+    if _Runner is None:
+      raise ValueError(
+        "OpenAI Agents SDK not installed. Please install openai-agents to use this provider."
+      )
     try:
-      config = self._build_config(provider)
-      text_with_citations = await provider.generate(full_prompt, config)
-      return await self._save_assistant_message(
-        db_session, cast(int, chat_session.id), text_with_citations
+      history = await self._get_chat_history(db_session, session_pk)
+      agent_input = build_agent_input(history, user_message)
+
+      self._setup_byo_context(
+        db_session, user_id, [r.route for r in resolved], session_id=session_pk
       )
+      agent = create_multi_paper_agent(papers)
+      primary = resolved[0]
+      rc = build_run_config(
+        provider_configs=[primary.route],
+        model_hint=primary.route.default_model or None,
+      )
+
+      await self._save_user_message(db_session, session_pk, user_message, references)
+
+      result = await _Runner.run(
+        agent, input=agent_input, run_config=rc, max_turns=settings.AGENT_MAX_TURNS
+      )
+      response_text = result.final_output
+
+      await self._persist_session_provider(
+        db_session, session_pk, current_provider_id, [primary]
+      )
+      return await self._save_assistant_message(db_session, session_pk, response_text)
+
+    except asyncio.CancelledError:
+      raise
     except Exception as e:
       logger.error(
-        "AI provider error in multi-chat send_message",
+        "Agent error in multi-chat send_message",
         error_type=type(e).__name__,
         error_message=str(e),
       )
-      error_content = _build_error_message(e)
-      await self._save_assistant_message(
-        db_session, cast(int, chat_session.id), error_content
-      )
+      error_content = build_error_message(e)
+      await db_session.rollback()
+      await self._save_assistant_message(db_session, session_pk, error_content)
       raise ValueError(f"Failed to get AI response: {str(e)[:200]}") from e
+    finally:
+      reset_byo_context()
 
 
 multi_chat_service = MultiChatService()

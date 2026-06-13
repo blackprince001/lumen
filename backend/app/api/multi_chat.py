@@ -14,6 +14,7 @@ from app.api.crud.multi_chat_session import (
   get_multi_chat_session_or_404,
   list_multi_chat_sessions_for_group,
 )
+from app.core.database import stream_db_session
 from app.core.logger import get_logger
 from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.multi_chat import MultiChatMessage, MultiChatSession
@@ -25,6 +26,7 @@ from app.schemas.multi_chat import (
 from app.schemas.multi_chat import (
   MultiChatSession as MultiChatSessionSchema,
 )
+from app.services.ai.agent.error import classify_exception
 from app.services.multi_chat import multi_chat_service
 
 logger = get_logger(__name__)
@@ -78,15 +80,29 @@ async def stream_group_chat_message(
   await get_visible_group_or_404(session, group_id, user_id=scoped_user_id(user))
 
   async def generate_stream():
-    async for chunk in multi_chat_service.stream_message(
-      db_session=session,
-      user_message=chat_request.message,
-      group_id=group_id,
-      references=chat_request.references,
-      session_id=chat_request.session_id,
-      provider_id=chat_request.provider_id,
-    ):
-      yield f"data: {json.dumps(chunk)}\n\n"
+    # Use a dedicated session whose lifecycle stays inside this streaming task
+    # (see stream_db_session for the greenlet rationale).
+    async with stream_db_session() as stream_session:
+      try:
+        async for chunk in multi_chat_service.stream_message(
+          db_session=stream_session,
+          user_message=chat_request.message,
+          group_id=group_id,
+          references=chat_request.references,
+          session_id=chat_request.session_id,
+          user_id=user.id,
+          provider_id=chat_request.provider_id,
+        ):
+          yield f"data: {json.dumps(chunk)}\n\n"
+      except Exception as e:
+        error_code, recoverable = classify_exception(e)
+        error_chunk = {
+          "type": "error",
+          "error": str(e)[:200],
+          "error_code": error_code,
+          "recoverable": recoverable,
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
 
   return StreamingResponse(
     generate_stream(),
@@ -184,16 +200,29 @@ async def stream_multi_chat_message(
     )
 
   async def generate_stream():
-    async for chunk in multi_chat_service.stream_message(
-      db_session=session,
-      user_message=chat_request.message,
-      paper_ids=chat_request.paper_ids,
-      group_id=chat_request.group_id,
-      references=chat_request.references,
-      session_id=chat_request.session_id,
-      provider_id=chat_request.provider_id,
-    ):
-      yield f"data: {json.dumps(chunk)}\n\n"
+    # Dedicated session for the streaming task (see stream_db_session).
+    async with stream_db_session() as stream_session:
+      try:
+        async for chunk in multi_chat_service.stream_message(
+          db_session=stream_session,
+          user_message=chat_request.message,
+          paper_ids=chat_request.paper_ids,
+          group_id=chat_request.group_id,
+          references=chat_request.references,
+          session_id=chat_request.session_id,
+          user_id=user.id,
+          provider_id=chat_request.provider_id,
+        ):
+          yield f"data: {json.dumps(chunk)}\n\n"
+      except Exception as e:
+        error_code, recoverable = classify_exception(e)
+        error_chunk = {
+          "type": "error",
+          "error": str(e)[:200],
+          "error_code": error_code,
+          "recoverable": recoverable,
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
 
   return StreamingResponse(
     generate_stream(),

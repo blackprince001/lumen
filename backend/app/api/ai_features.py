@@ -61,8 +61,10 @@ async def run_ai_action(
   from app.services.ai.helpers import get_provider_for_user
   from app.services.ai.providers.base import GenerateConfig
 
-  uid = scoped_user_id(user)
-  paper = await get_visible_paper_or_404(session, paper_id, user_id=uid)
+  uid = user.id
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
 
   provider = await get_provider_for_user(session, uid)
   if not provider:
@@ -71,7 +73,7 @@ async def run_ai_action(
   content = cast(Optional[str], paper.content_text) or ""
   prompt = (
     f"Paper Context:\n{paper.title or 'Unknown'}\n\n"
-    + (f"Paper Content:\n{content[:15000]}\n\n" if content else "")
+    + (f"Paper Content:\n{content[:40000]}\n\n" if content else "")
     + f"{AI_ACTION_PROMPTS[request.action]}\n\n"
     + f'Passage (page {request.page}):\n"""{request.selection_text}"""'
   )
@@ -120,13 +122,7 @@ async def generate_summary(
   """Trigger AI summary generation task."""
   await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
-  if not settings.GOOGLE_API_KEY:
-    raise HTTPException(
-      status_code=400,
-      detail="Google API key not configured.",
-    )
-
-  # Trigger task
+  # Trigger task (uses the paper owner's configured provider — no server key needed)
   generate_summary_task.delay(paper_id)
 
   return SummaryResponse(summary=None, generated_at=None, status="pending")
@@ -209,7 +205,9 @@ async def get_findings(
   )
 
   return FindingsResponse(
-    findings=findings, status="completed" if findings else "not_found"
+    findings=findings,
+    generated_at=cast(datetime | None, paper.findings_extracted_at),
+    status="completed" if findings else "not_found",
   )
 
 
@@ -263,7 +261,11 @@ async def get_reading_guide(
     else {}
   )
 
-  return ReadingGuideResponse(guide=guide, status="completed" if guide else "not_found")
+  return ReadingGuideResponse(
+    guide=guide,
+    generated_at=cast(datetime | None, paper.guide_generated_at),
+    status="completed" if guide else "not_found",
+  )
 
 
 @router.put("/papers/{paper_id}/reading-guide", response_model=ReadingGuideResponse)

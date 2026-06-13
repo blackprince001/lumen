@@ -15,6 +15,7 @@ from app.api.crud import (
   get_visible_paper_or_404,
   list_chat_sessions_for_paper,
 )
+from app.core.database import stream_db_session
 from app.core.logger import get_logger
 from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.models.chat import ChatMessage, ChatSession
@@ -32,6 +33,7 @@ from app.schemas.chat import (
 from app.schemas.chat import (
   ChatSession as ChatSessionSchema,
 )
+from app.services.ai.agent.error import classify_exception
 from app.services.chat import chat_service
 
 logger = get_logger(__name__)
@@ -55,7 +57,7 @@ async def send_chat_message(
       user_message=chat_request.message,
       references=chat_request.references,
       session_id=chat_request.session_id,
-      user_id=scoped_user_id(user),
+      user_id=user.id,
       provider_id=chat_request.provider_id,
     )
 
@@ -110,21 +112,29 @@ async def stream_chat_message(
   await get_visible_paper_or_404(session, paper_id, user_id=scoped_user_id(user))
 
   async def generate_stream():
-    try:
-      async for chunk in chat_service.stream_message(
-        db_session=session,
-        paper_id=paper_id,
-        user_message=chat_request.message,
-        references=chat_request.references,
-        session_id=chat_request.session_id,
-        user_id=scoped_user_id(user),
-        provider_id=chat_request.provider_id,
-      ):
-        data = json.dumps(chunk)
-        yield f"data: {data}\n\n"
-    except Exception as e:
-      error_chunk = {"type": "error", "error": str(e)[:200]}
-      yield f"data: {json.dumps(error_chunk)}\n\n"
+    # Dedicated session for the streaming task (see stream_db_session).
+    async with stream_db_session() as stream_session:
+      try:
+        async for chunk in chat_service.stream_message(
+          db_session=stream_session,
+          paper_id=paper_id,
+          user_message=chat_request.message,
+          references=chat_request.references,
+          session_id=chat_request.session_id,
+          user_id=user.id,
+          provider_id=chat_request.provider_id,
+        ):
+          data = json.dumps(chunk)
+          yield f"data: {data}\n\n"
+      except Exception as e:
+        error_code, recoverable = classify_exception(e)
+        error_chunk = {
+          "type": "error",
+          "error": str(e)[:200],
+          "error_code": error_code,
+          "recoverable": recoverable,
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
 
   return StreamingResponse(
     generate_stream(),
@@ -204,7 +214,7 @@ async def send_thread_message(
       parent_message_id=message_id,
       user_message=request.message,
       references=request.references,
-      user_id=scoped_user_id(user),
+      user_id=user.id,
     )
 
     parent_message = await chat_service.get_message_by_id(session, message_id)
@@ -234,19 +244,27 @@ async def stream_thread_message(
   await _get_thread_parent_or_404(session, message_id, user)
 
   async def generate_stream():
-    try:
-      async for chunk in chat_service.stream_thread_message(
-        db_session=session,
-        parent_message_id=message_id,
-        user_message=request.message,
-        references=request.references,
-        user_id=scoped_user_id(user),
-      ):
-        data = json.dumps(chunk)
-        yield f"data: {data}\n\n"
-    except Exception as e:
-      error_chunk = {"type": "error", "error": str(e)[:200]}
-      yield f"data: {json.dumps(error_chunk)}\n\n"
+    # Dedicated session for the streaming task (see stream_db_session).
+    async with stream_db_session() as stream_session:
+      try:
+        async for chunk in chat_service.stream_thread_message(
+          db_session=stream_session,
+          parent_message_id=message_id,
+          user_message=request.message,
+          references=request.references,
+          user_id=user.id,
+        ):
+          data = json.dumps(chunk)
+          yield f"data: {data}\n\n"
+      except Exception as e:
+        error_code, recoverable = classify_exception(e)
+        error_chunk = {
+          "type": "error",
+          "error": str(e)[:200],
+          "error_code": error_code,
+          "recoverable": recoverable,
+        }
+        yield f"data: {json.dumps(error_chunk)}\n\n"
 
   return StreamingResponse(
     generate_stream(),

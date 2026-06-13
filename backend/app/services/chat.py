@@ -10,28 +10,27 @@ import asyncio
 import re
 from typing import Any, AsyncGenerator, cast
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
+from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.annotation import Annotation
 from app.models.chat import ChatMessage, ChatSession
 from app.models.paper import Paper
 from app.services.ai.agent import (
-  ERROR_CODE_AUTH,
   ERROR_CODE_INTERNAL,
-  ERROR_CODE_NETWORK,
   ERROR_CODE_NO_PROVIDER,
-  ERROR_CODE_PROVIDER_UNAVAILABLE,
-  ERROR_CODE_RATE_LIMIT,
-  ERROR_CODE_TIMEOUT,
   adapt_stream,
+  build_error_message,
   build_run_config,
+  classify_exception,
 )
-from app.services.ai.agent.agents import create_paper_agent
+from app.services.ai.agent.agents import build_agent_input, create_paper_agent
 from app.services.ai.agent.context import (
   BYOContext,
-  get_byo_context,
+  reset_byo_context,
   set_byo_context,
 )
 from app.services.ai.agent.fallback_runner import stream_agent_with_fallback
@@ -41,23 +40,9 @@ from app.services.ai.agent.provider_resolver import (
   resolve_providers,
 )
 from app.services.ai.base_ai_service import BaseAIService
-from app.services.ai.providers.base import (
-  AIProviderError,
-  AuthError,
-  RateLimitError,
-)
 from app.services.content_provider import content_provider
 
 logger = get_logger(__name__)
-
-RATE_LIMIT_ERROR_MESSAGE = (
-  "I apologize, but I've hit the API rate limit. Please wait a moment and try again."
-)
-
-API_KEY_ERROR_MESSAGE = (
-  "I apologize, but there's an issue with the API key configuration. "
-  "Please check your AI provider settings and ensure the key is valid."
-)
 
 AGENT_PROVIDER_TYPES = {
   "openai-compatible",
@@ -83,41 +68,6 @@ def _get_runner():
     return R
   except ImportError:
     return None
-
-
-def _build_error_message(error: Exception) -> str:
-  """Build user-facing error message from provider-agnostic errors."""
-  if isinstance(error, RateLimitError):
-    return RATE_LIMIT_ERROR_MESSAGE
-  if isinstance(error, AuthError):
-    return API_KEY_ERROR_MESSAGE
-  if isinstance(error, AIProviderError):
-    return f"I apologize, but I encountered an error: {str(error)[:200]}"
-  return f"I apologize, but I encountered an error: {str(error)[:200]}"
-
-
-def _classify_exception(error: Exception) -> tuple[str, bool]:
-  """Classify an exception into (error_code, recoverable)."""
-  if isinstance(error, RateLimitError):
-    return ERROR_CODE_RATE_LIMIT, True
-  if isinstance(error, AuthError):
-    return ERROR_CODE_AUTH, False
-
-  error_str = str(error).lower()
-  error_name = type(error).__name__.lower()
-
-  if any(k in error_str + error_name for k in ("429", "rate", "ratelimit")):
-    return ERROR_CODE_RATE_LIMIT, True
-  if any(k in error_str + error_name for k in ("auth", "api key", "unauthorized", "401", "403")):
-    return ERROR_CODE_AUTH, False
-  if any(k in error_str + error_name for k in ("timeout", "timed out")):
-    return ERROR_CODE_TIMEOUT, True
-  if any(k in error_str + error_name for k in ("5", "502", "503", "unavailable")):
-    return ERROR_CODE_PROVIDER_UNAVAILABLE, True
-  if any(k in error_str for k in ("connect", "network", "econnrefused", "econnreset")):
-    return ERROR_CODE_NETWORK, True
-
-  return ERROR_CODE_INTERNAL, False
 
 
 class ChatService(BaseAIService):
@@ -240,8 +190,6 @@ class ChatService(BaseAIService):
     papers = await self._resolve_papers(db_session, mentions.get("papers", []))
     return {"notes": notes, "annotations": annotations, "papers": papers}
 
-  # ---- Session Management (unchanged) ----
-
   async def create_session(
     self,
     db_session: AsyncSession,
@@ -249,23 +197,49 @@ class ChatService(BaseAIService):
     name: str = "New Session",
     user_id: int | None = None,
   ) -> ChatSession:
+    if not name or name.strip() in ("", "New Session"):
+      count_query = (
+        select(func.count())
+        .select_from(ChatSession)
+        .where(ChatSession.paper_id == paper_id)
+      )
+      if user_id is not None:
+        count_query = count_query.where(ChatSession.user_id == user_id)
+      existing = (await db_session.execute(count_query)).scalar_one() or 0
+      name = f"Chat {existing + 1}"
+
     chat_session = ChatSession(paper_id=paper_id, name=name, user_id=user_id)
     db_session.add(chat_session)
     await db_session.commit()
-    await db_session.refresh(chat_session)
     return chat_session
 
   async def get_session(
     self, db_session: AsyncSession, session_id: int
   ) -> ChatSession | None:
-    query = select(ChatSession).where(ChatSession.id == session_id)
+    query = (
+      select(ChatSession)
+      .where(ChatSession.id == session_id)
+      .options(
+        selectinload(ChatSession.messages),
+        selectinload(ChatSession.user),
+        selectinload(ChatSession.paper),
+      )
+    )
     result = await db_session.execute(query)
     return result.scalar_one_or_none()
 
   async def get_latest_session(
     self, db_session: AsyncSession, paper_id: int, user_id: int | None = None
   ) -> ChatSession | None:
-    query = select(ChatSession).where(ChatSession.paper_id == paper_id)
+    query = (
+      select(ChatSession)
+      .where(ChatSession.paper_id == paper_id)
+      .options(
+        selectinload(ChatSession.messages),
+        selectinload(ChatSession.user),
+        selectinload(ChatSession.paper),
+      )
+    )
     if user_id is not None:
       query = query.where(ChatSession.user_id == user_id)
     query = query.order_by(ChatSession.updated_at.desc()).limit(1)
@@ -293,7 +267,15 @@ class ChatService(BaseAIService):
     return chat_session, None
 
   async def _fetch_paper(self, db_session: AsyncSession, paper_id: int) -> Paper | None:
-    paper_query = select(Paper).where(Paper.id == paper_id)
+    paper_query = (
+      select(Paper)
+      .where(Paper.id == paper_id)
+      .options(
+        selectinload(Paper.tags),
+        selectinload(Paper.groups),
+        selectinload(Paper.annotations),
+      )
+    )
     paper_result = await db_session.execute(paper_query)
     return paper_result.scalar_one_or_none()
 
@@ -320,8 +302,6 @@ class ChatService(BaseAIService):
       ],
       "papers": [r.get("id") for r in references.get("papers", []) if r.get("id")],
     }
-
-  # ---- Message Persistence (unchanged) ----
 
   async def _save_user_message(
     self,
@@ -354,27 +334,29 @@ class ChatService(BaseAIService):
     )
     db_session.add(assistant_msg)
     await db_session.commit()
-    await db_session.refresh(assistant_msg)
     return assistant_msg
-
-  # ---- Streaming (rewritten to use agent framework) ----
 
   def _setup_byo_context(
     self,
     db_session: AsyncSession,
     user_id: int | None,
     provider_configs: list[ProviderRouteConfig],
+    session_id: int | None = None,
   ) -> None:
-    """Set up the BYOContext for the current request."""
-    ctx = get_byo_context()
-    if ctx.user_id is None:
-      set_byo_context(
-        BYOContext(
-          user_id=user_id,
-          provider_configs=provider_configs,
-          extra={"db_session": db_session},
-        )
+    """Set up the BYOContext for the current request.
+
+    Always overwrites any prior context so a request never inherits another
+    request's db_session or credentials. ``session_id`` is stored so tools
+    (e.g. ``get_chat_history``) can scope to the active chat session without
+    the model having to supply it.
+    """
+    set_byo_context(
+      BYOContext(
+        user_id=user_id,
+        provider_configs=provider_configs,
+        extra={"db_session": db_session, "session_id": session_id},
       )
+    )
 
   async def _resolve_providers(
     self,
@@ -384,84 +366,37 @@ class ChatService(BaseAIService):
   ) -> list[ResolvedProvider]:
     return await resolve_providers(db_session, user_id, preferred_provider_id)
 
-  async def _resolve_provider_configs(
-    self,
-    db_session: AsyncSession,
-    user_id: int | None,
-    preferred_provider_id: int | None = None,
-  ) -> list[ProviderRouteConfig]:
-    """Resolve provider routes for the user, with env fallback."""
-    resolved = await self._resolve_providers(
-      db_session, user_id, preferred_provider_id
-    )
-    return [r.route for r in resolved]
-
   async def _persist_session_provider(
     self,
     db_session: AsyncSession,
-    chat_session: ChatSession,
+    session_pk: int,
+    current_provider_id: int | None,
     used_holder: list[ResolvedProvider],
   ) -> None:
-    """Remember which provider produced the response on the session."""
+    """Remember which provider produced the response on the session.
+
+    Uses an explicit UPDATE by primary key rather than mutating the ORM
+    object: after a tool-triggered rollback the ``ChatSession`` instance may
+    be expired, and touching its attributes would fire an implicit lazy reload
+    — which async SQLAlchemy cannot do from attribute access and which
+    surfaces as ``MissingGreenlet``.
+    """
     if not used_holder:
       return
     used = used_holder[-1]
-    if used.provider_id is not None and chat_session.provider_id != used.provider_id:
-      chat_session.provider_id = used.provider_id
+    if used.provider_id is not None and current_provider_id != used.provider_id:
+      from sqlalchemy import update
+
+      await db_session.execute(
+        update(ChatSession)
+        .where(ChatSession.id == session_pk)
+        .values(provider_id=used.provider_id)
+      )
       await db_session.commit()
 
   def _can_use_agent(self, provider_type: str) -> bool:
     """Check if the provider supports the agent framework."""
     return provider_type.lower() in AGENT_PROVIDER_TYPES
-
-  async def _prepare_message_context(
-    self,
-    db_session: AsyncSession,
-    paper_id: int,
-    user_message: str,
-    references: dict[str, Any] | None,
-    chat_session: ChatSession,
-  ) -> tuple[str, dict[str, Any], list[Any]]:
-    """Legacy context preparation for non-agent provider path."""
-    has_explicit_refs = references and (
-      references.get("notes")
-      or references.get("annotations")
-      or references.get("papers")
-    )
-    if has_explicit_refs:
-      mention_ids = self._extract_mention_ids(references)
-    else:
-      mention_ids = self.parse_mentions(user_message)
-    resolved_references = await self.resolve_references(
-      db_session, paper_id, mention_ids
-    )
-    paper = await self._fetch_paper(db_session, paper_id)
-    if not paper:
-      raise ValueError(f"Paper {paper_id} not found")
-    paper_content_parts = await content_provider.get_content_parts(paper)
-    use_file_context = False
-    if paper_content_parts and hasattr(paper_content_parts[0], "file_uri"):
-      use_file_context = True
-    chat_history = await self._get_chat_history(db_session, cast(int, chat_session.id))
-    context = self.build_context(
-      paper, resolved_references, chat_history, use_file_context=use_file_context
-    )
-    return context, resolved_references, paper_content_parts
-
-  def build_context(
-    self,
-    paper: Paper,
-    references: dict[str, Any],
-    chat_history: list[ChatMessage],
-    use_file_context: bool = False,
-  ) -> str:
-    """Build context string for legacy provider path."""
-    context_parts = self._build_context_header(paper)
-    if not use_file_context:
-      context_parts.append(self._build_context_content(paper))
-    context_parts.extend(self._build_context_references(references))
-    context_parts.extend(self._build_context_history(chat_history))
-    return "\n".join(context_parts)
 
   def _build_context_header(self, paper: Paper) -> list[str]:
     parts = [
@@ -481,45 +416,6 @@ class ChatService(BaseAIService):
     if len(content) > max_length:
       content = content[:max_length] + "..."
     return f"\nContent:\n{content}"
-
-  def _build_context_references(self, references: dict[str, Any]) -> list[str]:
-    parts = []
-    if references.get("notes"):
-      parts.append("\n## Notes:")
-      for note in references["notes"][:5]:
-        page_info = f" (p{note['page']})" if note.get("page") else ""
-        note_content = note["content"][:500]
-        if len(note["content"]) > 500:
-          note_content += "..."
-        parts.append(f"\nNote {note['id']}{page_info}: {note_content}")
-    if references.get("annotations"):
-      parts.append("\n## Annotations:")
-      for ann in references["annotations"][:5]:
-        page_info = f" (p{ann['page']})" if ann.get("page") else ""
-        ann_content = ann["content"][:500]
-        if len(ann["content"]) > 500:
-          ann_content += "..."
-        parts.append(f"\nAnn {ann['id']}{page_info}: {ann_content}")
-    if references.get("papers"):
-      parts.append("\n## Referenced Papers:")
-      for ref_paper in references["papers"][:3]:
-        content = ref_paper["content_text"][:1000]
-        if len(ref_paper["content_text"]) > 1000:
-          content += "..."
-        parts.append(f"\n{ref_paper['title']}:\n{content}")
-    return parts
-
-  def _build_context_history(self, chat_history: list[ChatMessage]) -> list[str]:
-    if not chat_history:
-      return []
-    parts = ["\n## Conversation:"]
-    for msg in chat_history[-5:]:
-      role_label = "U" if msg.role == "user" else "A"
-      msg_content = msg.content[:500]
-      if len(cast(str, msg.content)) > 500:
-        msg_content += "..."
-      parts.append(f"\n{role_label}: {msg_content}")
-    return parts
 
   async def stream_message(
     self,
@@ -558,151 +454,119 @@ class ChatService(BaseAIService):
       }
       return
 
-    # Resolve provider fallback chain for agent path
-    preferred_provider_id = provider_id or cast(
-      "int | None", chat_session.provider_id
-    )
-    resolved = await self._resolve_providers(
-      db_session, user_id, preferred_provider_id
-    )
+    # Capture primitives up front: a tool error during the agent run may roll
+    # back the session and expire ``chat_session``. Re-reading its attributes
+    # afterwards would fire an implicit lazy load (MissingGreenlet), so the rest
+    # of this method works off these plain ints instead of the ORM object.
+    session_pk = cast(int, chat_session.id)
+    current_provider_id = cast("int | None", chat_session.provider_id)
 
-    # ---- Agent path (OpenAI-compatible providers) ----
-    if resolved and self._can_use_agent(resolved[0].route.provider_type):
-      _Runner = _get_runner()
-      if _Runner is None:
-        yield {
-          "type": "error",
-          "error": "OpenAI Agents SDK not installed. Please install openai-agents to use this provider.",
-          "error_code": ERROR_CODE_NO_PROVIDER,
-          "recoverable": False,
-        }
-        return
-      try:
-        self._setup_byo_context(db_session, user_id, [r.route for r in resolved])
-        agent = create_paper_agent(paper)
+    # Resolve the provider chain (default + fallbacks). No env fallback:
+    # an unconfigured user gets a clear error instead of a silent server key.
+    preferred_provider_id = provider_id or current_provider_id
+    resolved = await self._resolve_providers(db_session, user_id, preferred_provider_id)
 
-        await self._save_user_message(
-          db_session, cast(int, chat_session.id), user_message, {}
-        )
-
-        full_content: list[str] = []
-        had_error = False
-        used_holder: list[ResolvedProvider] = []
-        async for adapted in stream_agent_with_fallback(
-          runner=_Runner,
-          agent=agent,
-          user_message=user_message,
-          providers=resolved,
-          session_id=chat_session.id,
-          used_holder=used_holder,
-        ):
-          if adapted["type"] == "chunk":
-            full_content.append(adapted.get("content", ""))
-          elif adapted["type"] == "error":
-            had_error = True
-          yield adapted
-
-        if not had_error:
-          response_text = "".join(full_content)
-          assistant_msg = await self._save_assistant_message(
-            db_session, cast(int, chat_session.id), response_text
-          )
-          await self._persist_session_provider(
-            db_session, chat_session, used_holder
-          )
-          yield {
-            "type": "done",
-            "content": response_text,
-            "message_id": assistant_msg.id,
-            "session_id": chat_session.id,
-          }
-
-      except Exception as e:
-        logger.error(
-          "Agent error in stream_message",
-          error_type=type(e).__name__,
-          error_message=str(e),
-        )
-        error_content = _build_error_message(e)
-        error_code, recoverable = _classify_exception(e)
-        await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), error_content
-        )
-        yield {
-          "type": "error",
-          "error": error_content,
-          "error_code": error_code,
-          "recoverable": recoverable,
-        }
-      return
-
-    # ---- Legacy path (Gemini etc.) ----
-    provider = await self._get_provider(
-      db_session, user_id, preferred_provider_id=preferred_provider_id
-    )
-    if not provider:
+    if not resolved:
       yield {
         "type": "error",
-        "error": "AI provider not configured. Please configure your AI provider in settings.",
+        "error": "No AI provider configured. Add one in your settings to chat.",
+        "error_code": ERROR_CODE_NO_PROVIDER,
+        "recoverable": False,
+      }
+      return
+
+    if not self._can_use_agent(resolved[0].route.provider_type):
+      yield {
+        "type": "error",
+        "error": (
+          f"Provider '{resolved[0].route.provider_type}' is not supported for chat. "
+          "Configure an OpenAI-compatible provider (openai, anthropic, deepseek, "
+          "ollama, vllm, or a custom endpoint)."
+        ),
+        "error_code": ERROR_CODE_NO_PROVIDER,
+        "recoverable": False,
+      }
+      return
+
+    _Runner = _get_runner()
+    if _Runner is None:
+      yield {
+        "type": "error",
+        "error": "OpenAI Agents SDK not installed. Please install openai-agents to use this provider.",
         "error_code": ERROR_CODE_NO_PROVIDER,
         "recoverable": False,
       }
       return
 
     try:
-      context, resolved_refs, content_parts = await self._prepare_message_context(
-        db_session, paper_id, user_message, references, chat_session
+      # Replay this session's history so the agent keeps context across turns
+      # and across a provider switch — memory is keyed by the chat session.
+      history = await self._get_chat_history(db_session, session_pk)
+      agent_input = build_agent_input(history, user_message)
+
+      self._setup_byo_context(
+        db_session, user_id, [r.route for r in resolved], session_id=session_pk
       )
-    except ValueError as e:
-      yield {
-        "type": "error",
-        "error": str(e),
-        "error_code": ERROR_CODE_INTERNAL,
-        "recoverable": False,
-      }
-      return
+      agent = create_paper_agent(paper)
 
-    await self._save_user_message(
-      db_session, cast(int, chat_session.id), user_message, resolved_refs
-    )
+      await self._save_user_message(db_session, session_pk, user_message, {})
 
-    full_prompt = f"{context}\n\n## User Question:\n{user_message}"
+      full_content: list[str] = []
+      had_error = False
+      used_holder: list[ResolvedProvider] = []
+      async for adapted in stream_agent_with_fallback(
+        runner=_Runner,
+        agent=agent,
+        agent_input=agent_input,
+        providers=resolved,
+        session_id=session_pk,
+        used_holder=used_holder,
+      ):
+        if adapted["type"] == "chunk":
+          full_content.append(adapted.get("content", ""))
+        elif adapted["type"] == "error":
+          had_error = True
+        yield adapted
 
-    try:
-      config = self._build_config(provider)
-      full_content = await provider.generate(full_prompt, config)
+      response_text = "".join(full_content)
+      if not had_error:
+        assistant_msg = await self._save_assistant_message(
+          db_session, session_pk, response_text
+        )
+        await self._persist_session_provider(
+          db_session, session_pk, current_provider_id, used_holder
+        )
+        yield {
+          "type": "done",
+          "content": response_text,
+          "message_id": assistant_msg.id,
+          "session_id": session_pk,
+        }
+      elif response_text.strip():
+        # Persist whatever streamed before the error so the turn isn't lost.
+        await self._save_assistant_message(db_session, session_pk, response_text)
 
-      chunk_size = 50
-      for i in range(0, len(full_content), chunk_size):
-        chunk = full_content[i : i + chunk_size]
-        yield {"type": "chunk", "content": chunk}
-
-      assistant_msg = await self._save_assistant_message(
-        db_session, cast(int, chat_session.id), full_content
-      )
-      yield {
-        "type": "done",
-        "message_id": assistant_msg.id,
-        "session_id": chat_session.id,
-      }
-
+    except asyncio.CancelledError:
+      raise
     except Exception as e:
       logger.error(
-        "AI provider error in stream_message",
+        "Agent error in stream_message",
         error_type=type(e).__name__,
         error_message=str(e),
       )
-      error_content = _build_error_message(e)
-      error_code, recoverable = _classify_exception(e)
-      await self._save_assistant_message(
-        db_session, cast(int, chat_session.id), error_content
-      )
+      error_content = build_error_message(e)
+      error_code, recoverable = classify_exception(e)
+      # Clear any aborted transaction left by a tool error before inserting.
+      await db_session.rollback()
+      await self._save_assistant_message(db_session, session_pk, error_content)
       yield {
         "type": "error",
         "error": error_content,
         "error_code": error_code,
         "recoverable": recoverable,
       }
+    finally:
+      reset_byo_context()
 
   async def send_message(
     self,
@@ -714,123 +578,75 @@ class ChatService(BaseAIService):
     user_id: int | None = None,
     provider_id: int | None = None,
   ) -> ChatMessage | None:
-    """Send a chat message and get a response (non-streaming).
-
-    Uses agent framework for OpenAI-compatible providers, legacy path for others.
-    """
+    """Send a chat message and get a response (non-streaming, agent-only)."""
     chat_session, session_error = await self._get_or_create_session(
       db_session, paper_id, session_id, user_id=user_id
     )
     if session_error or not chat_session:
       raise ValueError(session_error or "Failed to get session")
 
-    preferred_provider_id = provider_id or cast(
-      "int | None", chat_session.provider_id
-    )
-    resolved = await self._resolve_providers(
-      db_session, user_id, preferred_provider_id
-    )
+    session_pk = cast(int, chat_session.id)
+    current_provider_id = cast("int | None", chat_session.provider_id)
 
-    # ---- Agent path ----
-    if resolved and self._can_use_agent(resolved[0].route.provider_type):
-      _Runner = _get_runner()
-      if _Runner is None:
-        raise ValueError("OpenAI Agents SDK not installed. Please install openai-agents to use this provider.")
-      paper = await self._fetch_paper(db_session, paper_id)
-      if not paper:
-        raise ValueError(f"Paper {paper_id} not found")
-      try:
-        self._setup_byo_context(db_session, user_id, [r.route for r in resolved])
-        agent = create_paper_agent(paper)
-        primary = resolved[0]
-        rc = build_run_config(
-          provider_configs=[primary.route],
-          model_hint=primary.route.default_model or None,
-        )
+    preferred_provider_id = provider_id or current_provider_id
+    resolved = await self._resolve_providers(db_session, user_id, preferred_provider_id)
 
-        await self._save_user_message(
-          db_session, cast(int, chat_session.id), user_message, {}
-        )
-
-        result = await _Runner.run(agent, input=user_message, run_config=rc)
-        response_text = result.final_output
-
-        await self._persist_session_provider(db_session, chat_session, [primary])
-        return await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), response_text
-        )
-
-      except Exception as e:
-        logger.error(
-          "Agent error in send_message",
-          error_type=type(e).__name__,
-          error_message=str(e),
-        )
-        error_content = _build_error_message(e)
-        await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), error_content
-        )
-        raise ValueError(f"Failed to get AI response: {str(e)[:200]}") from e
-
-    # ---- Legacy path ----
-    provider = await self._get_provider(
-      db_session, user_id, preferred_provider_id=preferred_provider_id
-    )
-    if not provider:
+    if not resolved:
+      raise ValueError("No AI provider configured. Add one in your settings to chat.")
+    if not self._can_use_agent(resolved[0].route.provider_type):
       raise ValueError(
-        "AI provider not configured. Please configure your AI provider in settings."
+        f"Provider '{resolved[0].route.provider_type}' is not supported for chat. "
+        "Configure an OpenAI-compatible provider."
+      )
+
+    _Runner = _get_runner()
+    if _Runner is None:
+      raise ValueError(
+        "OpenAI Agents SDK not installed. Please install openai-agents to use this provider."
       )
     paper = await self._fetch_paper(db_session, paper_id)
     if not paper:
       raise ValueError(f"Paper {paper_id} not found")
+    try:
+      history = await self._get_chat_history(db_session, session_pk)
+      agent_input = build_agent_input(history, user_message)
 
-    context, resolved_refs, content_parts = await self._prepare_message_context(
-      db_session, paper_id, user_message, references, chat_session
-    )
+      self._setup_byo_context(
+        db_session, user_id, [r.route for r in resolved], session_id=session_pk
+      )
+      agent = create_paper_agent(paper)
+      primary = resolved[0]
+      rc = build_run_config(
+        provider_configs=[primary.route],
+        model_hint=primary.route.default_model or None,
+      )
 
-    await self._save_user_message(
-      db_session, cast(int, chat_session.id), user_message, resolved_refs
-    )
+      await self._save_user_message(db_session, session_pk, user_message, {})
 
-    full_prompt = f"{context}\n\n## User Question:\n{user_message}"
+      result = await _Runner.run(
+        agent, input=agent_input, run_config=rc, max_turns=settings.AGENT_MAX_TURNS
+      )
+      response_text = result.final_output
 
-    max_retries = 3
-    base_delay = 1.0
+      await self._persist_session_provider(
+        db_session, session_pk, current_provider_id, [primary]
+      )
+      return await self._save_assistant_message(db_session, session_pk, response_text)
 
-    for attempt in range(max_retries):
-      try:
-        config = self._build_config(provider)
-        text_with_citations = await provider.generate(full_prompt, config)
-        return await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), text_with_citations
-        )
-      except RateLimitError as e:
-        if attempt < max_retries - 1:
-          retry_delay = base_delay * (2**attempt)
-          await asyncio.sleep(retry_delay)
-          continue
-        error_content = _build_error_message(e)
-        await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), error_content
-        )
-        raise ValueError("API rate limit exceeded. Please wait and try again.") from e
-      except Exception as e:
-        logger.error(
-          "AI provider error in send_message",
-          attempt=attempt + 1,
-          error_type=type(e).__name__,
-          error_message=str(e),
-        )
-        error_content = _build_error_message(e)
-        await self._save_assistant_message(
-          db_session, cast(int, chat_session.id), error_content
-        )
-        if isinstance(e, RateLimitError):
-          raise ValueError("API rate limit exceeded. Please wait and try again.") from e
-        raise ValueError(f"Failed to get AI response: {str(e)[:200]}") from e
-    return None
-
-  # ---- Thread Methods (unchanged) ----
+    except asyncio.CancelledError:
+      raise
+    except Exception as e:
+      logger.error(
+        "Agent error in send_message",
+        error_type=type(e).__name__,
+        error_message=str(e),
+      )
+      error_content = build_error_message(e)
+      await db_session.rollback()
+      await self._save_assistant_message(db_session, session_pk, error_content)
+      raise ValueError(f"Failed to get AI response: {str(e)[:200]}") from e
+    finally:
+      reset_byo_context()
 
   async def get_thread_messages(
     self, db_session: AsyncSession, parent_message_id: int
@@ -999,14 +815,16 @@ class ChatService(BaseAIService):
         "parent_message_id": parent_message_id,
       }
 
+    except asyncio.CancelledError:
+      raise
     except Exception as e:
       logger.error(
         "AI provider error in stream_thread_message",
         error_type=type(e).__name__,
         error_message=str(e),
       )
-      error_content = _build_error_message(e)
-      error_code, recoverable = _classify_exception(e)
+      error_content = build_error_message(e)
+      error_code, recoverable = classify_exception(e)
       await self._save_thread_message(
         db_session, session_id, parent_message_id, "assistant", error_content
       )
@@ -1071,17 +889,19 @@ class ChatService(BaseAIService):
         db_session, session_id, parent_message_id, "assistant", full_content
       )
       return user_msg, assistant_msg
+    except asyncio.CancelledError:
+      raise
     except Exception as e:
       logger.error(
         "AI provider error in send_thread_message",
         error_type=type(e).__name__,
         error_message=str(e),
       )
-      error_content = _build_error_message(e)
-      error_msg = await self._save_thread_message(
+      error_content = build_error_message(e)
+      _ = await self._save_thread_message(
         db_session, session_id, parent_message_id, "assistant", error_content
       )
-      return user_msg, error_msg
+      raise
 
 
 chat_service = ChatService()
