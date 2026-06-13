@@ -7,7 +7,6 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.crud import get_visible_paper_or_404
-from app.core.config import settings
 from app.dependencies import CurrentUser, get_db, scoped_user_id
 from app.schemas.ai_features import (
   AIActionRequest,
@@ -79,7 +78,7 @@ async def run_ai_action(
   )
 
   config = GenerateConfig(
-    model=provider.config.model or settings.GENAI_MODEL,
+    model=provider.config.model,
     temperature=0.3,
     max_output_tokens=1024,
   )

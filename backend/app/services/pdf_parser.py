@@ -6,7 +6,6 @@ from typing import Any
 
 from pypdf import PdfReader
 
-from app.core.config import settings
 from app.core.logger import get_logger
 from app.schemas.paper import PaperMetadata
 from app.services.ai.providers.base import AIProvider, GenerateConfig
@@ -199,7 +198,7 @@ class PDFParser:
   async def _call_metadata_api(self, provider: AIProvider, prompt: str) -> str | None:
     try:
       config = GenerateConfig(
-        model=provider.config.model or settings.GENAI_MODEL,
+        model=provider.config.model,
         temperature=0.1,
       )
       response = await provider.generate(prompt, config)
@@ -369,7 +368,7 @@ class PDFParser:
 
       prompt = TITLE_EXTRACTION_PROMPT.format(text=text_preview)
       config = GenerateConfig(
-        model=provider.config.model or settings.GENAI_MODEL,
+        model=provider.config.model,
         temperature=0.1,
       )
       response = asyncio.run(provider.generate(prompt, config))

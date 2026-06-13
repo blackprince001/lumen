@@ -8,11 +8,10 @@ from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.paper import Paper
-from app.services.ai.providers.base import GenerateConfig
 from app.models.paper_citation import PaperCitation
+from app.services.ai.providers.base import GenerateConfig
 
 logger = get_logger(__name__)
 
@@ -233,7 +232,7 @@ class CitationExtractor:
 
     try:
       config = GenerateConfig(
-        model=provider.config.model or settings.GENAI_MODEL,
+        model=provider.config.model,
         temperature=0.1,
         max_output_tokens=32768,
       )

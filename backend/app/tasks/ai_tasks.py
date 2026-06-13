@@ -239,7 +239,7 @@ def generate_summary_task(self, paper_id: int) -> dict[str, Any]:
 
     full_prompt = _build_prompt_with_content(SUMMARY_PROMPT, paper)
     config = GenerateConfig(
-      model=p.config.model or settings.GENAI_MODEL,
+      model=p.config.model,
       temperature=0.3,
     )
     summary = asyncio.run(p.generate(full_prompt, config))
@@ -287,7 +287,7 @@ def extract_findings_task(self, paper_id: int) -> dict[str, Any]:
 
     full_prompt = _build_prompt_with_content(FINDINGS_PROMPT, paper)
     config = GenerateConfig(
-      model=p.config.model or settings.GENAI_MODEL, temperature=0.3
+      model=p.config.model, temperature=0.3
     )
     text = asyncio.run(p.generate(full_prompt, config))
 
@@ -335,7 +335,7 @@ def generate_reading_guide_task(self, paper_id: int) -> dict[str, Any]:
 
     full_prompt = _build_prompt_with_content(READING_GUIDE_PROMPT, paper)
     config = GenerateConfig(
-      model=p.config.model or settings.GENAI_MODEL, temperature=0.3
+      model=p.config.model, temperature=0.3
     )
     text = asyncio.run(p.generate(full_prompt, config))
 
@@ -413,7 +413,7 @@ def generate_highlights_task(self, paper_id: int) -> dict[str, Any]:
       )
 
     config = GenerateConfig(
-      model=p.config.model or settings.GENAI_MODEL, temperature=0.3
+      model=p.config.model, temperature=0.3
     )
     text = asyncio.run(p.generate(prompt, config))
 

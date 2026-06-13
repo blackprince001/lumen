@@ -174,7 +174,7 @@ def extract_citations_task(self, paper_id: int, file_path: str) -> dict[str, Any
 
     prompt = CITATION_EXTRACTION_PROMPT.format(text=references_text)
     config = GenerateConfig(
-      model=provider.config.model or settings.GENAI_MODEL,
+      model=provider.config.model,
       temperature=0.1,
       max_output_tokens=32768,
     )
