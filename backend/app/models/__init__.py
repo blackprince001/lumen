@@ -14,6 +14,7 @@ from app.models.saved_search import SavedSearch
 from app.models.sharing import GroupShare, PaperShare, UserPaperState
 from app.models.tag import Tag
 from app.models.user import User
+from app.models.user_ai_provider import UserAIProvider
 from app.models.user_ai_settings import UserAISettings
 
 __all__ = [
@@ -39,4 +40,5 @@ __all__ = [
   "Tag",
   "User",
   "UserAISettings",
+  "UserAIProvider",
 ]

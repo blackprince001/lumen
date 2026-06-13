@@ -23,6 +23,7 @@ from app.api.search import router as search_router
 from app.api.statistics import router as statistics_router
 from app.api.tags import router as tags_router
 from app.api.tasks import router as tasks_router
+from app.api.user_ai_providers import router as user_ai_providers_router
 from app.api.user_ai_settings import router as user_ai_settings_router
 from app.api.users import router as users_router
 from app.core.config import settings
@@ -161,6 +162,12 @@ app.include_router(
   user_ai_settings_router,
   prefix="/api/v1",
   tags=["ai-settings"],
+  dependencies=_auth_dep,
+)
+app.include_router(
+  user_ai_providers_router,
+  prefix="/api/v1",
+  tags=["ai-providers"],
   dependencies=_auth_dep,
 )
 app.include_router(
