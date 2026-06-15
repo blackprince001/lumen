@@ -196,6 +196,19 @@ export const papersApi = {
   getReference: (id: number, format: 'apa' | 'mla' | 'bibtex' = 'apa'): Promise<PaperReference> =>
     api.get<PaperReference>(`/papers/${id}/reference?format=${format}`),
 
+  /** Fetch the stored PDF (authenticated) and trigger a browser download. */
+  downloadFile: async (id: number, filename?: string): Promise<void> => {
+    const blob = await api.get<Blob>(`/papers/${id}/file`, { responseType: 'blob' });
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = objectUrl;
+    a.download = filename ? `${filename}.pdf` : `paper-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(objectUrl);
+  },
+
   uploadFiles: (files: File[], groupIds?: number[]): Promise<PaperUploadResponse> => {
     const formData = new FormData();
     files.forEach((file) => formData.append('files', file));

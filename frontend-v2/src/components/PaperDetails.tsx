@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { motion } from 'motion/react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { toastInfo } from '@/lib/utils/toast';
-import { Trash as Trash2, Edit as Pencil, TickCircle as Check, CloseCircle as X, ExportSquare as ExternalLink, Calendar, Link as LinkIcon, FingerScan as Fingerprint, Refresh, Share } from 'iconsax-reactjs';
+import { toastInfo, toastError } from '@/lib/utils/toast';
+import { Trash as Trash2, Edit as Pencil, TickCircle as Check, CloseCircle as X, ExportSquare as ExternalLink, Calendar, Link as LinkIcon, FingerScan as Fingerprint, Refresh, Share, DocumentDownload } from 'iconsax-reactjs';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { type Paper, papersApi } from '@/lib/api/papers';
 import { Button } from '@/components/ui/Button';
@@ -267,21 +267,52 @@ export function PaperDetails({ paper, onDelete }: PaperDetailsProps) {
                 </a>
               </div>
             )}
-            {paper.url && (
-              <div className="space-y-1.5">
-                <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-(--muted-foreground)">
-                  <LinkIcon size={12} /> URL
-                </h4>
-                <a
-                  href={paper.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-code text-(--foreground) hover:text-(--sky-blue) truncate block"
-                >
-                  Source <ExternalLink size={10} className="inline ml-1" />
-                </a>
-              </div>
-            )}
+            {(() => {
+              // Uploaded files store a `file://…` placeholder rather than a real
+              // web URL — for those, offer a download of the stored PDF instead
+              // of a broken external link.
+              const hasExternalUrl = !!paper.url && !paper.url.startsWith('file://');
+              if (hasExternalUrl) {
+                return (
+                  <div className="space-y-1.5">
+                    <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-(--muted-foreground)">
+                      <LinkIcon size={12} /> URL
+                    </h4>
+                    <a
+                      href={paper.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-code text-(--foreground) hover:text-(--sky-blue) truncate block"
+                    >
+                      Source <ExternalLink size={10} className="inline ml-1" />
+                    </a>
+                  </div>
+                );
+              }
+              if (paper.file_url) {
+                return (
+                  <div className="space-y-1.5">
+                    <h4 className="flex items-center gap-1.5 text-caption font-bold uppercase tracking-wider text-(--muted-foreground)">
+                      <DocumentDownload size={12} /> File
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await papersApi.downloadFile(paper.id, paper.title);
+                        } catch {
+                          toastError('Failed to download file');
+                        }
+                      }}
+                      className="text-code text-(--foreground) hover:text-(--sky-blue) truncate block text-left"
+                    >
+                      Download <DocumentDownload size={10} className="inline ml-1" />
+                    </button>
+                  </div>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
 
