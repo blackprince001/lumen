@@ -406,6 +406,13 @@ function ProviderForm({
         <p className="text-caption text-(--muted-foreground) mt-1">
           Your key is encrypted at rest
         </p>
+        {draft.provider === 'gemini' && (
+          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-caption text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
+            Use a Gemini key with billing enabled. Free-tier keys have very low
+            quotas and frequently fail with rate-limit / quota errors mid-request —
+            a paid (billing-attached) key is strongly recommended for reliable use.
+          </div>
+        )}
       </div>
 
       <div>

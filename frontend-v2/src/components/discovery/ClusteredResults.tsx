@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { ArrowDown2 as ChevronDown, ArrowUp2 as ChevronUp, Tag, MagicStar as Sparkles } from 'iconsax-reactjs';
+import { useMemo, useState } from 'react';
+import { Tag, MagicStar as Sparkles } from 'iconsax-reactjs';
 import type { ClusteringResult, DiscoveredPaperPreview, PaperRelevanceExplanation } from '@/lib/api/discovery';
 import { DiscoveredPaperCard } from './DiscoveredPaperCard';
+import { cn } from '@/lib/utils';
 
 interface ClusteredResultsProps {
   clustering: ClusteringResult;
@@ -9,116 +10,134 @@ interface ClusteredResultsProps {
   relevanceExplanations?: PaperRelevanceExplanation[];
 }
 
-interface ClusterSectionProps {
+interface ClusterPaper {
+  paper: DiscoveredPaperPreview;
+  relevance?: PaperRelevanceExplanation;
+}
+
+interface ClusterSection {
   name: string;
   description: string;
   keywords: string[];
-  papers: DiscoveredPaperPreview[];
-  relevanceMap: Map<number, PaperRelevanceExplanation>;
-  defaultExpanded?: boolean;
-}
-
-function ClusterSection({ name, description, keywords, papers, relevanceMap, defaultExpanded = true }: ClusterSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-
-  return (
-    <div className="bg-(--card) border border-(--border) rounded-xl overflow-hidden mb-4">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-(--muted) transition-colors text-left"
-      >
-        <div className="flex items-start gap-3">
-          <Tag className="w-4 h-4 text-(--muted-foreground) shrink-0 mt-0.5" />
-          <div>
-            <h3 className="text-body font-semibold text-(--foreground)">{name}</h3>
-            {description && (
-              <p className="text-caption text-(--muted-foreground) mt-0.5">{description}</p>
-            )}
-            {keywords.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {keywords.slice(0, 5).map((kw, i) => (
-                  <span key={i} className="px-2 py-0.5 bg-(--muted) text-(--muted-foreground) text-caption rounded border border-(--border)">
-                    {kw}
-                  </span>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 ml-4">
-          <span className="text-caption text-(--muted-foreground)">{papers.length} papers</span>
-          {isExpanded
-            ? <ChevronUp className="w-4 h-4 text-(--muted-foreground)" />
-            : <ChevronDown className="w-4 h-4 text-(--muted-foreground)" />}
-        </div>
-      </button>
-
-      {isExpanded && (
-        <div className="border-t border-(--border) p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
-          {papers.map((paper, localIdx) => {
-            const relevance = relevanceMap.get(localIdx);
-            return (
-              <div key={`${paper.source}-${paper.external_id}`} className="flex flex-col gap-2">
-                <DiscoveredPaperCard paper={paper} />
-                {relevance && (
-                  <div className="px-3 py-2 bg-(--muted) rounded-lg border border-(--border) flex items-start gap-2">
-                    <Sparkles className="w-3.5 h-3.5 text-(--muted-foreground) shrink-0 mt-0.5" />
-                    <div className="text-caption text-(--muted-foreground) space-y-0.5">
-                      <p><span className="font-medium text-(--foreground)">Why relevant: </span>{relevance.relevance}</p>
-                      {relevance.key_contribution && (
-                        <p><span className="font-medium text-(--foreground)">Key contribution: </span>{relevance.key_contribution}</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
+  papers: ClusterPaper[];
 }
 
 export function ClusteredResults({ clustering, papers, relevanceExplanations = [] }: ClusteredResultsProps) {
-  const globalRelevanceMap = new Map(relevanceExplanations.map((e) => [e.paper_index, e]));
-  const unclusteredPapers = clustering.unclustered_indices.map((i) => papers[i]).filter(Boolean);
+  const sections = useMemo<ClusterSection[]>(() => {
+    const relevanceMap = new Map(relevanceExplanations.map((e) => [e.paper_index, e]));
+
+    const resolve = (indices: number[]): ClusterPaper[] =>
+      indices
+        .map((globalIdx) => ({ paper: papers[globalIdx], relevance: relevanceMap.get(globalIdx) }))
+        .filter((x) => Boolean(x.paper));
+
+    const list: ClusterSection[] = clustering.clusters
+      .map((cluster) => ({
+        name: cluster.name,
+        description: cluster.description,
+        keywords: cluster.keywords,
+        papers: resolve(cluster.paper_indices),
+      }))
+      .filter((section) => section.papers.length > 0);
+
+    const unclustered = resolve(clustering.unclustered_indices);
+    if (unclustered.length > 0) {
+      list.push({
+        name: 'Other Results',
+        description: "Papers that don't fit neatly into the main topic clusters",
+        keywords: [],
+        papers: unclustered,
+      });
+    }
+
+    return list;
+  }, [clustering, papers, relevanceExplanations]);
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const active = sections[activeIdx] ?? sections[0];
+
+  if (!active) return null;
 
   return (
-    <div>
-      {clustering.clusters.map((cluster, clusterIdx) => {
-        const clusterPapers = cluster.paper_indices.map((i) => papers[i]).filter(Boolean);
-        if (clusterPapers.length === 0) return null;
+    <div className="flex flex-col gap-5 md:flex-row md:items-start">
+      {/* Sidebar: cluster sections.
+          Mobile: horizontal scroll with a right-edge fade to signal more tabs.
+          Desktop: vertical list whose items size/wrap to their label. */}
+      <div className="relative md:w-56 md:shrink-0 md:self-start md:sticky md:top-4">
+        <nav className="flex gap-1 overflow-x-auto pb-1 md:flex-col md:overflow-visible md:pb-0">
+          {sections.map((section, idx) => {
+            const isActive = idx === activeIdx;
+            return (
+              <button
+                key={section.name + idx}
+                onClick={() => setActiveIdx(idx)}
+                className={cn(
+                  'flex shrink-0 items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-caption transition-colors md:w-full md:items-start',
+                  isActive
+                    ? 'bg-(--muted) text-(--foreground) font-medium'
+                    : 'text-(--muted-foreground) hover:bg-(--muted) hover:text-(--foreground)'
+                )}
+              >
+                <span className="flex min-w-0 items-center gap-2 md:items-start">
+                  <Tag className="w-3.5 h-3.5 shrink-0 md:mt-0.5" />
+                  <span className="truncate md:overflow-visible md:whitespace-normal md:text-clip md:break-words">
+                    {section.name}
+                  </span>
+                </span>
+                <span className="shrink-0 tabular-nums text-(--muted-foreground) md:mt-px">
+                  {section.papers.length}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+        {/* Mobile-only scroll affordance */}
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-(--background) to-transparent md:hidden" />
+      </div>
 
-        const localRelevanceMap = new Map<number, PaperRelevanceExplanation>();
-        cluster.paper_indices.forEach((globalIdx, localIdx) => {
-          const rel = globalRelevanceMap.get(globalIdx);
-          if (rel) localRelevanceMap.set(localIdx, rel);
-        });
+      {/* Content: selected cluster overview + papers */}
+      <div className="min-w-0 flex-1">
+        <div className="mb-4 rounded-xl border border-(--border) bg-(--card) p-4">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="text-body font-semibold text-(--foreground)">{active.name}</h3>
+            <span className="shrink-0 text-caption text-(--muted-foreground)">{active.papers.length} papers</span>
+          </div>
+          {active.description && (
+            <p className="mt-1 text-caption text-(--muted-foreground)">{active.description}</p>
+          )}
+          {active.keywords.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {active.keywords.slice(0, 6).map((kw, i) => (
+                <span
+                  key={i}
+                  className="rounded border border-(--border) bg-(--muted) px-2 py-0.5 text-caption text-(--muted-foreground)"
+                >
+                  {kw}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
 
-        return (
-          <ClusterSection
-            key={clusterIdx}
-            name={cluster.name}
-            description={cluster.description}
-            keywords={cluster.keywords}
-            papers={clusterPapers}
-            relevanceMap={localRelevanceMap}
-            defaultExpanded={clusterIdx === 0}
-          />
-        );
-      })}
-
-      {unclusteredPapers.length > 0 && (
-        <ClusterSection
-          name="Other Results"
-          description="Papers that don't fit neatly into the main topic clusters"
-          keywords={[]}
-          papers={unclusteredPapers}
-          relevanceMap={new Map()}
-          defaultExpanded={false}
-        />
-      )}
+        <div className="grid grid-cols-1 gap-3">
+          {active.papers.map(({ paper, relevance }) => (
+            <div key={`${paper.source}-${paper.external_id}`} className="flex flex-col gap-2">
+              <DiscoveredPaperCard paper={paper} />
+              {relevance && (
+                <div className="flex items-start gap-2 rounded-lg border border-(--border) bg-(--muted) px-3 py-2">
+                  <Sparkles className="w-3.5 h-3.5 shrink-0 text-(--muted-foreground) mt-0.5" />
+                  <div className="space-y-0.5 text-caption text-(--muted-foreground)">
+                    <p><span className="font-medium text-(--foreground)">Why relevant: </span>{relevance.relevance}</p>
+                    {relevance.key_contribution && (
+                      <p><span className="font-medium text-(--foreground)">Key contribution: </span>{relevance.key_contribution}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

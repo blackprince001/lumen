@@ -22,12 +22,26 @@ const STAGE_LABEL: Record<string, string> = {
   complete: 'Complete',
 };
 
+// The AI insight stages all read every paper to produce the overview, topic
+// clusters, and per-paper relevance notes — this can take a few minutes on
+// slower providers, so set expectations rather than looking stalled.
+const AI_INSIGHT_HINT =
+  'Reading all results to build the overview, topic clusters, and relevance notes. This can take a few minutes — clustering and relevance run in the background.';
+
+const STAGE_HINT: Record<string, string> = {
+  enhancing: AI_INSIGHT_HINT,
+  overview: AI_INSIGHT_HINT,
+  clustering: AI_INSIGHT_HINT,
+  relevance: AI_INSIGHT_HINT,
+};
+
 export function DiscoveryStatus({ status, timeline, isSearching }: DiscoveryStatusProps) {
   if (!isSearching && (!status || status.stage === 'complete')) return null;
 
   const progress = Math.max(0, Math.min(100, status?.progress ?? 0));
   const headline = status?.message || 'Searching…';
   const stageLabel = STAGE_LABEL[status?.stage ?? 'starting'] ?? 'Searching';
+  const hint = status?.stage ? STAGE_HINT[status.stage] : undefined;
 
   return (
     <motion.div
@@ -65,6 +79,11 @@ export function DiscoveryStatus({ status, timeline, isSearching }: DiscoveryStat
         <p className="text-code text-(--foreground) leading-snug">
           {headline}
         </p>
+        {hint && (
+          <p className="text-caption text-(--muted-foreground) leading-snug mt-1.5">
+            {hint}
+          </p>
+        )}
       </div>
 
       <div className="relative h-px w-full bg-(--border)">

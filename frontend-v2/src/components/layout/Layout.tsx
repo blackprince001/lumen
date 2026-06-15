@@ -65,7 +65,9 @@ export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
 
-  const isPaperDetailPage = /^\/papers\/\d+/.test(location.pathname);
+  // Only the reader route itself gets the tab bar + chat side panel. Sub-routes
+  // like /papers/:id/chat are standalone pages and must not inherit that chrome.
+  const isPaperDetailPage = /^\/papers\/\d+\/?$/.test(location.pathname);
 
   useEffect(() => { setMobileMenuOpen(false); }, [location.pathname]);
   

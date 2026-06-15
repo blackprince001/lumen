@@ -1,5 +1,5 @@
-import { Link } from 'react-router-dom';
-import { Trash as Trash2, People } from 'iconsax-reactjs';
+import { Link, useNavigate } from 'react-router-dom';
+import { Trash as Trash2, People, Message as MessageSquare } from 'iconsax-reactjs';
 import { cn } from '@/lib/utils';
 import { getPaperTheme } from '@/lib/paper-themes';
 import { paperAuthors, paperYear } from '@/lib/paper-display';
@@ -27,6 +27,7 @@ export function PaperCard({
   selected = false,
   onSelect,
 }: PaperCardProps) {
+  const navigate = useNavigate();
   const theme = getPaperTheme(paper.id);
   const isShared = paper.is_shared === true;
   const coverUrl = usePaperThumbnail(paper);
@@ -97,6 +98,16 @@ export function PaperCard({
             <span className="text-caption font-semibold opacity-60" style={{ color: theme.text }}>
               {publicationYear}
             </span>
+          )}
+          {!selectionMode && (
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigate(`/papers/${paper.id}/chat`); }}
+              aria-label="Chat with paper"
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-black/10"
+              style={{ color: theme.text }}
+            >
+              <MessageSquare size={12} />
+            </button>
           )}
           {!selectionMode && onDelete && (
             <button

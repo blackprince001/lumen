@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Bookmark, Share } from 'iconsax-reactjs';
+import { Link } from 'react-router-dom';
+import { Bookmark, Share, Message as MessageSquare } from 'iconsax-reactjs';
 import { papersApi, type Paper } from '@/lib/api/papers';
 import { Select } from '@/components/ui/Select';
 import { Tooltip } from '@/components/ui/Tooltip';
@@ -88,6 +89,15 @@ export function ReaderToolbarActions({
           </option>
         ))}
       </Select>
+      <Tooltip content="Open full chat view" side="bottom">
+        <Link
+          to={`/papers/${paper.id}/chat`}
+          aria-label="Open full chat view"
+          className="flex size-7 items-center justify-center rounded-md text-(--muted-foreground) transition-colors hover:bg-(--secondary) hover:text-(--foreground)"
+        >
+          <MessageSquare size={15} />
+        </Link>
+      </Tooltip>
       {canAnnotate(paper) && (
         <Tooltip content={`Bookmark page ${currentPage}`} side="bottom">
           <button
