@@ -110,6 +110,8 @@ async def ingest_paper_endpoint(
       user_id=user.id,
     )
 
+    await session.commit()
+
     # Dispatch Celery task for full AI processing
     paper_response = Paper.model_validate(paper)
     if paper.file_path:
