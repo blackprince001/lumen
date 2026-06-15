@@ -78,7 +78,14 @@ export type {
 } from './huggingface';
 
 export { userAiSettingsApi } from './userAiSettings';
-export type { UserAiSettings, UserAiSettingsUpdate, ProviderInfo } from './userAiSettings';
+export type {
+  UserAiSettings,
+  UserAiSettingsUpdate,
+  ProviderInfo,
+  ModelInfo,
+  ProviderTestRequest,
+  ProviderTestResponse,
+} from './userAiSettings';
 export { userAiProvidersApi } from './userAiProviders';
 export type { UserAiProvider, UserAiProviderCreate, UserAiProviderUpdate } from './userAiProviders';
 

@@ -22,6 +22,7 @@ import { Select } from '@/components/ui/Select';
 import {
   userAiSettingsApi,
   userAiProvidersApi,
+  type ModelInfo,
   type ProviderInfo,
   type UserAiProvider,
 } from '@/lib/api';
@@ -338,26 +339,57 @@ const EMPTY_DRAFT: ProviderDraft = {
   isDefault: false,
 };
 
-function modelPlaceholder(provider: string): string {
-  return provider === 'gemini' ? 'gemini-2.0-flash'
-    : provider === 'anthropic' ? 'claude-sonnet-4-20250514'
-      : provider === 'deepseek' ? 'deepseek-chat'
-        : 'gpt-4o';
-}
+const SELF_HOSTED = new Set(['ollama', 'vllm', 'openai-compatible']);
+
+const KNOWN_PROVIDERS = new Set(['openai', 'anthropic', 'deepseek', 'gemini']);
 
 function ProviderForm({
-  draft, setDraft, providers, editing, onSave, onCancel, saving,
+  draft, setDraft, providers, models, editing, onSave, onCancel, saving,
 }: {
   draft: ProviderDraft;
   setDraft: (d: ProviderDraft) => void;
   providers: ProviderInfo[];
+  models: ModelInfo[];
   editing: boolean;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
 }) {
-  const set = (patch: Partial<ProviderDraft>) => setDraft({ ...draft, ...patch });
+  const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [testing, setTesting] = useState(false);
+
+  const set = (patch: Partial<ProviderDraft>) => {
+    const relevant = ['provider', 'apiKey', 'baseUrl', 'model'];
+    if (relevant.some((k) => k in patch)) {
+      setTestResult(null);
+    }
+    setDraft({ ...draft, ...patch });
+  };
   const selectedProvider = providers.find((p) => p.type === draft.provider);
+  const showModelSelect = KNOWN_PROVIDERS.has(draft.provider);
+  const hideApiKey = SELF_HOSTED.has(draft.provider);
+  const needsTest = !editing;
+
+  const availableModels = models.filter((m) => m.provider === draft.provider);
+  const noModels = draft.provider !== '' && showModelSelect && availableModels.length === 0;
+
+  const handleTest = async () => {
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await userAiSettingsApi.testConnection({
+        provider: draft.provider,
+        api_key: draft.apiKey || undefined,
+        base_url: draft.baseUrl || null,
+        model: draft.model || undefined,
+      });
+      setTestResult({ ok: res.success, msg: res.message });
+    } catch {
+      setTestResult({ ok: false, msg: 'Could not reach server' });
+    } finally {
+      setTesting(false);
+    }
+  };
 
   return (
     <div className="border border-(--border) rounded-xl p-4 space-y-4 bg-(--card)">
@@ -382,7 +414,9 @@ function ProviderForm({
           </label>
           <Select
             value={draft.provider}
-            onChange={(e) => set({ provider: e.target.value })}
+            onChange={(e) => {
+              set({ provider: e.target.value, model: '' });
+            }}
             placeholder="Select a provider"
           >
             <option value="">Select a provider</option>
@@ -393,27 +427,29 @@ function ProviderForm({
         </div>
       </div>
 
-      <div>
-        <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
-          API key
-        </label>
-        <Input
-          type="password"
-          value={draft.apiKey}
-          onChange={(e) => set({ apiKey: e.target.value })}
-          placeholder={editing ? '•••••••• (leave blank to keep)' : 'Enter API key'}
-        />
-        <p className="text-caption text-(--muted-foreground) mt-1">
-          Your key is encrypted at rest
-        </p>
-        {draft.provider === 'gemini' && (
-          <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-caption text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
-            Use a Gemini key with billing enabled. Free-tier keys have very low
-            quotas and frequently fail with rate-limit / quota errors mid-request —
-            a paid (billing-attached) key is strongly recommended for reliable use.
-          </div>
-        )}
-      </div>
+      {!hideApiKey && (
+        <div>
+          <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
+            API key
+          </label>
+          <Input
+            type="password"
+            value={draft.apiKey}
+            onChange={(e) => set({ apiKey: e.target.value })}
+            placeholder={editing ? '•••••••• (leave blank to keep)' : 'Enter API key'}
+          />
+          <p className="text-caption text-(--muted-foreground) mt-1">
+            Your key is encrypted at rest
+          </p>
+          {draft.provider === 'gemini' && (
+            <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-caption text-amber-800 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-200">
+              Use a Gemini key with billing enabled. Free-tier keys have very low
+              quotas and frequently fail with rate-limit / quota errors mid-request —
+              a paid (billing-attached) key is strongly recommended for reliable use.
+            </div>
+          )}
+        </div>
+      )}
 
       <div>
         <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
@@ -433,11 +469,47 @@ function ProviderForm({
         <label className="text-caption font-medium text-(--muted-foreground) uppercase tracking-wide mb-1.5 block">
           Model
         </label>
-        <Input
-          value={draft.model}
-          onChange={(e) => set({ model: e.target.value })}
-          placeholder={modelPlaceholder(draft.provider)}
-        />
+        {showModelSelect ? (
+          <Select
+            value={draft.model}
+            onChange={(e) => set({ model: e.target.value })}
+            placeholder="Select a model"
+          >
+            <option value="">{noModels ? 'No models available' : 'Select a model'}</option>
+            {availableModels.map((m) => (
+              <option key={m.model} value={m.model}>
+                {m.name} {m.source === 'self-hosted' ? '(Self-host)' : '(API)'}
+              </option>
+            ))}
+          </Select>
+        ) : (
+          <Input
+            value={draft.model}
+            onChange={(e) => set({ model: e.target.value })}
+            placeholder={draft.provider === 'gemini' ? 'gemini-2.0-flash'
+              : draft.provider === 'anthropic' ? 'claude-sonnet-4-20250514'
+                : draft.provider === 'deepseek' ? 'deepseek-chat'
+                  : 'gpt-4o'}
+          />
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          onClick={handleTest}
+          disabled={testing || !draft.provider || !draft.model}
+        >
+          {testing ? 'Testing…' : 'Test connection'}
+        </Button>
+        {testResult && (
+          <span className={cn(
+            'text-caption',
+            testResult.ok ? 'text-(--success-green)' : 'text-(--destructive)',
+          )}>
+            {testResult.ok ? '✓' : '✗'} {testResult.msg}
+          </span>
+        )}
       </div>
 
       <label className="flex items-center gap-2 text-code text-(--foreground) cursor-pointer">
@@ -451,7 +523,7 @@ function ProviderForm({
       </label>
 
       <div className="flex items-center gap-3 pt-1">
-        <Button variant="primary" onClick={onSave} disabled={saving || !draft.provider}>
+        <Button variant="primary" onClick={onSave} disabled={saving || !draft.provider || (needsTest && !testResult?.ok)}>
           {saving ? 'Saving…' : editing ? 'Save changes' : 'Add provider'}
         </Button>
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
@@ -463,6 +535,7 @@ function ProviderForm({
 function AiSettingsSection() {
   const [items, setItems] = useState<UserAiProvider[]>([]);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [models, setModels] = useState<ModelInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
@@ -478,12 +551,14 @@ function AiSettingsSection() {
   useEffect(() => {
     (async () => {
       try {
-        const [list, provs] = await Promise.all([
+        const [list, provs, modelList] = await Promise.all([
           userAiProvidersApi.list(),
           userAiSettingsApi.listProviders(),
+          userAiSettingsApi.listModels(),
         ]);
         setItems(list);
         setProviders(provs);
+        setModels(modelList);
       } catch {
         // noop — empty is fine
       } finally {
@@ -599,6 +674,7 @@ function AiSettingsSection() {
           draft={draft}
           setDraft={setDraft}
           providers={providers}
+          models={models}
           editing={editingId !== 'new'}
           onSave={handleSave}
           onCancel={() => setEditingId(null)}

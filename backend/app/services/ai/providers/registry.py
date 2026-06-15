@@ -7,6 +7,7 @@ from app.services.ai.providers.openai_compatible import (
   AnthropicProvider,
   DeepSeekProvider,
   OpenAICompatibleProvider,
+  OpenAIProvider,
 )
 
 logger = get_logger(__name__)
@@ -76,5 +77,6 @@ class AIProviderRegistry:
 ai_provider_registry = AIProviderRegistry()
 ai_provider_registry.register("gemini", GeminiProvider)
 ai_provider_registry.register("openai-compatible", OpenAICompatibleProvider)
+ai_provider_registry.register("openai", OpenAIProvider)
 ai_provider_registry.register("deepseek", DeepSeekProvider)
 ai_provider_registry.register("anthropic", AnthropicProvider)

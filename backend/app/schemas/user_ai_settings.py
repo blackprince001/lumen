@@ -49,3 +49,35 @@ class ProviderTypeInfo(BaseModel):
   type: str
   display_name: str
   supports_grounding: bool
+
+
+class ModelInfo(BaseModel):
+  """A model available from a supported provider."""
+
+  provider: str = Field(
+    description="Internal provider type, e.g. 'openai', 'anthropic'"
+  )
+  model: str = Field(description="Raw model name sent to the API, e.g. 'gpt-4o'")
+  name: str = Field(description="Human-readable display name")
+  context_length: int = Field(description="Maximum context length in tokens")
+  source: str = Field(
+    description="'api' for closed-source API-only, 'self-hosted' for open-weight models"
+  )
+
+
+class ProviderTestRequest(BaseModel):
+  """Request schema for testing a provider connection."""
+
+  provider: str = Field(description="Provider type, e.g. 'openai', 'ollama'")
+  api_key: str = Field(
+    default="", description="API key (not required for local providers)"
+  )
+  base_url: str | None = Field(default=None, description="Base URL override")
+  model: str = Field(default="", description="Model name to test with")
+
+
+class ProviderTestResponse(BaseModel):
+  """Result of a provider connection test."""
+
+  success: bool
+  message: str

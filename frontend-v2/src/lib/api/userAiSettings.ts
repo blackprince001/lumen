@@ -23,6 +23,26 @@ export interface ProviderInfo {
   supports_grounding: boolean;
 }
 
+export interface ModelInfo {
+  provider: string;
+  model: string;
+  name: string;
+  context_length: number;
+  source: 'api' | 'self-hosted';
+}
+
+export interface ProviderTestRequest {
+  provider: string;
+  api_key?: string;
+  base_url?: string | null;
+  model?: string;
+}
+
+export interface ProviderTestResponse {
+  success: boolean;
+  message: string;
+}
+
 export const userAiSettingsApi = {
   get: () => api.get<UserAiSettings>('/user/ai-settings'),
 
@@ -35,4 +55,9 @@ export const userAiSettingsApi = {
   delete: () => api.delete<void>('/user/ai-settings'),
 
   listProviders: () => api.get<ProviderInfo[]>('/ai/providers'),
+
+  listModels: () => api.get<ModelInfo[]>('/ai/models'),
+
+  testConnection: (data: ProviderTestRequest) =>
+    api.post<ProviderTestResponse>('/ai/providers/test', data),
 };

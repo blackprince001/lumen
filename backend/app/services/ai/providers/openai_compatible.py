@@ -139,6 +139,20 @@ class OpenAICompatibleProvider(AIProvider):
     return AIProviderError(str(error), original_error=error)
 
 
+class OpenAIProvider(OpenAICompatibleProvider):
+  """OpenAI API provider.
+
+  Uses the OpenAI-compatible endpoint at https://api.openai.com/v1.
+  """
+
+  display_name = "OpenAI"
+  default_base_url = "https://api.openai.com/v1"
+
+  @property
+  def name(self) -> str:
+    return "openai"
+
+
 class DeepSeekProvider(OpenAICompatibleProvider):
   """DeepSeek API provider.
 
