@@ -8,7 +8,7 @@ import { MessageAuthor } from '@/components/ai/MessageAuthor';
 import { StreamingMessage } from './ai/StreamingMessage';
 import { ExpandedInput } from './ExpandedInput';
 import { format } from 'date-fns';
-import { Send } from 'iconsax-reactjs';
+import { Send, ArrowRight2, ArrowDown2 } from 'iconsax-reactjs';
 import { Skeleton } from './ui/Skeleton';
 import { logger } from '@/lib/logger';
 
@@ -45,6 +45,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
   });
 
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const queryClient = useQueryClient();
@@ -57,7 +58,17 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
   });
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const end = messagesEndRef.current;
+    if (!end) return;
+    // Don't yank the user down mid-stream if they've scrolled up to read.
+    // Threads render inside the chat's scroll container (data-chat-scroll).
+    const container = end.closest('[data-chat-scroll]') as HTMLElement | null;
+    if (container) {
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (distanceFromBottom > 120) return;
+    }
+    end.scrollIntoView({ behavior: 'smooth' });
   }, [threadMessages, streamState.displayedContent, pendingUserMessage]);
 
   // Word-by-word display
@@ -237,17 +248,32 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
   }, []);
 
   const threadCount = parentMessage.thread_count || threadMessages.length;
+  // Replying (showInput) always forces the thread open; otherwise it's
+  // collapsed by default so the main conversation stays scannable.
+  const isExpanded = expanded || showInput;
+  const lastMessageId = threadMessages.length
+    ? threadMessages[threadMessages.length - 1].id
+    : null;
 
   return (
-    <div className="mt-2 ml-4 pl-3 border-l-2 border-(--border)">
-      {/* Thread header */}
+    <div className="relative mt-1 ml-3 pl-4 border-l-2 border-(--border)">
+      {/* Elbow connector tying the branch back to the parent message */}
+      <span className="absolute -left-0.5 top-0 h-3 w-3 border-l-2 border-b-2 border-(--border) rounded-bl-lg pointer-events-none" />
+
+      {/* Thread header — click to expand/collapse */}
       {threadCount > 0 && (
-        <div className="mb-2 text-caption text-(--muted-foreground) font-medium">
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="mb-1.5 inline-flex items-center gap-1 text-caption text-(--muted-foreground) font-medium hover:text-(--foreground) transition-colors"
+        >
+          {isExpanded ? <ArrowDown2 size={12} /> : <ArrowRight2 size={12} />}
           {threadCount} {threadCount === 1 ? 'reply' : 'replies'}
-        </div>
+        </button>
       )}
 
       {/* Thread messages */}
+      {isExpanded && (
       <div className="space-y-0.5">
         {isLoading ? (
           <div className="flex items-center justify-center py-4">
@@ -264,9 +290,11 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
                   ) : (
                     <MarkdownMessage content={msg.content} />
                   )}
-                  <span className="absolute top-2 right-2 text-[0.625rem] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
-                    {format(new Date(msg.created_at), 'HH:mm')}
-                  </span>
+                  {msg.id === lastMessageId && (
+                    <span className="absolute top-2 right-2 text-[0.625rem] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
+                      {format(new Date(msg.created_at), 'HH:mm')}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -314,6 +342,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
         )}
         <div ref={messagesEndRef} />
       </div>
+      )}
 
       {/* Thread input */}
       {showInput && (

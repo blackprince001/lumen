@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkMath from 'remark-math';
 import remarkGfm from 'remark-gfm';
@@ -14,7 +14,30 @@ interface MarkdownMessageProps {
 }
 
 const REMARK_PLUGINS = [remarkMath, remarkGfm];
-const REHYPE_PLUGINS = [rehypeKatex];
+// throwOnError keeps a single malformed expression from blanking the whole
+// message — KaTeX renders the offending source in red instead of crashing.
+const REHYPE_PLUGINS = [[rehypeKatex, { throwOnError: false, strict: false }]] as any;
+
+/**
+ * Convert LaTeX written with `\( \)` / `\[ \]` delimiters (the style most
+ * LLMs emit) into the `$ $` / `$$ $$` delimiters that remark-math parses.
+ * Without this, markdown treats `\(` as an escaped paren and the math never
+ * renders. Fenced and inline code spans are left untouched.
+ */
+function normalizeMathDelimiters(input: string): string {
+  if (!input.includes('\\(') && !input.includes('\\[')) return input;
+  // Split on code so delimiter rewriting never touches code samples. The
+  // capturing group keeps the code segments in the array at odd indices.
+  const segments = input.split(/(```[\s\S]*?```|`[^`]*`)/g);
+  return segments
+    .map((seg, i) => {
+      if (i % 2 === 1) return seg; // a code segment — leave as-is
+      return seg
+        .replace(/\\\[([\s\S]+?)\\\]/g, (_, body) => `$$${body}$$`)
+        .replace(/\\\(([\s\S]+?)\\\)/g, (_, body) => `$${body}$`);
+    })
+    .join('');
+}
 
 const MARKDOWN_COMPONENTS: Components = {
   code({ className: cls, children, ...props }: any) {
@@ -79,6 +102,7 @@ const MARKDOWN_COMPONENTS: Components = {
 };
 
 export const MarkdownMessage = memo(function MarkdownMessage({ content, className }: MarkdownMessageProps) {
+  const normalized = useMemo(() => normalizeMathDelimiters(content), [content]);
   return (
     <div className={cn('text-code leading-[1.75]', className)}>
       <ReactMarkdown
@@ -86,7 +110,7 @@ export const MarkdownMessage = memo(function MarkdownMessage({ content, classNam
         rehypePlugins={REHYPE_PLUGINS}
         components={MARKDOWN_COMPONENTS}
       >
-        {content}
+        {normalized}
       </ReactMarkdown>
     </div>
   );

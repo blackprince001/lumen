@@ -55,6 +55,21 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
   const annotationItems = annotations.filter((a) => a.type !== 'note');
   const noteItems = annotations.filter((a) => a.type === 'note');
 
+  const tabItems: Array<{
+    value: string;
+    label: string;
+    Icon: typeof FileText;
+    badge?: number;
+  }> = [
+    { value: 'details', label: 'Details', Icon: FileText },
+    { value: 'ai', label: 'Insights', Icon: Sparkles },
+    { value: 'related', label: 'Related', Icon: Link },
+    { value: 'chat', label: 'Chat', Icon: MessageSquare },
+    { value: 'notes', label: 'Notes', Icon: StickyNote, badge: noteItems.length || undefined },
+    { value: 'annotations', label: 'Annotations', Icon: Highlighter, badge: annotationItems.length || undefined },
+    { value: 'bookmarks', label: 'Bookmarks', Icon: Bookmark },
+  ];
+
   if (!isOpen) return null;
 
   return (
@@ -66,40 +81,27 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
         </div>
       ) : (
         <Tabs value={activeTab} onValueChange={setActiveTab} variant="plain" className="flex flex-col h-full">
-          {/* Icon-only pill bar */}
+          {/* Expanding pill bar — active tab reveals its label */}
           <div className="flex items-center justify-between shrink-0 border-b border-(--panel-border) bg-(--panel-surface)">
             <TabsList className="flex items-center gap-1 px-3 py-2 border-none bg-transparent">
-              <TabsTrigger value="details" title="Details" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
-                <FileText size={18} />
-              </TabsTrigger>
-              <TabsTrigger value="ai" title="Insights" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
-                <Sparkles size={18} />
-              </TabsTrigger>
-              <TabsTrigger value="related" title="Related" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
-                <Link size={18} />
-              </TabsTrigger>
-              <TabsTrigger value="chat" title="Chat" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
-                <MessageSquare size={18} />
-              </TabsTrigger>
-              <TabsTrigger value="notes" title="Notes" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
-                <StickyNote size={18} />
-                {noteItems.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 text-micro bg-(--muted) px-1 py-0.5 rounded-full tabular-nums leading-none">
-                    {noteItems.length}
+              {tabItems.map(({ value, label, Icon, badge }) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  title={label}
+                  className="group relative inline-flex items-center justify-center h-10 rounded-full text-caption overflow-hidden transition-all duration-300 ease-out data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:w-10 data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground) data-[state=active]:px-3.5 data-[state=active]:gap-2"
+                >
+                  <Icon size={18} className="shrink-0" />
+                  <span className="grid grid-cols-[0fr] group-data-[state=active]:grid-cols-[1fr] transition-[grid-template-columns] duration-300 ease-out">
+                    <span className="overflow-hidden whitespace-nowrap font-medium">{label}</span>
                   </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="annotations" title="Annotations" className="relative inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
-                <Highlighter size={18} />
-                {annotationItems.length > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 text-micro bg-(--muted) px-1 py-0.5 rounded-full tabular-nums leading-none">
-                    {annotationItems.length}
-                  </span>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="bookmarks" title="Bookmarks" className="inline-flex items-center justify-center w-10 h-10 rounded-full text-caption transition-all duration-150 data-[state=active]:bg-(--foreground) data-[state=active]:text-(--card) data-[state=inactive]:text-(--muted-foreground) data-[state=inactive]:hover:bg-(--muted) data-[state=inactive]:hover:text-(--foreground)">
-                <Bookmark size={18} />
-              </TabsTrigger>
+                  {badge ? (
+                    <span className="absolute -top-0.5 -right-0.5 text-micro bg-(--muted) text-(--foreground) px-1 py-0.5 rounded-full tabular-nums leading-none group-data-[state=active]:hidden">
+                      {badge}
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+              ))}
             </TabsList>
 
             <button
@@ -114,7 +116,7 @@ export default function ChatPanel({ isOpen, onToggle, activeTab, setActiveTab }:
           {/* Tab content */}
           <div className="flex-1 overflow-hidden relative bg-(--panel-surface)">
             <TabsContent value="details" className="h-full overflow-y-auto scrollbar-none">
-              <PaperDetails paper={paper} onDelete={() => { }} />
+              <PaperDetails paper={paper} />
             </TabsContent>
 
             <TabsContent value="ai" className="h-full overflow-hidden flex flex-col">

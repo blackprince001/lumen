@@ -105,7 +105,9 @@ export function useChatSessions(paperId: number): UseChatSessionsReturn {
     sessions,
     currentSessionId,
     currentSession,
-    messages: currentSession?.messages ?? [],
+    // Only top-level messages belong in the main chat; thread replies
+    // (parent_message_id set) are rendered separately by MessageThread.
+    messages: (currentSession?.messages ?? []).filter((m) => m.parent_message_id == null),
     isLoading: sessionsLoading || initialLoading || sessionLoading,
     sessionsLoading,
     sessionLoading,

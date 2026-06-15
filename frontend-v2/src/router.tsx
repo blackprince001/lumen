@@ -7,6 +7,7 @@ import AdminLogin from './pages/AdminLogin';
 import Home from './pages/Home';
 import PapersList from './pages/PapersList';
 import PaperDetail from './pages/PaperDetail';
+import PaperChat from './pages/PaperChat';
 import GroupRedirect from './pages/GroupRedirect';
 
 // Lazy: the Finder pulls in the file-system block, document viewers, and
@@ -43,6 +44,7 @@ export const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: 'papers', element: <PapersList /> },
       { path: 'papers/:id', element: <PaperDetail /> },
+      { path: 'papers/:id/chat', element: <PaperChat /> },
       {
         path: 'groups',
         element: (
