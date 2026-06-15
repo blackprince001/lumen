@@ -716,6 +716,21 @@ class ChatService(BaseAIService):
     await db_session.refresh(msg)
     return msg
 
+  def _build_thread_agent_input(
+    self,
+    parent_message: ChatMessage,
+    thread_history: list[ChatMessage],
+    user_message: str,
+  ) -> list[dict[str, str]]:
+    """Build the Runner input for a thread reply.
+
+    Replays the parent assistant message followed by the thread's prior
+    turns so the agent stays anchored to the message being discussed, then
+    appends the new user question. The paper content itself is injected via
+    ``create_paper_agent``'s instructions, so it isn't repeated here.
+    """
+    return build_agent_input([parent_message, *thread_history], user_message)
+
   async def stream_thread_message(
     self,
     db_session: AsyncSession,
@@ -726,19 +741,10 @@ class ChatService(BaseAIService):
   ) -> AsyncGenerator[dict[str, Any], None]:
     """Stream AI response for a thread message.
 
-    Uses the legacy provider path since thread context building is
-    tightly coupled to the manual prompt pattern.
+    Uses the agent framework so thread replies stream real model tokens as
+    they arrive (matching ``stream_message``) instead of buffering the full
+    response and slicing it into fake chunks.
     """
-    provider = await self._get_provider(db_session, user_id)
-    if not provider:
-      yield {
-        "type": "error",
-        "error": "AI provider not configured. Please configure your AI provider in settings.",
-        "error_code": ERROR_CODE_NO_PROVIDER,
-        "recoverable": False,
-      }
-      return
-
     parent_message = await self.get_message_by_id(db_session, parent_message_id)
     if not parent_message:
       yield {
@@ -758,7 +764,7 @@ class ChatService(BaseAIService):
       }
       return
 
-    session_id = parent_message.session_id
+    session_id = cast(int, parent_message.session_id)
     chat_session = await self.get_session(db_session, session_id)
     if not chat_session:
       yield {
@@ -769,7 +775,11 @@ class ChatService(BaseAIService):
       }
       return
 
-    paper_id = chat_session.paper_id
+    # Capture primitives up front — a tool error mid-run may roll back and
+    # expire the ORM object (see stream_message for the MissingGreenlet note).
+    paper_id = cast(int, chat_session.paper_id)
+    current_provider_id = cast("int | None", chat_session.provider_id)
+
     paper = await self._fetch_paper(db_session, paper_id)
     if not paper:
       yield {
@@ -780,51 +790,103 @@ class ChatService(BaseAIService):
       }
       return
 
-    thread_history = await self.get_thread_messages(db_session, parent_message_id)
+    resolved = await self._resolve_providers(db_session, user_id, current_provider_id)
+    if not resolved:
+      yield {
+        "type": "error",
+        "error": "No AI provider configured. Add one in your settings to chat.",
+        "error_code": ERROR_CODE_NO_PROVIDER,
+        "recoverable": False,
+      }
+      return
 
-    paper_content_parts = await content_provider.get_content_parts(paper)
-    use_file_context = bool(paper_content_parts) and any(
-      hasattr(p, "file_uri") for p in paper_content_parts
-    )
+    if not self._can_use_agent(resolved[0].route.provider_type):
+      yield {
+        "type": "error",
+        "error": (
+          f"Provider '{resolved[0].route.provider_type}' is not supported for chat. "
+          "Configure an OpenAI-compatible provider (openai, anthropic, deepseek, "
+          "ollama, vllm, or a custom endpoint)."
+        ),
+        "error_code": ERROR_CODE_NO_PROVIDER,
+        "recoverable": False,
+      }
+      return
 
-    context = self.build_thread_context(
-      paper, parent_message, thread_history, use_file_context=use_file_context
-    )
-
-    await self._save_thread_message(
-      db_session, session_id, parent_message_id, "user", user_message, references
-    )
-
-    full_prompt = f"{context}\n\n## User Question (in thread):\n{user_message}"
+    _Runner = _get_runner()
+    if _Runner is None:
+      yield {
+        "type": "error",
+        "error": "OpenAI Agents SDK not installed. Please install openai-agents to use this provider.",
+        "error_code": ERROR_CODE_NO_PROVIDER,
+        "recoverable": False,
+      }
+      return
 
     try:
-      config = self._build_config(provider)
-      full_content = await provider.generate(full_prompt, config)
-
-      chunk_size = 50
-      for i in range(0, len(full_content), chunk_size):
-        chunk = full_content[i : i + chunk_size]
-        yield {"type": "chunk", "content": chunk}
-
-      assistant_msg = await self._save_thread_message(
-        db_session, session_id, parent_message_id, "assistant", full_content
+      thread_history = await self.get_thread_messages(db_session, parent_message_id)
+      agent_input = self._build_thread_agent_input(
+        parent_message, thread_history, user_message
       )
-      yield {
-        "type": "done",
-        "message_id": assistant_msg.id,
-        "parent_message_id": parent_message_id,
-      }
+
+      self._setup_byo_context(
+        db_session, user_id, [r.route for r in resolved], session_id=session_id
+      )
+      agent = create_paper_agent(paper)
+
+      await self._save_thread_message(
+        db_session, session_id, parent_message_id, "user", user_message, references
+      )
+
+      full_content: list[str] = []
+      had_error = False
+      used_holder: list[ResolvedProvider] = []
+      async for adapted in stream_agent_with_fallback(
+        runner=_Runner,
+        agent=agent,
+        agent_input=agent_input,
+        providers=resolved,
+        session_id=session_id,
+        used_holder=used_holder,
+      ):
+        if adapted["type"] == "chunk":
+          full_content.append(adapted.get("content", ""))
+        elif adapted["type"] == "error":
+          had_error = True
+        yield adapted
+
+      response_text = "".join(full_content)
+      if not had_error:
+        assistant_msg = await self._save_thread_message(
+          db_session, session_id, parent_message_id, "assistant", response_text
+        )
+        await self._persist_session_provider(
+          db_session, session_id, current_provider_id, used_holder
+        )
+        yield {
+          "type": "done",
+          "content": response_text,
+          "message_id": assistant_msg.id,
+          "parent_message_id": parent_message_id,
+        }
+      elif response_text.strip():
+        # Persist whatever streamed before the error so the turn isn't lost.
+        await self._save_thread_message(
+          db_session, session_id, parent_message_id, "assistant", response_text
+        )
 
     except asyncio.CancelledError:
       raise
     except Exception as e:
       logger.error(
-        "AI provider error in stream_thread_message",
+        "Agent error in stream_thread_message",
         error_type=type(e).__name__,
         error_message=str(e),
       )
       error_content = build_error_message(e)
       error_code, recoverable = classify_exception(e)
+      # Clear any aborted transaction left by a tool error before inserting.
+      await db_session.rollback()
       await self._save_thread_message(
         db_session, session_id, parent_message_id, "assistant", error_content
       )
@@ -834,6 +896,8 @@ class ChatService(BaseAIService):
         "error_code": error_code,
         "recoverable": recoverable,
       }
+    finally:
+      reset_byo_context()
 
   async def send_thread_message(
     self,

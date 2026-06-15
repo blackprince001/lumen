@@ -1,5 +1,7 @@
 """ChatSession CRUD functions."""
 
+from collections import Counter
+
 from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,6 +10,21 @@ from sqlalchemy.orm import selectinload
 from app.api.crud.paper import get_visible_paper_or_404
 from app.api.crud.utils import ensure_loaded
 from app.models.chat import ChatSession
+
+
+def _populate_thread_counts(chat_session: ChatSession) -> None:
+  """Stamp each message's ``thread_count`` from the loaded message set.
+
+  All replies live in ``chat_session.messages`` (they share the session),
+  so the count is derived in-memory rather than with extra queries. The
+  value is set as a transient attribute that the Pydantic schema reads.
+  """
+  messages = chat_session.messages or []
+  reply_counts = Counter(
+    m.parent_message_id for m in messages if m.parent_message_id is not None
+  )
+  for m in messages:
+    m.thread_count = reply_counts.get(m.id, 0)
 
 
 async def get_chat_session_or_404(
@@ -36,6 +53,7 @@ async def get_chat_session_or_404(
 
   if with_messages:
     ensure_loaded(chat_session, "messages")
+    _populate_thread_counts(chat_session)
 
   return chat_session
 
@@ -69,6 +87,7 @@ async def list_chat_sessions_for_paper(
 
   for s in sessions:
     ensure_loaded(s, "messages")
+    _populate_thread_counts(s)
 
   return sessions
 

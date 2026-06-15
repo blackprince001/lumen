@@ -489,7 +489,9 @@ async def ai_search_stream(
 
       ai_task_enqueued = False
       progress_key = f"discovery:{search_id}:progress"
-      deadline = asyncio.get_event_loop().time() + 300.0  # matches Celery time_limit
+      # Must outlast ai_enhance_task's hard time_limit (600s) so the stream
+      # stays open until clustering/relevance finish on slow providers.
+      deadline = asyncio.get_event_loop().time() + 660.0
 
       while True:
         if asyncio.get_event_loop().time() > deadline:

@@ -232,9 +232,7 @@ async def list_papers_endpoint(
 
   # Papers belonging to no group at all (the Finder shows these at its root).
   if ungrouped:
-    query = query.where(
-      ~exists().where(paper_group_association.c.paper_id == Paper.id)
-    )
+    query = query.where(~exists().where(paper_group_association.c.paper_id == Paper.id))
 
   if tag_id is not None:
     query = query.join(paper_tag_association).where(

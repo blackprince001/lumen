@@ -25,6 +25,7 @@ from app.services.ai.agent.tools.discovery_tools import (
 from app.services.ai.agent.tools.discovery_tools import (
   get_paper_details as discovery_get_paper_details,
 )
+from app.services.ai.agent.tools.figure_tools import view_figures
 from app.services.ai.agent.tools.paper_tools import (
   get_annotations,
   get_citations,
@@ -34,7 +35,6 @@ from app.services.ai.agent.tools.paper_tools import (
   get_paper_metadata,
   search_papers,
 )
-from app.services.ai.agent.tools.figure_tools import view_figures
 from app.services.ai.agent.tools.rag_tool import semantic_search
 
 # OpenAI Agents SDK — optional dependency
@@ -58,7 +58,7 @@ Guidelines:
 - If the user asks about something not in the paper, use your general knowledge but clarify what comes from the paper vs. what is external.
 - Be concise but thorough. Default to providing useful detail.
 - Use semantic_search when the user asks about related concepts not in this specific paper.
-- Format mathematical expressions using LaTeX notation when relevant.
+- Format mathematical expressions using LaTeX. Use $...$ for inline math and $$...$$ for displayed equations. Do NOT use \\( \\) or \\[ \\] delimiters.
 - Do not use emojis. Do not insert horizontal rule separators (lines of "---" or "***"); use markdown headings and plain prose to structure your answer.
 
 Use your tools to ground every answer. Before stating facts about the paper,
@@ -80,7 +80,7 @@ Guidelines:
 - If the user's notes or annotations are relevant, reference them.
 - Use semantic_search to find additional relevant papers in the user's library.
 - Be concise but thorough.
-- Format mathematical expressions using LaTeX notation when relevant.
+- Format mathematical expressions using LaTeX. Use $...$ for inline math and $$...$$ for displayed equations. Do NOT use \\( \\) or \\[ \\] delimiters.
 - Do not use emojis. Do not insert horizontal rule separators (lines of "---" or "***"); use markdown headings and plain prose to structure your answer.
 
 Use your tools to ground every answer. Before comparing or asserting what a
