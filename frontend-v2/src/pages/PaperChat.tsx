@@ -41,7 +41,7 @@ function PaperChatInner({ paperId, paperTitle }: { paperId: number; paperTitle?:
     <div className="h-full flex flex-col bg-(--background)">
       {/* Page header */}
       <header className="shrink-0 border-b border-(--border) bg-(--card)">
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3">
+        <div className="px-4 py-3 flex items-center gap-3">
           <Link
             to={`/papers/${paperId}`}
             className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"

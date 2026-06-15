@@ -35,6 +35,8 @@ export interface ExpandedInputProps {
   loading?: boolean;
   autoFocus?: boolean;
   size?: 'default' | 'compact';
+  /** Draw the border around the input shell. Off for a borderless, filled look. */
+  bordered?: boolean;
   submitLabel?: string;
   submitIcon?: ReactNode;
   suggestions?: SuggestionPrompt[];
@@ -56,6 +58,7 @@ export function ExpandedInput({
   loading,
   autoFocus,
   size = 'default',
+  bordered = true,
   submitLabel,
   submitIcon,
   suggestions,
@@ -323,8 +326,8 @@ export function ExpandedInput({
   return (
     <div className={cn('flex flex-col gap-4 w-full', className)}>
       <div className={cn(
-        'flex flex-col bg-(--card) border border-(--border) transition-colors',
-        'hover:border-(--foreground)/20 focus-within:border-(--foreground)/30',
+        'flex flex-col bg-(--card) transition-colors',
+        bordered && 'border border-(--border) hover:border-(--foreground)/20 focus-within:border-(--foreground)/30',
         isCompact ? 'rounded-xl' : 'min-h-[7.5rem] rounded-2xl',
       )}>
         {/* Textarea container — no overflow-y so absolute mention dropdown isn't clipped */}

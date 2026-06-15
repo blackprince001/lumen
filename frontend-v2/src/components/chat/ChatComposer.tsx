@@ -42,8 +42,13 @@ export function ChatComposer({ controller, centered = false }: ChatComposerProps
   } = controller;
 
   return (
-    <div className="border-t border-(--border) p-3 shrink-0">
-      <div className={cn(centered && 'mx-auto w-full max-w-3xl')}>
+    <div
+      className={cn(
+        'shrink-0 relative z-10 -mt-10 pt-10 px-3 pb-3 pointer-events-none bg-gradient-to-b from-transparent',
+        centered ? 'to-(--background)' : 'to-(--panel-surface)',
+      )}
+    >
+      <div className={cn('pointer-events-auto', centered && 'mx-auto w-full max-w-3xl')}>
         <div className="mb-2 flex justify-end">
           <ProviderPicker
             value={activeProviderId}
@@ -58,6 +63,7 @@ export function ChatComposer({ controller, centered = false }: ChatComposerProps
           placeholder="Ask about this paper... (use @ to mention notes/annotations/papers)"
           submitLabel="Send"
           submitIcon={<Send size={14} />}
+          bordered={false}
           disabled={stream.isActive}
           mentionPaperId={paperId}
           onMentionSelect={(mention) => {
