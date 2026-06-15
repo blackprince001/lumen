@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.annotation import Annotation
 from app.models.paper import Paper
-from app.services.ai.helpers import get_provider_for_user_sync
+from app.services.ai.helpers import ProviderLookupError, get_provider_for_user_sync
 from app.services.ai.providers.base import (
   EmbeddingConfig,
   GenerateConfig,
@@ -253,6 +253,10 @@ def generate_summary_task(self, paper_id: int) -> dict[str, Any]:
     logger.info("Generated summary", paper_id=paper_id)
     return {"status": "success", "paper_id": paper_id, "summary_length": len(summary)}
 
+  except ProviderLookupError:
+    # Transient lookup failure — retry rather than skip as "no provider".
+    session.rollback()
+    raise
   except Exception as e:
     session.rollback()
     logger.error("Error generating summary", paper_id=paper_id, error=str(e))
@@ -301,6 +305,9 @@ def extract_findings_task(self, paper_id: int) -> dict[str, Any]:
 
     return {"status": "error", "error": "Invalid response format", "paper_id": paper_id}
 
+  except ProviderLookupError:
+    session.rollback()
+    raise
   except Exception as e:
     session.rollback()
     logger.error("Error extracting findings", paper_id=paper_id, error=str(e))
@@ -347,6 +354,9 @@ def generate_reading_guide_task(self, paper_id: int) -> dict[str, Any]:
 
     return {"status": "error", "error": "Invalid response format", "paper_id": paper_id}
 
+  except ProviderLookupError:
+    session.rollback()
+    raise
   except Exception as e:
     session.rollback()
     logger.error("Error generating reading guide", paper_id=paper_id, error=str(e))

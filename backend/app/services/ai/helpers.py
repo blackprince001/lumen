@@ -13,6 +13,16 @@ from app.services.ai.providers.base import AIProvider
 logger = get_logger(__name__)
 
 
+class ProviderLookupError(Exception):
+  """The provider lookup itself failed (e.g., a transient DB error).
+
+  This is distinct from "no provider configured" — which returns ``None`` so
+  the caller cleanly skips the AI step. A ``ProviderLookupError`` means we
+  could not determine *whether* a provider exists, so the caller should retry
+  rather than wrongly report the user as having no provider.
+  """
+
+
 def get_provider_for_user_sync(
   user_id: int | None,
 ) -> AIProvider | None:
@@ -22,6 +32,10 @@ def get_provider_for_user_sync(
   1. The user's default or newest active ``user_ai_providers`` row.
   2. The legacy ``user_ai_settings`` row (last resort).
   3. ``None`` — the caller skips the AI step (it cannot run without a key).
+
+  Raises:
+      ProviderLookupError: if a lookup query fails (transient/unexpected),
+          so the caller can retry instead of treating it as "no provider".
   """
   if user_id is None:
     logger.warning("No user_id given for provider resolution (sync)")
@@ -54,9 +68,11 @@ def get_provider_for_user_sync(
         if provider:
           return provider
   except Exception as e:
+    # The query/credential read failed — this is transient, not "no provider".
     logger.error(
       "Error loading user AI providers (sync)", user_id=user_id, error=str(e)
     )
+    raise ProviderLookupError(str(e)) from e
 
   # 2) Legacy user_ai_settings row (last resort).
   try:
@@ -74,7 +90,9 @@ def get_provider_for_user_sync(
           return provider
   except Exception as e:
     logger.error("Error loading user AI settings (sync)", user_id=user_id, error=str(e))
+    raise ProviderLookupError(str(e)) from e
 
+  # Both lookups succeeded and found nothing — genuinely no provider.
   logger.warning("No AI provider configured for user (sync)", user_id=user_id)
   return None
 

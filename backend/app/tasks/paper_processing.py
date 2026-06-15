@@ -12,7 +12,7 @@ from app.core.config import settings
 from app.core.logger import get_logger
 from app.models.paper import Paper
 from app.models.paper_citation import PaperCitation
-from app.services.ai.helpers import get_provider_for_user_sync
+from app.services.ai.helpers import ProviderLookupError, get_provider_for_user_sync
 from app.tasks.ai_tasks import (
   extract_findings_task,
   generate_reading_guide_task,
@@ -233,6 +233,9 @@ def extract_citations_task(self, paper_id: int, file_path: str) -> dict[str, Any
     logger.info("Extracted citations", paper_id=paper_id, count=stored_count)
     return {"status": "success", "paper_id": paper_id, "citations_count": stored_count}
 
+  except ProviderLookupError:
+    session.rollback()
+    raise
   except Exception as e:
     session.rollback()
     logger.error("Error extracting citations", paper_id=paper_id, error=str(e))

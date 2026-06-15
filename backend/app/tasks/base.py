@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import SyncSessionLocal
 from app.core.logger import get_logger
+from app.services.ai.helpers import ProviderLookupError
 
 if TYPE_CHECKING:
   import redis as _redis
@@ -84,10 +85,13 @@ class BaseAITask(BaseTask):
 
   Tasks resolve the provider per paper owner via
   ``get_provider_for_user_sync``; there is no environment-default provider.
+  A failed provider lookup (``ProviderLookupError``) is retried rather than
+  reported as "no provider", which previously caused spurious skips under
+  load (e.g., the parallel processing chord on bulk ingestion).
   """
 
   abstract = True
-  autoretry_for = (ConnectionError, TimeoutError, OSError)
+  autoretry_for = (ConnectionError, TimeoutError, OSError, ProviderLookupError)
   retry_backoff = True
   retry_backoff_max = 600
   max_retries = 5
