@@ -12,6 +12,11 @@ from app.utils.json_extractor import extract_json_from_text
 
 logger = get_logger(__name__)
 
+# Force providers that support it (OpenAI-compatible) to return strict JSON.
+# Every prompt below already contains the literal word "JSON" and a schema,
+# which OpenAI-style json_object mode requires.
+JSON_RESPONSE_FORMAT = {"type": "json_object"}
+
 
 class QueryUnderstandingResponse(BaseModel):
   interpreted_query: str
@@ -217,7 +222,12 @@ class AISearchService(BaseAIService):
 
     try:
       logger.debug("Calling AI for query understanding", query=query[:100])
-      config = self._build_config(provider, temperature=0.3, max_output_tokens=4096)
+      config = self._build_config(
+        provider,
+        temperature=0.3,
+        max_output_tokens=4096,
+        response_format=JSON_RESPONSE_FORMAT,
+      )
       text = await provider.generate(prompt, config)
 
       if not text:
@@ -281,6 +291,7 @@ class AISearchService(BaseAIService):
         provider,
         temperature=0.3,
         max_output_tokens=16384,
+        response_format=JSON_RESPONSE_FORMAT,
       )
       text = await provider.generate(prompt, config)
 
@@ -327,6 +338,7 @@ class AISearchService(BaseAIService):
         provider,
         temperature=0.3,
         max_output_tokens=16384,
+        response_format=JSON_RESPONSE_FORMAT,
       )
       text = await provider.generate(prompt, config)
 
@@ -374,6 +386,7 @@ class AISearchService(BaseAIService):
         provider,
         temperature=0.3,
         max_output_tokens=16384,
+        response_format=JSON_RESPONSE_FORMAT,
       )
       text = await provider.generate(prompt, config)
 

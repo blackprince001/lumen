@@ -53,7 +53,21 @@ class OpenAICompatibleProvider(AIProvider):
       }
       if config.response_format:
         kwargs["response_format"] = config.response_format
-      response = await self._client.chat.completions.create(**kwargs)
+      try:
+        response = await self._client.chat.completions.create(**kwargs)
+      except OpenAIAPIStatusError as e:
+        # Some OpenAI-compatible endpoints/models reject response_format.
+        # Retry once without it rather than failing the whole request.
+        if config.response_format and e.status_code in (400, 422):
+          logger.warning(
+            "Provider rejected response_format; retrying without it",
+            model=config.model,
+            status=e.status_code,
+          )
+          kwargs.pop("response_format", None)
+          response = await self._client.chat.completions.create(**kwargs)
+        else:
+          raise
       content = response.choices[0].message.content or ""
       return content
     except OpenAIRateLimitError as e:

@@ -33,6 +33,35 @@ API_KEY_ERROR_MESSAGE = (
   "Please check your AI provider settings and ensure the key is valid."
 )
 
+# Reaching the provider but being denied for quota/permission reasons usually
+# means the key itself is too limited rather than invalid — most commonly a
+# Gemini free-tier key, whose quotas are very low. Point the user at a
+# billing-enabled key instead of telling them to "just wait".
+QUOTA_REACH_ERROR_MESSAGE = (
+  "I reached the AI provider, but this API key doesn't have enough quota/reach "
+  "for the request. If this is a Gemini free-tier key, its limits are very low — "
+  "switch to an API key with billing enabled (or a higher tier) for reliable access."
+)
+
+
+def _looks_like_quota_reach_issue(error: Exception) -> bool:
+  """Heuristic: the provider was reachable but rejected the key for quota or
+  access-tier reasons (free-tier exhaustion, per-day limits, missing billing)."""
+  text = (str(error) + " " + type(error).__name__).lower()
+  signals = (
+    "resource_exhausted",
+    "free tier",
+    "free_tier",
+    "freetier",
+    "quota",
+    "perdayperproject",
+    "requests per day",
+    "billing",
+    "exceeded your current quota",
+    "insufficient_quota",
+  )
+  return any(s in text for s in signals)
+
 
 def classify_exception(error: Exception) -> tuple[str, bool]:
   """Classify an exception into ``(error_code, recoverable)``."""
@@ -64,8 +93,16 @@ def classify_exception(error: Exception) -> tuple[str, bool]:
 def build_error_message(error: Exception) -> str:
   """Build a user-facing error message from a provider-agnostic error."""
   if isinstance(error, RateLimitError):
+    # A rate limit that's really free-tier/quota exhaustion needs different
+    # advice than a transient burst limit.
+    if _looks_like_quota_reach_issue(error):
+      return QUOTA_REACH_ERROR_MESSAGE
     return RATE_LIMIT_ERROR_MESSAGE
   if isinstance(error, AuthError):
+    # A reachable key denied for quota/permission reasons isn't "invalid" —
+    # steer toward a higher-tier / billing-enabled key.
+    if _looks_like_quota_reach_issue(error):
+      return QUOTA_REACH_ERROR_MESSAGE
     return API_KEY_ERROR_MESSAGE
   if isinstance(error, AIProviderError):
     return f"I apologize, but I encountered an error: {str(error)[:200]}"

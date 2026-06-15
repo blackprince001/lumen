@@ -286,9 +286,7 @@ def extract_findings_task(self, paper_id: int) -> dict[str, Any]:
     import asyncio
 
     full_prompt = _build_prompt_with_content(FINDINGS_PROMPT, paper)
-    config = GenerateConfig(
-      model=p.config.model, temperature=0.3
-    )
+    config = GenerateConfig(model=p.config.model, temperature=0.3)
     text = asyncio.run(p.generate(full_prompt, config))
 
     parsed = extract_json_from_text(text)
@@ -334,9 +332,7 @@ def generate_reading_guide_task(self, paper_id: int) -> dict[str, Any]:
     import asyncio
 
     full_prompt = _build_prompt_with_content(READING_GUIDE_PROMPT, paper)
-    config = GenerateConfig(
-      model=p.config.model, temperature=0.3
-    )
+    config = GenerateConfig(model=p.config.model, temperature=0.3)
     text = asyncio.run(p.generate(full_prompt, config))
 
     parsed = extract_json_from_text(text)
@@ -412,9 +408,7 @@ def generate_highlights_task(self, paper_id: int) -> dict[str, Any]:
         paper,
       )
 
-    config = GenerateConfig(
-      model=p.config.model, temperature=0.3
-    )
+    config = GenerateConfig(model=p.config.model, temperature=0.3)
     text = asyncio.run(p.generate(prompt, config))
 
     parsed = extract_json_from_text(text)

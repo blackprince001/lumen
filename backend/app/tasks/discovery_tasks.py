@@ -11,7 +11,12 @@ from app.tasks.base import BaseTask, sync_session_scope
 
 logger = get_logger(__name__)
 
-REDIS_TTL = 300  # 5 minutes
+REDIS_TTL = 900  # 15 minutes — must outlast the longest AI enhancement
+
+# Clustering and relevance run over the full result set and can take several
+# minutes on slower/reasoning providers. Give each enhancement a generous
+# per-task timeout (the three run concurrently, so wall-clock ≈ the slowest).
+AI_ENHANCEMENT_TIMEOUT = 420.0  # 7 minutes per enhancement
 
 
 def _get_redis() -> redis.Redis:
@@ -136,7 +141,13 @@ def search_source_task(
 
 
 @celery_app.task(
-  bind=True, base=BaseTask, name="app.tasks.discovery_tasks.ai_enhance_task"
+  bind=True,
+  base=BaseTask,
+  name="app.tasks.discovery_tasks.ai_enhance_task",
+  # Override BaseTask's 5/6-minute limits — AI enhancements can legitimately
+  # run longer than the default per-enhancement timeout above.
+  soft_time_limit=540,  # 9 minutes
+  time_limit=600,  # 10 minutes hard kill
 )
 def ai_enhance_task(
   self,
@@ -204,7 +215,7 @@ def ai_enhance_task(
 
     async def _run_one(key: str, coro_task) -> None:
       try:
-        result = await asyncio.wait_for(coro_task, timeout=60.0)
+        result = await asyncio.wait_for(coro_task, timeout=AI_ENHANCEMENT_TIMEOUT)
         if result:
           r.set(
             f"discovery:{search_id}:ai:{key}",
@@ -218,7 +229,9 @@ def ai_enhance_task(
             r, search_id, {"type": key, "error": "no result", "incomplete": True}
           )
       except asyncio.TimeoutError:
-        logger.error("AI enhancement timed out", enhancement=key, timeout_s=60)
+        logger.error(
+          "AI enhancement timed out", enhancement=key, timeout_s=AI_ENHANCEMENT_TIMEOUT
+        )
         _push_progress(
           r, search_id, {"type": key, "error": "timed out", "incomplete": True}
         )
