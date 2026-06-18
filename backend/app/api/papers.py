@@ -392,6 +392,42 @@ async def get_paper_layout(
   return {"chunks": [{"blocks": paper.layout_blocks}]}
 
 
+@router.get("/papers/{paper_id}/figures/{index}/thumbnail")
+async def get_paper_figure_thumbnail(
+  paper_id: int,
+  index: int,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
+):
+  """Render a single figure (1-based ``index``) to a PNG data URL on demand.
+
+  Kept out of the reference manifest so base64 image data never lands in the
+  DB — chat reference chips fetch figure thumbnails through this route lazily.
+  """
+  paper = await get_visible_paper_or_404(
+    session, paper_id, user_id=scoped_user_id(user)
+  )
+
+  from app.services.figure_service import list_figures, render_figure_data_url
+
+  figures = list_figures(paper.layout_blocks)
+  if index < 1 or index > len(figures):
+    raise HTTPException(status_code=404, detail="Figure not found")
+
+  fig = figures[index - 1]
+  data_url = fig.get("image")
+  if not data_url:
+    file_path = content_provider.get_local_file_path(paper)
+    page = fig.get("page")
+    bbox = fig.get("bbox")
+    if file_path and page and bbox:
+      data_url = await asyncio.to_thread(render_figure_data_url, file_path, page, bbox)
+  if not data_url:
+    raise HTTPException(status_code=404, detail="Figure image unavailable")
+
+  return {"thumbnail_url": data_url}
+
+
 @router.patch("/papers/{paper_id}", response_model=PaperSchema)
 async def update_paper_endpoint(
   paper_id: int,
@@ -674,26 +710,34 @@ async def regenerate_paper_metadata_bulk(
 async def extract_paper_citations(
   paper_id: int, user: CurrentUser, session: AsyncSession = Depends(get_db)
 ):
-  """Extract and store citations from a paper's PDF."""
+  """Extract and store citations from a paper's layout blocks (or PDF fallback)."""
   paper = await get_visible_paper_or_404(
     session, paper_id, user_id=scoped_user_id(user)
   )
 
-  if not paper.file_path:
-    raise HTTPException(status_code=400, detail="Paper has no associated PDF file")
-
-  file_path = content_provider.get_local_file_path(paper)
-  if not file_path:
+  if not paper.layout_blocks and not paper.file_path:
     raise HTTPException(
-      status_code=404, detail=f"PDF file not found at {paper.file_path}"
+      status_code=400,
+      detail="Paper has no layout blocks or file — cannot extract citations",
     )
 
-  try:
+  pdf_content: bytes | None = None
+  if not paper.layout_blocks and paper.file_path:
+    file_path = content_provider.get_local_file_path(paper)
+    if not file_path:
+      raise HTTPException(
+        status_code=404, detail=f"PDF file not found at {paper.file_path}"
+      )
     with open(file_path, "rb") as f:
       pdf_content = f.read()
 
+  try:
     citation_count = await citation_extractor.extract_and_store_citations(
-      session, paper_id, pdf_content, user.id
+      session,
+      paper_id,
+      layout_blocks=cast("list[dict[str, Any]] | None", paper.layout_blocks),
+      pdf_content=pdf_content,
+      user_id=user.id,
     )
     return {"paper_id": paper_id, "citations_extracted": citation_count}
 

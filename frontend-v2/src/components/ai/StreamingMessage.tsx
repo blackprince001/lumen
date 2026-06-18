@@ -84,7 +84,7 @@ export function StreamingMessage({
       {(state.displayedContent || isStreaming) && (
         <div className="mt-1">
           {state.displayedContent ? (
-            <MarkdownMessage content={state.displayedContent} />
+            <MarkdownMessage content={state.displayedContent} referenceManifest={state.referenceManifest} />
           ) : (
             <div className="space-y-2.5 w-72">
               <div className="flex flex-wrap gap-1.5">

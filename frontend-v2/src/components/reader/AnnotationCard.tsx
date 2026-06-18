@@ -1,7 +1,7 @@
-import { Trash as Trash2 } from 'iconsax-reactjs';
-import { cn } from '@/lib/utils';
-import { highlightLabel, highlightTheme } from './highlight-colors';
-import type { Annotation } from '@/lib/api/annotations';
+import { Trash as Trash2 } from "iconsax-reactjs";
+import { cn } from "@/lib/utils";
+import { highlightLabel, highlightTheme } from "./highlight-colors";
+import type { Annotation } from "@/lib/api/annotations";
 
 export function AnnotationCard({
   annotation,
@@ -16,43 +16,54 @@ export function AnnotationCard({
   onClick?: () => void;
   onDelete?: () => void;
 }) {
-  const theme = highlightTheme(annotation.highlight_type, annotation.selection_data);
+  const theme = highlightTheme(
+    annotation.highlight_type,
+    annotation.selection_data,
+  );
   const label = annotation.highlight_type
     ? highlightLabel(annotation.highlight_type)
     : annotation.selection_data?.color
-      ? 'Highlight'
-      : 'Note';
+      ? "Highlight"
+      : "Note";
   const showQuote =
-    annotation.highlighted_text && annotation.highlighted_text !== annotation.content;
+    annotation.highlighted_text &&
+    annotation.highlighted_text !== annotation.content;
 
   const expandText = active;
 
   return (
     <div
-      role={onClick ? 'button' : undefined}
+      role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
       onKeyDown={(event) => {
-        if (onClick && event.key === 'Enter') onClick();
+        if (onClick && event.key === "Enter") onClick();
       }}
       className={cn(
-        'group/card rounded-lg border p-2.5 text-left transition-all duration-150',
-        onClick && 'cursor-pointer',
+        "group/card rounded-lg border p-2.5 text-left transition-all duration-150",
+        onClick && "cursor-pointer",
+
+        expandText &&
+          "max-h-[60vh] overflow-y-auto scrollbar-none overscroll-contain",
         compact
           ? cn(
-              'ring-1 ring-black/5 backdrop-blur-[2px]',
+              "ring-1 ring-black/5 backdrop-blur-[2px]",
               active
-                ? 'z-10 scale-[1.03] shadow-(--shadow-elevated) ring-2'
-                : 'shadow-(--shadow-elevated) hover:scale-[1.01]',
+                ? "z-10 scale-[1.03] shadow-(--shadow-elevated) ring-2"
+                : "shadow-(--shadow-elevated) hover:scale-[1.01]",
             )
           : active
-            ? 'shadow-(--shadow-elevated)'
-            : 'shadow-(--shadow-subtle)',
+            ? "shadow-(--shadow-elevated)"
+            : "shadow-(--shadow-subtle)",
       )}
       style={{
         backgroundColor: `var(--theme-${theme}-bg)`,
-        borderColor: active ? `var(--theme-${theme}-action)` : `var(--theme-${theme}-border)`,
-        ...(active && compact ? { ['--tw-ring-color' as string]: `var(--theme-${theme}-action)` } : {}),
+        borderColor: active
+          ? `var(--theme-${theme}-action)`
+          : `var(--theme-${theme}-border)`,
+        ...(active && compact
+          ? { ["--tw-ring-color" as string]: `var(--theme-${theme}-action)` }
+          : {}),
       }}
     >
       <div className="mb-1 flex items-center justify-between gap-2">
@@ -64,7 +75,7 @@ export function AnnotationCard({
           }}
         >
           {label}
-          {annotation.auto_highlighted ? ' · AI' : ''}
+          {annotation.auto_highlighted ? " · AI" : ""}
         </span>
         {onDelete && (
           <button
@@ -85,8 +96,12 @@ export function AnnotationCard({
       {showQuote && (
         <p
           className={cn(
-            'mb-1 border-l-2 pl-1.5 text-micro italic opacity-70',
-            expandText ? 'whitespace-pre-wrap' : compact ? 'line-clamp-2' : 'line-clamp-3',
+            "mb-1 border-l-2 pl-1.5 text-micro italic opacity-70",
+            expandText
+              ? "whitespace-pre-wrap"
+              : compact
+                ? "line-clamp-2"
+                : "line-clamp-3",
           )}
           style={{
             color: `var(--theme-${theme}-text)`,
@@ -99,8 +114,8 @@ export function AnnotationCard({
 
       <p
         className={cn(
-          'text-caption leading-relaxed',
-          expandText || !compact ? 'whitespace-pre-wrap' : 'line-clamp-4',
+          "text-caption leading-relaxed",
+          expandText || !compact ? "whitespace-pre-wrap" : "line-clamp-4",
         )}
         style={{ color: `var(--theme-${theme}-text)` }}
       >

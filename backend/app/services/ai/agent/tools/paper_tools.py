@@ -375,11 +375,13 @@ async def get_citations(paper_id: int) -> str:
     lines = [f"Citation info for paper {paper_id}:\n"]
     for c in citations:
       ctx = c.citation_context or "N/A"
-      lines.append(f"- {ctx}")
+      lines.append(f"- [{c.id}] {ctx}")
       if c.external_paper_title:
         lines.append(f"  Title: {c.external_paper_title}")
       if c.external_paper_doi:
         lines.append(f"  DOI: {c.external_paper_doi}")
+      if c.cited_paper_id is not None:
+        lines.append(f"  (matched paper in library: [ref:paper/{c.cited_paper_id}])")
 
     return "\n".join(lines).strip()
 

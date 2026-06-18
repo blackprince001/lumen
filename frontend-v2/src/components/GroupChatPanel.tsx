@@ -11,6 +11,7 @@ import { StreamingMessage } from '@/components/ai/StreamingMessage';
 import { MessageAuthor } from '@/components/ai/MessageAuthor';
 import { ExpandedInput } from '@/components/ExpandedInput';
 import { ProviderPicker } from '@/components/ai/ProviderPicker';
+import type { ReferenceManifestEntry } from '@/lib/api/references';
 import { logger } from '@/lib/logger';
 import { useTypewriter } from '@/hooks/use-typewriter';
 
@@ -47,6 +48,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
   const [streamState, setStreamState] = useState<{
     status: 'idle' | 'connecting' | 'streaming' | 'thinking' | 'using_tool' | 'done' | 'error';
     content: string;
+    displayedContent: string;
     toolCalls: StreamEvent[];
     toolResults: StreamEvent[];
     thoughts: StreamEvent[];
@@ -54,9 +56,11 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     error: { message: string; code: string; recoverable: boolean } | null;
     messageId: number | null;
     sessionId: number | null;
+    referenceManifest: ReferenceManifestEntry[] | null;
   }>({
     status: 'idle',
     content: '',
+    displayedContent: '',
     toolCalls: [],
     toolResults: [],
     thoughts: [],
@@ -64,6 +68,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     error: null,
     messageId: null,
     sessionId: null,
+    referenceManifest: null,
   });
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -108,18 +113,20 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
   const handleCancel = useCallback(() => {
     abortRef.current?.abort();
     abortRef.current = null;
-    setStreamState({
-      status: 'idle',
-      content: '',
-      toolCalls: [],
-      toolResults: [],
-      thoughts: [],
-      currentTool: null,
-      error: null,
-      messageId: null,
-      sessionId: null,
-    });
-    setPendingUserMessage(null);
+      setStreamState({
+        status: 'idle',
+        content: '',
+        displayedContent: '',
+        toolCalls: [],
+        toolResults: [],
+        thoughts: [],
+        currentTool: null,
+        error: null,
+        messageId: null,
+        sessionId: null,
+        referenceManifest: null,
+      });
+      setPendingUserMessage(null);
   }, []);
 
   const handleRetry = useCallback(() => {
@@ -130,6 +137,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     setStreamState({
       status: 'idle',
       content: '',
+      displayedContent: '',
       toolCalls: [],
       toolResults: [],
       thoughts: [],
@@ -137,6 +145,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
       error: null,
       messageId: null,
       sessionId: null,
+      referenceManifest: null,
     });
     // Kick off send in next tick
     setTimeout(() => handleSendWithText(msg), 0);
@@ -151,6 +160,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
     setStreamState({
       status: 'connecting',
       content: '',
+      displayedContent: '',
       toolCalls: [],
       toolResults: [],
       thoughts: [],
@@ -158,6 +168,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
       error: null,
       messageId: null,
       sessionId: null,
+      referenceManifest: null,
     });
 
     try {
@@ -218,6 +229,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
             case 'done':
               next.messageId = (event.message_id as number) ?? null;
               next.sessionId = (event.session_id as number) ?? null;
+              next.referenceManifest = (event.reference_manifest as ReferenceManifestEntry[]) ?? null;
               next.status = 'done';
               break;
           }
@@ -243,6 +255,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
         setStreamState({
           status: 'idle',
           content: '',
+          displayedContent: '',
           toolCalls: [],
           toolResults: [],
           thoughts: [],
@@ -250,6 +263,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
           error: null,
           messageId: null,
           sessionId: null,
+          referenceManifest: null,
         });
         return;
       }
@@ -314,7 +328,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
                 {msg.role === 'user' ? (
                   <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                 ) : (
-                  <MarkdownMessage content={msg.content} />
+                  <MarkdownMessage content={msg.content} referenceManifest={(msg as any).reference_manifest} />
                 )}
               </div>
             ))}
@@ -352,6 +366,7 @@ export function GroupChatPanel({ groupId, groupName, onClose }: GroupChatPanelPr
                   error: streamState.error,
                   messageId: streamState.messageId,
                   sessionId: streamState.sessionId,
+                  referenceManifest: streamState.referenceManifest,
                 }}
                 isStreaming={isStreaming}
                 onRetry={handleRetry}

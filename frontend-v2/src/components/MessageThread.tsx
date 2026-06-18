@@ -7,6 +7,7 @@ import { MarkdownMessage } from './MarkdownMessage';
 import { MessageAuthor } from '@/components/ai/MessageAuthor';
 import { StreamingMessage } from './ai/StreamingMessage';
 import { ExpandedInput } from './ExpandedInput';
+import type { ReferenceManifestEntry } from '@/lib/api/references';
 import { format } from 'date-fns';
 import { Send, ArrowRight2, ArrowDown2 } from 'iconsax-reactjs';
 import { Skeleton } from './ui/Skeleton';
@@ -31,6 +32,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
     error: { message: string; code: string; recoverable: boolean } | null;
     messageId: number | null;
     sessionId: number | null;
+    referenceManifest: ReferenceManifestEntry[] | null;
   }>({
     status: 'idle',
     content: '',
@@ -42,6 +44,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
     error: null,
     messageId: null,
     sessionId: null,
+    referenceManifest: null,
   });
 
   const [pendingUserMessage, setPendingUserMessage] = useState<string | null>(null);
@@ -115,6 +118,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
       error: null,
       messageId: null,
       sessionId: null,
+      referenceManifest: null,
     });
 
     try {
@@ -163,6 +167,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
             case 'done':
               next.messageId = (event.message_id as number) ?? null;
               next.sessionId = (event.session_id as number) ?? null;
+              next.referenceManifest = (event.reference_manifest as ReferenceManifestEntry[]) ?? null;
               next.status = 'done';
               break;
           }
@@ -201,6 +206,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
           error: null,
           messageId: null,
           sessionId: null,
+          referenceManifest: null,
         });
         return;
       }
@@ -243,6 +249,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
       error: null,
       messageId: null,
       sessionId: null,
+      referenceManifest: null,
     });
     setPendingUserMessage(null);
   }, []);
@@ -288,7 +295,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
                   {msg.role === 'user' ? (
                     <div className="whitespace-pre-wrap wrap-break-word">{msg.content}</div>
                   ) : (
-                    <MarkdownMessage content={msg.content} />
+                    <MarkdownMessage content={msg.content} referenceManifest={(msg as any).reference_manifest} />
                   )}
                   {msg.id === lastMessageId && (
                     <span className="absolute top-2 right-2 text-[0.625rem] text-(--muted-foreground) opacity-0 group-hover:opacity-60 transition-opacity pointer-events-none">
@@ -332,6 +339,7 @@ export function MessageThread({ parentMessage, showInput = false, onCloseInput }
                   error: streamState.error,
                   messageId: streamState.messageId,
                   sessionId: streamState.sessionId,
+                  referenceManifest: streamState.referenceManifest,
                 }}
                 isStreaming={isStreaming}
                 onRetry={handleRetry}

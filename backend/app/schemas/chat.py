@@ -15,11 +15,13 @@ class ChatMessageBase(BaseModel):
   role: str  # 'user' or 'assistant'
   content: str
   references: Optional[Dict[str, Any]] = {}
+  reference_manifest: Optional[List[Dict[str, Any]]] = None
 
 
 class ChatMessageCreate(BaseModel):
   content: str
   references: Optional[Dict[str, Any]] = {}
+  reference_manifest: Optional[List[Dict[str, Any]]] = None
 
 
 class ChatMessage(ChatMessageBase):

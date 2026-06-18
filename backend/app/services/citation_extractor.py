@@ -162,6 +162,46 @@ def _build_citation_context(citation: dict[str, Any]) -> str:
 
 class CitationExtractor:
   @staticmethod
+  def _extract_references_from_layout(
+    layout_blocks: list[dict[str, Any]] | None,
+  ) -> str | None:
+    """Find and extract the references section from layout blocks.
+
+    Scans for a ``heading`` block matching ``REFERENCES_SECTION_PATTERNS``,
+    then returns the plain text of all **text**/``heading`` blocks that follow
+    (excluding the heading itself).  Falls back to the last 40% of blocks when
+    no matching heading is found.
+    """
+    if not layout_blocks:
+      return None
+
+    # Find the first heading that matches a references section title
+    ref_start = -1
+    for i, block in enumerate(layout_blocks):
+      if block.get("type") == "heading":
+        content = (block.get("content") or "").strip()
+        if any(re.match(p, content) for p in REFERENCES_SECTION_PATTERNS):
+          ref_start = i + 1  # skip the heading itself
+          break
+
+    # Fallback: no heading found → take last 40% of blocks
+    if ref_start < 0:
+      ref_start = max(0, int(len(layout_blocks) * 0.6))
+
+    parts: list[str] = []
+    for block in layout_blocks[ref_start:]:
+      if block.get("type") not in ("text", "heading"):
+        continue
+      content = (block.get("content") or "").strip()
+      if not content:
+        continue
+      page = ((block.get("metadata") or {}).get("page") or {}).get("number")
+      line = f"[p{page}] {content}\n" if page else f"{content}\n"
+      parts.append(line)
+
+    return "".join(parts).strip() or None
+
+  @staticmethod
   def _find_references_start_position(full_text: str) -> int:
     """Find the start position of references section."""
     lines = full_text.split("\n")
@@ -466,10 +506,15 @@ class CitationExtractor:
   async def extract_and_store_citations(
     db_session: AsyncSession,
     paper_id: int,
-    pdf_content: bytes,
+    layout_blocks: list[dict[str, Any]] | None = None,
+    pdf_content: bytes | None = None,
     user_id: int | None = None,
   ) -> int:
-    """Extract citations from PDF and store them in database."""
+    """Extract citations and store them in database.
+
+    Layout blocks are the preferred input (cleaner text, no PDF re-read).
+    Falls back to raw PDF bytes when layout blocks are unavailable.
+    """
     try:
       paper_query = select(Paper).where(Paper.id == paper_id)
       paper_result = await db_session.execute(paper_query)
@@ -481,13 +526,17 @@ class CitationExtractor:
 
       await CitationExtractor._delete_existing_citations(db_session, paper_id)
 
-      loop = asyncio.get_event_loop()
-      references_text = await loop.run_in_executor(
-        None, CitationExtractor.extract_references_section, pdf_content
-      )
+      references_text = CitationExtractor._extract_references_from_layout(layout_blocks)
+
+      if not references_text and pdf_content:
+        loop = asyncio.get_event_loop()
+        references_text = await loop.run_in_executor(
+          None, CitationExtractor.extract_references_section, pdf_content
+        )
 
       if not references_text:
         logger.info("No references section found", paper_id=paper_id)
+        await db_session.commit()
         return 0
 
       parsed_citations = await CitationExtractor.parse_citations(
@@ -495,6 +544,7 @@ class CitationExtractor:
       )
       if not parsed_citations:
         logger.info("No citations parsed", paper_id=paper_id)
+        await db_session.commit()
         return 0
 
       stored_count = 0

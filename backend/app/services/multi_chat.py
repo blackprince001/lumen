@@ -37,6 +37,7 @@ from app.services.ai.agent.provider_resolver import (
   resolve_providers,
 )
 from app.services.ai.base_ai_service import BaseAIService
+from app.services.reference_resolver import resolve_manifest
 
 logger = get_logger(__name__)
 
@@ -389,9 +390,15 @@ class MultiChatService(BaseAIService):
 
       response_text = "".join(full_content)
       if not had_error:
+        manifest = await resolve_manifest(
+          db_session, user_id, response_text, paper_id=None
+        )
         assistant_msg = await self._save_assistant_message(
           db_session, session_pk, response_text
         )
+        if manifest:
+          assistant_msg.reference_manifest = manifest
+          await db_session.commit()
         await self._persist_session_provider(
           db_session, session_pk, current_provider_id, used_holder
         )
@@ -400,6 +407,7 @@ class MultiChatService(BaseAIService):
           "content": response_text,
           "message_id": assistant_msg.id,
           "session_id": session_pk,
+          "reference_manifest": manifest,
         }
       elif response_text.strip():
         await self._save_assistant_message(db_session, session_pk, response_text)

@@ -1,41 +1,44 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
   Warning2 as AlertCircle,
   Maximize4 as MaximizeIcon,
   CloseSquare as MinimizeIcon,
-} from 'iconsax-reactjs';
-import { annotationsApi, type Annotation } from '@/lib/api/annotations';
-import { aiFeaturesApi, type AIActionKind } from '@/lib/api/aiFeatures';
-import { type Paper } from '@/lib/api/papers';
+} from "iconsax-reactjs";
+import { annotationsApi, type Annotation } from "@/lib/api/annotations";
+import { aiFeaturesApi, type AIActionKind } from "@/lib/api/aiFeatures";
+import { type Paper } from "@/lib/api/papers";
 import {
   PDFViewer,
   type PDFViewerHandle,
   type PDFViewerPageOverlayProps,
-} from '@/components/shadcn/pdf-viewer';
-import { canAnnotate } from '@/lib/utils/permissions';
-import { toastError, toastSuccess } from '@/lib/utils/toast';
-import { cn } from '@/lib/utils';
-import { useTheme } from '@/lib/theme';
-import { useReader } from '@/contexts/ReaderContext';
-import { usePaperFile } from './use-paper-file';
-import { annotationPage, annotationRects, type NormalizedRect } from './annotation-geometry';
-import { highlightTheme } from './highlight-colors';
-import type { ThemeName } from '@/lib/paper-themes';
-import { AnnotationCard } from './AnnotationCard';
-import { AnnotationMarker } from './AnnotationMarker';
-import { OutlinePanel } from './OutlinePanel';
-import { ReaderToolbarActions } from './ReaderToolbarActions';
-import { HighlighterControl } from './HighlighterControl';
-import { SelectionPopover, type SelectionState } from './SelectionPopover';
+} from "@/components/shadcn/pdf-viewer";
+import { canAnnotate } from "@/lib/utils/permissions";
+import { toastError, toastSuccess } from "@/lib/utils/toast";
+import { cn } from "@/lib/utils";
+import { useTheme } from "@/lib/theme";
+import { useReader } from "@/contexts/ReaderContext";
+import { usePaperFile } from "./use-paper-file";
+import {
+  annotationPage,
+  annotationRects,
+  type NormalizedRect,
+} from "./annotation-geometry";
+import { highlightTheme } from "./highlight-colors";
+import type { ThemeName } from "@/lib/paper-themes";
+import { AnnotationCard } from "./AnnotationCard";
+import { AnnotationMarker } from "./AnnotationMarker";
+import { OutlinePanel } from "./OutlinePanel";
+import { ReaderToolbarActions } from "./ReaderToolbarActions";
+import { HighlighterControl } from "./HighlighterControl";
+import { SelectionPopover, type SelectionState } from "./SelectionPopover";
 
 const PDF_DOCUMENT_OPTIONS = {
   cMapPacked: true,
-  cMapUrl: '/pdfjs/cmaps/',
-  standardFontDataUrl: '/pdfjs/standard_fonts/',
+  cMapUrl: "/pdfjs/cmaps/",
+  standardFontDataUrl: "/pdfjs/standard_fonts/",
 };
-
 
 const MARGIN_CARD_MAX_WIDTH = 280;
 const MARGIN_CARD_MIN_WIDTH = 188;
@@ -47,6 +50,10 @@ interface ReaderShellProps {
   annotations: Annotation[];
   onAnnotationSuccess: () => void;
   onCurrentPageChange?: (page: number) => void;
+  /** Page to scroll to once the document loads (deep-link from chat refs). */
+  initialPage?: number;
+  /** Item to focus on load, e.g. "annotation:22" or "note:10". */
+  focusRef?: string;
 }
 
 export function ReaderShell({
@@ -54,6 +61,8 @@ export function ReaderShell({
   annotations,
   onAnnotationSuccess,
   onCurrentPageChange,
+  initialPage,
+  focusRef,
 }: ReaderShellProps) {
   const queryClient = useQueryClient();
   const { fileUrl, error: fileError } = usePaperFile(paper);
@@ -70,9 +79,11 @@ export function ReaderShell({
   const [pendingAction, setPendingAction] = useState<AIActionKind | null>(null);
 
   const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  const isDark = theme === "dark";
   const [highlighterActive, setHighlighterActive] = useState(false);
-  const [highlighterColor, setHighlighterColor] = useState<ThemeName>('yellow' as ThemeName);
+  const [highlighterColor, setHighlighterColor] = useState<ThemeName>(
+    "yellow" as ThemeName,
+  );
 
   const [zen, setZen] = useState(false);
   const ZEN_ZOOM = 1.5;
@@ -91,10 +102,10 @@ export function ReaderShell({
   useEffect(() => {
     if (!zen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setZen(false);
+      if (e.key === "Escape") setZen(false);
     };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, [zen]);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -110,8 +121,11 @@ export function ReaderShell({
   }, [fileUrl]);
 
   const highlights = useMemo(
-    () => annotations.filter((a) => a.type !== 'note' && annotationRects(a).length > 0),
-    [annotations]
+    () =>
+      annotations.filter(
+        (a) => a.type !== "note" && annotationRects(a).length > 0,
+      ),
+    [annotations],
   );
 
   const byPage = useMemo(() => {
@@ -134,32 +148,69 @@ export function ReaderShell({
       page,
       rect
         ? {
-          left: rect.left * 100,
-          top: rect.top * 100,
-          width: rect.width * 100,
-          height: rect.height * 100,
-        }
+            left: rect.left * 100,
+            top: rect.top * 100,
+            width: rect.width * 100,
+            height: rect.height * 100,
+          }
         : { top: 0 },
-      { behavior: 'smooth' }
+      { behavior: "smooth" },
     );
   }, []);
-
 
   useEffect(() => {
     registerScrollCallbacks({ scrollToAnnotation });
     return () => unregisterScrollCallbacks();
   }, [scrollToAnnotation, registerScrollCallbacks, unregisterScrollCallbacks]);
 
+  const deepLinkDoneRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pdfProxy) return;
+    const targetKey = `${initialPage ?? ""}|${focusRef ?? ""}`;
+    if (targetKey === "|" || deepLinkDoneRef.current === targetKey) return;
+
+    const focused = focusRef
+      ? annotations.find((a) => `${a.type}:${a.id}` === focusRef)
+      : undefined;
+
+    if (focusRef && !focused && annotations.length === 0 && !initialPage)
+      return;
+
+    const page = focused ? annotationPage(focused) : (initialPage ?? null);
+    if (!page) {
+      deepLinkDoneRef.current = targetKey;
+      return;
+    }
+    deepLinkDoneRef.current = targetKey;
+
+    if (focused) setActiveAnnotationId(focused.id);
+    const rect = focused ? annotationRects(focused)[0] : undefined;
+    const area = rect
+      ? {
+          left: rect.left * 100,
+          top: rect.top * 100,
+          width: rect.width * 100,
+          height: rect.height * 100,
+        }
+      : { top: 0 };
+
+    const timers = [60, 280, 600].map((d) =>
+      window.setTimeout(() => {
+        viewerRef.current?.scrollToPageArea(page, area, { behavior: "auto" });
+      }, d),
+    );
+    return () => timers.forEach((t) => clearTimeout(t));
+  }, [pdfProxy, initialPage, focusRef, annotations, setActiveAnnotationId]);
 
   const invalidateAnnotations = () => {
-    void queryClient.invalidateQueries({ queryKey: ['annotations', paper.id] });
+    void queryClient.invalidateQueries({ queryKey: ["annotations", paper.id] });
     onAnnotationSuccess();
   };
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => annotationsApi.delete(id),
     onSuccess: invalidateAnnotations,
-    onError: () => toastError('Failed to delete annotation'),
+    onError: () => toastError("Failed to delete annotation"),
   });
 
   const handleAIAction = async (kind: AIActionKind) => {
@@ -175,7 +226,7 @@ export function ReaderShell({
       invalidateAnnotations();
       setSelection(null);
       setActiveAnnotationId(annotation.id);
-      toastSuccess('Saved as annotation');
+      toastSuccess("Saved as annotation");
     } catch (error) {
       toastError(`AI action failed: ${(error as Error).message}`);
     } finally {
@@ -189,12 +240,14 @@ export function ReaderShell({
       const annotation = await annotationsApi.create({
         paper_id: paper.id,
         content: text,
-        type: 'annotation',
+        type: "annotation",
         highlighted_text: selection.text,
         selection_data: { rects: selection.rects },
         coordinate_data: {
           page: selection.page,
-          x: selection.rects[0] ? selection.rects[0].left + selection.rects[0].width / 2 : 0.5,
+          x: selection.rects[0]
+            ? selection.rects[0].left + selection.rects[0].width / 2
+            : 0.5,
           y: selection.rects[0]?.top ?? 0,
         },
       });
@@ -202,7 +255,7 @@ export function ReaderShell({
       setSelection(null);
       setActiveAnnotationId(annotation.id);
     } catch {
-      toastError('Failed to save comment');
+      toastError("Failed to save comment");
     }
   };
 
@@ -213,7 +266,7 @@ export function ReaderShell({
         const annotation = await annotationsApi.create({
           paper_id: paper.id,
           content: sel.text,
-          type: 'annotation',
+          type: "annotation",
           highlighted_text: sel.text,
           selection_data: { rects: sel.rects, color },
           coordinate_data: {
@@ -226,7 +279,7 @@ export function ReaderShell({
         setSelection(null);
         setActiveAnnotationId(annotation.id);
       } catch {
-        toastError('Failed to create highlight');
+        toastError("Failed to create highlight");
       }
     },
     [paper.id, invalidateAnnotations],
@@ -257,7 +310,7 @@ export function ReaderShell({
         const text = range.toString().trim();
         if (!text) return;
 
-        const reference = pageElement.querySelector('canvas') ?? pageElement;
+        const reference = pageElement.querySelector("canvas") ?? pageElement;
         const pageRect = reference.getBoundingClientRect();
         if (pageRect.width === 0 || pageRect.height === 0) return;
 
@@ -265,10 +318,22 @@ export function ReaderShell({
         const clientRects = range.getClientRects();
         for (const r of clientRects) {
           if (r.width < 1 || r.height < 1) continue;
-          const left = Math.max(0, Math.min(1, (r.left - pageRect.left) / pageRect.width));
-          const top = Math.max(0, Math.min(1, (r.top - pageRect.top) / pageRect.height));
-          const right = Math.max(0, Math.min(1, (r.right - pageRect.left) / pageRect.width));
-          const bottom = Math.max(0, Math.min(1, (r.bottom - pageRect.top) / pageRect.height));
+          const left = Math.max(
+            0,
+            Math.min(1, (r.left - pageRect.left) / pageRect.width),
+          );
+          const top = Math.max(
+            0,
+            Math.min(1, (r.top - pageRect.top) / pageRect.height),
+          );
+          const right = Math.max(
+            0,
+            Math.min(1, (r.right - pageRect.left) / pageRect.width),
+          );
+          const bottom = Math.max(
+            0,
+            Math.min(1, (r.bottom - pageRect.top) / pageRect.height),
+          );
           rects.push({ left, top, width: right - left, height: bottom - top });
         }
         if (rects.length === 0) return;
@@ -295,42 +360,56 @@ export function ReaderShell({
         });
       }, 0);
     },
-    [paper, highlighterActive, highlighterColor, createHighlight]
+    [paper, highlighterActive, highlighterColor, createHighlight],
   );
 
-
   const renderPageOverlay = useCallback(
-    ({ pageNumber, pageWidth, pageHeight, scale }: PDFViewerPageOverlayProps) => {
+    ({
+      pageNumber,
+      pageWidth,
+      pageHeight,
+      scale,
+    }: PDFViewerPageOverlayProps) => {
       const pageAnnotations = byPage.get(pageNumber) ?? [];
       const renderedWidth = pageWidth * scale;
       const renderedHeight = pageHeight * scale;
 
       const sideGutter = (containerWidth - renderedWidth) / 2;
-      const marginMode = sideGutter >= MARGIN_CARD_MIN_WIDTH + MARGIN_CARD_GAP * 2;
+      const marginMode =
+        sideGutter >= MARGIN_CARD_MIN_WIDTH + MARGIN_CARD_GAP * 2;
       const cardWidth = Math.min(
         MARGIN_CARD_MAX_WIDTH,
-        Math.max(MARGIN_CARD_MIN_WIDTH, Math.floor(sideGutter - MARGIN_CARD_GAP * 2)),
+        Math.max(
+          MARGIN_CARD_MIN_WIDTH,
+          Math.floor(sideGutter - MARGIN_CARD_GAP * 2),
+        ),
       );
 
       const cursorY = { left: 0, right: 0 };
       const placed = marginMode
         ? pageAnnotations
-          .map((ann) => ({ ann, rect: annotationRects(ann)[0] }))
-          .filter((p): p is { ann: Annotation; rect: NormalizedRect } => Boolean(p.rect))
-          .map(({ ann, rect }) => {
-            const side: 'left' | 'right' = cursorY.left <= cursorY.right ? 'left' : 'right';
-            const anchorY = rect.top * renderedHeight;
-            const top = Math.max(anchorY, cursorY[side]);
-            cursorY[side] = top + MARGIN_CARD_MIN_HEIGHT + MARGIN_CARD_GAP;
-            return { ann, rect, top, side };
-          })
+            .map((ann) => ({ ann, rect: annotationRects(ann)[0] }))
+            .filter((p): p is { ann: Annotation; rect: NormalizedRect } =>
+              Boolean(p.rect),
+            )
+            .map(({ ann, rect }) => {
+              const side: "left" | "right" =
+                cursorY.left <= cursorY.right ? "left" : "right";
+              const anchorY = rect.top * renderedHeight;
+              const top = Math.max(anchorY, cursorY[side]);
+              cursorY[side] = top + MARGIN_CARD_MIN_HEIGHT + MARGIN_CARD_GAP;
+              return { ann, rect, top, side };
+            })
         : [];
 
       return (
         <>
           {/* Highlight rects */}
           {pageAnnotations.map((ann) => {
-            const theme = highlightTheme(ann.highlight_type, ann.selection_data);
+            const theme = highlightTheme(
+              ann.highlight_type,
+              ann.selection_data,
+            );
             return annotationRects(ann).map((rect, i) => (
               <button
                 key={`${ann.id}-${i}`}
@@ -340,9 +419,11 @@ export function ReaderShell({
                   setActiveAnnotationId(ann.id);
                 }}
                 className={cn(
-                  'absolute rounded-[2px] transition-opacity',
-                  isDark ? 'mix-blend-screen' : 'mix-blend-multiply',
-                  activeAnnotationId === ann.id ? 'opacity-90' : 'opacity-60 hover:opacity-80',
+                  "absolute rounded-[2px] transition-opacity",
+                  isDark ? "mix-blend-screen" : "mix-blend-multiply",
+                  activeAnnotationId === ann.id
+                    ? "opacity-90"
+                    : "opacity-60 hover:opacity-80",
                 )}
                 style={{
                   left: `${rect.left * 100}%`,
@@ -363,15 +444,20 @@ export function ReaderShell({
                 className="pointer-events-none absolute inset-0 size-full overflow-visible"
               >
                 {placed.map(({ ann, rect, top, side }) => {
-                  const theme = highlightTheme(ann.highlight_type, ann.selection_data);
+                  const theme = highlightTheme(
+                    ann.highlight_type,
+                    ann.selection_data,
+                  );
                   const y1 = (rect.top + rect.height / 2) * renderedHeight;
                   const y2 = top + 16;
                   const x1 =
-                    side === 'right'
+                    side === "right"
                       ? (rect.left + rect.width) * renderedWidth
                       : rect.left * renderedWidth;
                   const x2 =
-                    side === 'right' ? renderedWidth + MARGIN_CARD_GAP : -MARGIN_CARD_GAP;
+                    side === "right"
+                      ? renderedWidth + MARGIN_CARD_GAP
+                      : -MARGIN_CARD_GAP;
                   return (
                     <path
                       key={ann.id}
@@ -392,7 +478,7 @@ export function ReaderShell({
                     top,
                     width: cardWidth,
                     zIndex: activeAnnotationId === ann.id ? 40 : 20,
-                    ...(side === 'right'
+                    ...(side === "right"
                       ? { left: renderedWidth + MARGIN_CARD_GAP }
                       : { right: renderedWidth + MARGIN_CARD_GAP }),
                   }}
@@ -403,7 +489,9 @@ export function ReaderShell({
                     compact
                     onClick={() => setActiveAnnotationId(ann.id)}
                     onDelete={
-                      canAnnotate(paper) ? () => deleteMutation.mutate(ann.id) : undefined
+                      canAnnotate(paper)
+                        ? () => deleteMutation.mutate(ann.id)
+                        : undefined
                     }
                   />
                 </div>
@@ -423,7 +511,9 @@ export function ReaderShell({
                   onSelect={() => setActiveAnnotationId(ann.id)}
                   onClose={() => setActiveAnnotationId(null)}
                   onDelete={
-                    canAnnotate(paper) ? () => deleteMutation.mutate(ann.id) : undefined
+                    canAnnotate(paper)
+                      ? () => deleteMutation.mutate(ann.id)
+                      : undefined
                   }
                 />
               );
@@ -433,7 +523,7 @@ export function ReaderShell({
       );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [byPage, activeAnnotationId, paper, isDark, containerWidth]
+    [byPage, activeAnnotationId, paper, isDark, containerWidth],
   );
 
   /* ── render ─────────────────────────────────────────────────────────── */
@@ -441,7 +531,10 @@ export function ReaderShell({
   if (fileError) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-        <AlertCircle size={40} className="mb-3 text-(--destructive) opacity-30" />
+        <AlertCircle
+          size={40}
+          className="mb-3 text-(--destructive) opacity-30"
+        />
         <p className="text-body text-(--muted-foreground)">{fileError}</p>
       </div>
     );
@@ -451,10 +544,10 @@ export function ReaderShell({
     <div
       ref={containerRef}
       className={cn(
-        'relative w-full',
+        "relative w-full",
         zen
-          ? 'fixed inset-0 z-50 h-screen bg-(--background) p-2'
-          : 'h-full pb-3',
+          ? "fixed inset-0 z-50 h-screen bg-(--background) p-2"
+          : "h-full pb-3",
       )}
     >
       {fileUrl ? (
@@ -484,7 +577,11 @@ export function ReaderShell({
                 pdf={pdfProxy}
                 activePage={activePage}
                 onNavigate={(page) =>
-                  viewerRef.current?.scrollToPageArea(page, { top: 0 }, { behavior: 'smooth' })
+                  viewerRef.current?.scrollToPageArea(
+                    page,
+                    { top: 0 },
+                    { behavior: "smooth" },
+                  )
                 }
               />
             }
@@ -511,12 +608,12 @@ export function ReaderShell({
         <button
           type="button"
           onClick={() => setZen((v) => !v)}
-          aria-label={zen ? 'Exit zen reading mode' : 'Enter zen reading mode'}
-          title={zen ? 'Exit zen mode (Esc)' : 'Zen reading mode'}
+          aria-label={zen ? "Exit zen reading mode" : "Enter zen reading mode"}
+          title={zen ? "Exit zen mode (Esc)" : "Zen reading mode"}
           className={cn(
-            'absolute bottom-6 left-6 z-40 flex size-10 items-center justify-center',
-            'rounded-full border border-(--border) bg-(--popover) text-(--muted-foreground)',
-            'shadow-(--shadow-elevated) transition-colors hover:text-(--foreground)',
+            "absolute bottom-6 left-6 z-40 flex size-10 items-center justify-center",
+            "rounded-full border border-(--border) bg-(--popover) text-(--muted-foreground)",
+            "shadow-(--shadow-elevated) transition-colors hover:text-(--foreground)",
           )}
         >
           {zen ? <MinimizeIcon size={18} /> : <MaximizeIcon size={18} />}

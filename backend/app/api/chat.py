@@ -33,8 +33,10 @@ from app.schemas.chat import (
 from app.schemas.chat import (
   ChatSession as ChatSessionSchema,
 )
+from app.schemas.reference import BatchResolveRequest, BatchResolveResponse
 from app.services.ai.agent.error import classify_exception
 from app.services.chat import chat_service
+from app.services.reference_resolver import resolve_batch
 
 logger = get_logger(__name__)
 
@@ -377,3 +379,21 @@ async def clear_session_messages(
 
   await session.commit()
   return None
+
+
+@router.post("/chat/references/resolve", response_model=BatchResolveResponse)
+async def batch_resolve_references(
+  request: BatchResolveRequest,
+  user: CurrentUser,
+  session: AsyncSession = Depends(get_db),
+):
+  """Resolve a batch of ``ref:`` tokens into preview data.
+
+  Used by the frontend for lazy hover previews on older messages that
+  don't have a stored manifest, or during streaming before the manifest
+  arrives in the ``done`` event.
+  """
+  entries = await resolve_batch(
+    session, scoped_user_id(user), request.refs, paper_id=None
+  )
+  return BatchResolveResponse(entries=entries)

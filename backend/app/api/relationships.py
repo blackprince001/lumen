@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.crud import get_visible_paper_or_404
 from app.dependencies import CurrentUser, get_db, scoped_user_id
+from app.models.paper import Paper
 from app.models.paper_citation import PaperCitation
 from app.schemas.paper import Paper as PaperSchema
 from app.services.graph_service import graph_service
@@ -41,7 +42,10 @@ async def get_citations_list(
 
   citations_query = (
     select(PaperCitation)
-    .options(selectinload(PaperCitation.cited_paper))
+    .options(
+      selectinload(PaperCitation.cited_paper).selectinload(Paper.tags),
+      selectinload(PaperCitation.cited_paper).selectinload(Paper.groups),
+    )
     .where(PaperCitation.paper_id == paper_id)
     .order_by(PaperCitation.created_at.desc())
   )

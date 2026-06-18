@@ -64,6 +64,7 @@ class ChatMessage(Base):
   role = Column(String, nullable=False)
   content = Column(Text, nullable=False)
   references = Column(JSON, default=dict)
+  reference_manifest = Column(JSON, nullable=True)
   created_at = Column(
     DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
   )

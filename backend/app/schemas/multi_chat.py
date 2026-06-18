@@ -32,11 +32,13 @@ class MultiChatMessageBase(BaseModel):
   role: str  # 'user' or 'assistant'
   content: str
   references: Optional[Dict[str, Any]] = {}
+  reference_manifest: Optional[List[Dict[str, Any]]] = None
 
 
 class MultiChatMessageCreate(BaseModel):
   content: str
   references: Optional[Dict[str, Any]] = {}
+  reference_manifest: Optional[List[Dict[str, Any]]] = None
 
 
 class MultiChatMessage(MultiChatMessageBase):

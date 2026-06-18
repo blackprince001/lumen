@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { chatStreamClient } from '@/lib/ai/chatStream';
 import type { ChatReferences } from '@/lib/api/chat';
+import type { ReferenceManifestEntry } from '@/lib/api/references';
 import { logger } from '@/lib/logger';
 import { useTypewriter } from '@/hooks/use-typewriter';
 
@@ -46,6 +47,7 @@ export interface ChatStreamState {
   error: ChatStreamError | null;
   messageId: number | null;
   sessionId: number | null;
+  referenceManifest: ReferenceManifestEntry[] | null;
 }
 
 const INITIAL_STATE: ChatStreamState = {
@@ -58,6 +60,7 @@ const INITIAL_STATE: ChatStreamState = {
   error: null,
   messageId: null,
   sessionId: null,
+  referenceManifest: null,
 };
 
 export interface UseChatStreamReturn extends ChatStreamState {
@@ -201,6 +204,7 @@ export function useChatStream(): UseChatStreamReturn {
               case 'done':
                 next.messageId = (event.message_id as number) ?? null;
                 next.sessionId = (event.session_id as number) ?? null;
+                next.referenceManifest = (event.reference_manifest as ReferenceManifestEntry[]) ?? null;
                 next.status = 'done';
                 break;
             }

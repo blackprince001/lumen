@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { ReferenceManifestEntry } from './references';
 
 export interface ChatReferences {
   notes: Array<{ id: number; type: 'note'; content?: string; display?: string }>;
@@ -12,6 +13,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   references?: ChatReferences;
+  reference_manifest?: ReferenceManifestEntry[] | null;
   created_at: string;
   parent_message_id: number | null;
   thread_count: number;

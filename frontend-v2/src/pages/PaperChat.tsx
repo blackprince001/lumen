@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { papersApi } from '@/lib/api/papers';
-import { useChatController } from '@/hooks/use-chat-controller';
+import { useSharedChatController } from '@/contexts/ChatControllerContext';
 import { ChatMessageList } from '@/components/chat/ChatMessageList';
 import { ChatComposer } from '@/components/chat/ChatComposer';
 import { SessionPills } from '@/components/chat/SessionPills';
@@ -35,23 +35,23 @@ export default function PaperChat() {
 }
 
 function PaperChatInner({ paperId, paperTitle }: { paperId: number; paperTitle?: string }) {
-  const controller = useChatController(paperId);
+  const controller = useSharedChatController();
 
   return (
     <div className="h-full flex flex-col bg-(--background)">
       {/* Page header */}
       <header className="shrink-0 border-b border-(--border) bg-(--card)">
-        <div className="px-4 py-3 flex items-center gap-3">
+        <div className="px-3 py-1.5 flex items-center gap-2">
           <Link
             to={`/papers/${paperId}`}
-            className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
+            className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-lg text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
             title="Back to paper"
           >
-            <ArrowLeft2 size={16} />
+            <ArrowLeft2 size={14} />
           </Link>
-          <MessageSquare size={18} className="shrink-0 text-(--muted-foreground)" />
+          <MessageSquare size={14} className="shrink-0 text-(--muted-foreground)" />
           <div className="min-w-0 flex-1">
-            <h1 className="text-body font-bold leading-tight truncate" title={paperTitle}>
+            <h1 className="text-code font-semibold leading-tight truncate" title={paperTitle}>
               {paperTitle ?? 'Paper chat'}
             </h1>
           </div>

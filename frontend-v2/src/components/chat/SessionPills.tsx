@@ -38,7 +38,7 @@ export function SessionPills({ controller, showExpand = true }: SessionPillsProp
 
   return (
     <div className="shrink-0 border-b border-(--border) bg-(--card)">
-      <div className="flex items-center gap-1.5 p-2 overflow-x-auto scrollbar-none">
+      <div className="flex items-center gap-1 px-2 py-1 overflow-x-auto scrollbar-none">
         {sessions.length > 1 && (
           <button
             onClick={() => setSessionsCollapsed(!sessionsCollapsed)}
@@ -85,7 +85,7 @@ export function SessionPills({ controller, showExpand = true }: SessionPillsProp
                 key={s.id}
                 onClick={() => switchSession(s.id)}
                 className={cn(
-                  'shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-caption transition-all duration-150 whitespace-nowrap border',
+                  'shrink-0 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-micro transition-all duration-150 whitespace-nowrap border',
                   isActive
                     ? 'bg-(--foreground) text-(--card) border-(--foreground) font-medium'
                     : 'bg-(--card) text-(--muted-foreground) border-(--border) hover:text-(--foreground) hover:border-(--foreground)/30',
@@ -118,7 +118,7 @@ export function SessionPills({ controller, showExpand = true }: SessionPillsProp
         <button
           onClick={handleCreateSession}
           disabled={isCreatingSession}
-          className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-full border border-dashed border-(--border) text-(--muted-foreground) hover:text-(--foreground) hover:border-(--foreground)/30 transition-colors"
+          className="shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full border border-dashed border-(--border) text-(--muted-foreground) hover:text-(--foreground) hover:border-(--foreground)/30 transition-colors"
           title="New session"
         >
           <Plus size={12} />
@@ -127,7 +127,7 @@ export function SessionPills({ controller, showExpand = true }: SessionPillsProp
         {showExpand && (
           <Link
             to={`/papers/${paperId}/chat`}
-            className="shrink-0 ml-auto inline-flex items-center justify-center w-7 h-7 rounded-full text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
+            className="shrink-0 ml-auto inline-flex items-center justify-center w-6 h-6 rounded-full text-(--muted-foreground) hover:text-(--foreground) hover:bg-(--muted) transition-colors"
             title="Open full chat view"
           >
             <Maximize4 size={13} />

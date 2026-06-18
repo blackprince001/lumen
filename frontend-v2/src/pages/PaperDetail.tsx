@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { papersApi } from '@/lib/api/papers';
 import { annotationsApi } from '@/lib/api/annotations';
@@ -12,8 +12,15 @@ import { Button } from '@/components/ui/Button';
 export default function PaperDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const paperId = id ? parseInt(id) : undefined;
   const { addTab, updateTab, tabs, activeTabId } = useTabs();
+
+  // Deep-link from chat reference chips: ?page=N&focus=annotation:22
+  const initialPage = searchParams.get('page')
+    ? parseInt(searchParams.get('page')!) || undefined
+    : undefined;
+  const focusRef = searchParams.get('focus') ?? undefined;
 
   const { data: paper, isLoading: paperLoading, error: paperError, refetch: refetchPaper } = useQuery({
     queryKey: ['paper', paperId],
@@ -77,6 +84,8 @@ export default function PaperDetail() {
       <ReaderShell
         paper={paper}
         annotations={annotations || []}
+        initialPage={initialPage}
+        focusRef={focusRef}
         onAnnotationSuccess={() => {
           refetchAnnotations();
           refetchPaper();

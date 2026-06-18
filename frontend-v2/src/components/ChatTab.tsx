@@ -1,16 +1,16 @@
-import { useChatController } from '@/hooks/use-chat-controller';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { SessionPills } from '@/components/chat/SessionPills';
-import { ChatMessageList } from '@/components/chat/ChatMessageList';
-import { ChatComposer } from '@/components/chat/ChatComposer';
+import { useSharedChatController } from "@/contexts/ChatControllerContext";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { SessionPills } from "@/components/chat/SessionPills";
+import { ChatMessageList } from "@/components/chat/ChatMessageList";
+import { ChatComposer } from "@/components/chat/ChatComposer";
 
 interface ChatTabProps {
   paperId: number;
 }
 
-export function ChatTab({ paperId }: ChatTabProps) {
-  const controller = useChatController(paperId);
+export function ChatTab({ paperId: _paperId }: ChatTabProps) {
+  const controller = useSharedChatController();
 
   if (controller.isLoading) {
     return (

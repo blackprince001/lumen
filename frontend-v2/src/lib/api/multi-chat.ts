@@ -1,5 +1,6 @@
 import { api } from './client';
 import type { ChatReferences } from './chat';
+import type { ReferenceManifestEntry } from './references';
 
 export interface PaperSummary {
   id: number;
@@ -13,6 +14,7 @@ export interface MultiChatMessage {
   role: 'user' | 'assistant';
   content: string;
   references?: ChatReferences;
+  reference_manifest?: ReferenceManifestEntry[] | null;
   created_at: string;
   parent_message_id: number | null;
   thread_count: number;
