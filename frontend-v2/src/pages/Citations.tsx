@@ -1,175 +1,151 @@
-import { useState, useMemo } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
-import { SearchNormal as Search, Hierarchy as GitBranch, Refresh as Loader2, Refresh as RefreshCw, Hierarchy3 as Network } from 'iconsax-reactjs';
-import { papersApi } from '@/lib/api/papers';
-import { PaperCitationsList } from '@/components/PaperCitationsList';
-import { CitationCanvas } from '@/components/CitationCanvas';
-import { CanvasPaperPicker } from '@/components/CanvasPaperPicker';
+import { useMemo, useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Trash, InfoCircle, Hierarchy3 as Network, QuoteDown as Quote } from 'iconsax-reactjs';
+import { citationMapApi, type CitationMapResponse, type MapNode } from '@/lib/api/citationMap';
+import { CitationMap } from '@/components/citation-map/CitationMap';
+import { FocalPaperPicker } from '@/components/citation-map/FocalPaperPicker';
+import { NodeDetailPanel } from '@/components/citation-map/NodeDetailPanel';
+import { CitedByTab } from '@/components/citation-map/CitedByTab';
 import { Button } from '@/components/ui/Button';
-import { toastSuccess, toastError } from '@/lib/utils/toast';
+import { toastError } from '@/lib/utils/toast';
 import { cn } from '@/lib/utils';
 
-type ViewTab = 'list' | 'canvas';
+type Tab = 'map' | 'cited-by';
+
+function Legend() {
+  return (
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-caption text-(--muted-foreground)">
+      <span className="flex items-center gap-1.5">
+        <span className="w-3 h-3 rounded-full bg-(--foreground)" /> Your paper
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="w-3 h-3 rounded-full border-2 border-(--sky-blue)" /> Reference (work it cites)
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="w-3 h-3 rounded-full border-2 border-(--coral-red) bg-(--coral-red)/15" /> Shared across your papers
+      </span>
+    </div>
+  );
+}
 
 export default function Citations() {
-  const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedPaperId, setSelectedPaperId] = useState<number | null>(null);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [activeTab, setActiveTab] = useState<ViewTab>('list');
+  const queryClient = useQueryClient();
+  const [tab, setTab] = useState<Tab>('map');
+  const [selectedNode, setSelectedNode] = useState<MapNode | null>(null);
 
-  const { data: papersData, isLoading: papersLoading } = useQuery({
-    queryKey: ['papers', 1, 100, searchQuery],
-    queryFn: () => papersApi.list(1, 100, searchQuery || undefined),
+  const { data, isLoading } = useQuery<CitationMapResponse>({
+    queryKey: ['citation-map'],
+    queryFn: () => citationMapApi.get(),
   });
 
-  const filteredPapers = useMemo(() => {
-    if (!papersData?.papers) return [];
-    if (!searchQuery.trim()) return papersData.papers.slice(0, 20);
-    const q = searchQuery.toLowerCase();
-    return papersData.papers.filter(
-      (p) => p.title.toLowerCase().includes(q) || (p.metadata_json?.author as string | undefined)?.toLowerCase().includes(q)
-    ).slice(0, 20);
-  }, [papersData, searchQuery]);
-
-  const { data: citationsData, isLoading: citationsLoading, error: citationsError } = useQuery({
-    queryKey: ['citations-list', selectedPaperId],
-    queryFn: () => papersApi.getCitationsList(selectedPaperId!),
-    enabled: !!selectedPaperId,
+  const clearMutation = useMutation({
+    mutationFn: () => citationMapApi.clear(),
+    onSuccess: () => {
+      queryClient.setQueryData<CitationMapResponse>(['citation-map'], {
+        nodes: [],
+        edges: [],
+        focal_paper_ids: [],
+        unresolved: [],
+      });
+      setSelectedNode(null);
+    },
+    onError: () => toastError('Failed to clear the map'),
   });
 
-  const extractMutation = useMutation({
-    mutationFn: () => papersApi.extractCitations(selectedPaperId!),
-    onSuccess: (data) => toastSuccess(`Extracted ${data.citations_extracted} citations`),
-    onError: () => toastError('Failed to extract citations'),
-  });
+  const focalIds = data?.focal_paper_ids ?? [];
+  const unresolved = data?.unresolved ?? [];
 
-  const selectedPaper = useMemo(
-    () => papersData?.papers.find((p) => p.id === selectedPaperId) ?? null,
-    [selectedPaperId, papersData]
-  );
+  // Keep the selected node in sync with refreshed data (or drop it if removed).
+  const liveSelected = useMemo(() => {
+    if (!selectedNode || !data) return selectedNode;
+    return data.nodes.find((n) => n.key === selectedNode.key) ?? null;
+  }, [selectedNode, data]);
 
   return (
-    <div className="max-w-content mx-auto px-6 py-8">
-      <div className="mb-8">
-        <h1>Paper Citations</h1>
-        <p className="text-btn text-(--muted-foreground) mt-1">
-          Explore citation relationships between papers in your library
-        </p>
-      </div>
-
-      {/* Paper Search */}
-      <div className="relative mb-8">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-(--muted-foreground)" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => { setSearchQuery(e.target.value); setShowDropdown(true); }}
-            onFocus={() => setShowDropdown(true)}
-            placeholder="Search papers to view citations..."
-            className="w-full max-w-2xl pl-9 pr-4 h-10 bg-(--card) border border-(--border) rounded-xl text-code text-(--foreground) placeholder:text-(--muted-foreground) focus:outline-none focus:border-(--foreground) transition-colors"
-          />
-          {papersLoading && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-(--muted-foreground)" />}
+    <div className="flex flex-col h-[calc(100vh-var(--header-h,3.5rem))]">
+      <div className="px-4 md:px-6 pt-4 md:pt-6 pb-3 md:pb-4 shrink-0">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1>Citations</h1>
+            <p className="text-btn text-(--muted-foreground) mt-1">
+              {tab === 'map'
+                ? 'Chart what your papers built on — overlapping references connect across the canvas.'
+                : 'See which works cite a paper in your library.'}
+            </p>
+          </div>
+          {tab === 'map' && focalIds.length > 0 && (
+            <Button
+              variant="secondary"
+              className="h-8! text-caption!"
+              icon={<Trash size={13} />}
+              onClick={() => clearMutation.mutate()}
+              disabled={clearMutation.isPending}
+            >
+              Clear map
+            </Button>
+          )}
         </div>
 
-        {showDropdown && searchQuery && filteredPapers.length > 0 && (
-          <div className="absolute top-full left-0 max-w-2xl w-full mt-1 bg-(--white) border border-(--border) rounded-xl shadow-lg z-50 max-h-80 overflow-y-auto">
-            {filteredPapers.map((paper) => (
-              <button
-                key={paper.id}
-                onClick={() => { setSelectedPaperId(paper.id); setSearchQuery(''); setShowDropdown(false); }}
-                className="w-full text-left px-4 py-3 hover:bg-(--muted) border-b border-(--border) last:border-b-0 transition-colors"
-              >
-                <p className="text-code font-medium text-(--foreground) line-clamp-1">{paper.title}</p>
-                {!!paper.metadata_json?.author && (
-                  <p className="text-caption text-(--muted-foreground) mt-0.5 line-clamp-1">{paper.metadata_json.author as string}</p>
-                )}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {showDropdown && searchQuery && !papersLoading && filteredPapers.length === 0 && (
-          <div className="absolute top-full left-0 max-w-2xl w-full mt-1 bg-(--white) border border-(--border) rounded-xl shadow-lg z-50 px-4 py-3 text-code text-(--muted-foreground)">
-            No papers found matching "{searchQuery}"
-          </div>
-        )}
-      </div>
-
-      {selectedPaper ? (
-        <>
-          {/* Selected paper info */}
-          <div className="bg-(--card) border border-(--border) rounded-xl p-4 mb-6 flex items-center justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h4 className="text-body font-semibold text-(--foreground) line-clamp-1">{selectedPaper.title}</h4>
-              {!!selectedPaper.metadata_json?.author && (
-                <p className="text-caption text-(--muted-foreground) mt-0.5">{selectedPaper.metadata_json.author as string}</p>
-              )}
-              {citationsData && (
-                <p className="text-caption text-(--muted-foreground) mt-1">
-                  {citationsData.citations.length} citation{citationsData.citations.length !== 1 ? 's' : ''} found
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Button
-                variant="secondary"
-                className="h-8! text-caption!"
-                icon={extractMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
-                disabled={extractMutation.isPending}
-                onClick={() => extractMutation.mutate()}
-              >
-                Extract Citations
-              </Button>
-              <button
-                onClick={() => navigate(`/papers/${selectedPaper.id}`)}
-                className="px-3 py-1.5 text-caption font-medium bg-(--muted) text-(--foreground) border border-(--border) rounded-lg hover:bg-(--border) transition-colors"
-              >
-                View Paper
-              </button>
-            </div>
-          </div>
-
-          {/* List / Graph tabs */}
-          <div className="flex items-center gap-1 mb-6 border-b border-(--border)">
-            {([['list', 'List', GitBranch], ['canvas', 'Canvas', Network]] as const).map(([id, label, Icon]) => (
+        <div className="flex items-center gap-1 mt-4 border-b border-(--border)">
+          {([['map', 'Citation Map', Network], ['cited-by', 'Cited by', Quote]] as const).map(
+            ([id, label, Icon]) => (
               <button
                 key={id}
-                onClick={() => setActiveTab(id)}
+                onClick={() => setTab(id)}
                 className={cn(
                   'flex items-center gap-1.5 h-9 px-3 text-code font-semibold border-b-2 -mb-px transition-all',
-                  activeTab === id
+                  tab === id
                     ? 'border-(--foreground) text-(--foreground)'
                     : 'border-transparent text-(--muted-foreground) hover:text-(--foreground)'
                 )}
               >
-                <Icon size={13} />{label}
+                <Icon size={13} />
+                {label}
               </button>
-            ))}
-          </div>
+            )
+          )}
+        </div>
 
-          {activeTab === 'list' ? (
-            <PaperCitationsList
-              citations={citationsData?.citations || []}
-              isLoading={citationsLoading}
-              error={citationsError}
-            />
-          ) : (
-            <div className="bg-(--card) border border-(--border) rounded-xl overflow-hidden flex" style={{ height: '37.5rem' }}>
-              <CanvasPaperPicker className="w-64 shrink-0" />
-              <div className="flex-1">
-                <CitationCanvas />
+        {tab === 'map' && (
+          <>
+            <div className="mt-3">
+              <Legend />
+            </div>
+            {unresolved.length > 0 && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-(--border) bg-(--muted) px-3 py-2 text-caption text-(--muted-foreground)">
+                <InfoCircle size={14} className="shrink-0 mt-0.5" />
+                <span>
+                  Couldn’t find {unresolved.length} paper{unresolved.length !== 1 ? 's' : ''} on Semantic Scholar
+                  {': '}
+                  {unresolved.map((u) => u.title).slice(0, 3).join(', ')}
+                  {unresolved.length > 3 ? '…' : ''}. They appear without reference links.
+                </span>
               </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {tab === 'map' ? (
+        <div className="flex-1 min-h-0 mx-4 md:mx-6 mb-4 md:mb-6 flex flex-col md:flex-row rounded-xl border border-(--border) overflow-hidden bg-(--card)">
+          <FocalPaperPicker focalIds={focalIds} className="w-full md:w-64 shrink-0" />
+          <div className="flex-1 min-w-0 min-h-[300px] md:min-h-0">
+            <CitationMap
+              data={data}
+              isLoading={isLoading}
+              selectedKey={liveSelected?.key ?? null}
+              onSelectNode={setSelectedNode}
+            />
+          </div>
+          {liveSelected && (
+            <div className="w-full md:w-80 shrink-0">
+              <NodeDetailPanel node={liveSelected} onClose={() => setSelectedNode(null)} />
             </div>
           )}
-        </>
+        </div>
       ) : (
-        <div className="bg-(--card) border border-(--border) rounded-xl p-12 text-center">
-          <GitBranch size={40} className="text-(--border) mx-auto mb-3" />
-          <p className="text-body font-medium text-(--foreground) mb-1">No paper selected</p>
-          <p className="text-code text-(--muted-foreground)">Search for a paper above to view its citations</p>
+        <div className="flex-1 min-h-0 mx-4 md:mx-6 mb-4 md:mb-6 overflow-y-auto">
+          <CitedByTab />
         </div>
       )}
     </div>
