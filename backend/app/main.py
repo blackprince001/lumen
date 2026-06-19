@@ -9,7 +9,7 @@ from app.api.ai_features import router as ai_features_router
 from app.api.annotations import router as annotations_router
 from app.api.auth import router as auth_router
 from app.api.chat import router as chat_router
-from app.api.citation_canvas import router as citation_canvas_router
+from app.api.citation_map import router as citation_map_router
 from app.api.discovery import router as discovery_router
 from app.api.duplicates import router as duplicates_router
 from app.api.export import router as export_router
@@ -117,12 +117,10 @@ app.add_middleware(
   allow_headers=["*"],
 )
 
-# Auth routes are public (login, refresh). /auth/me and /auth/logout declare their
-# own CurrentUser dependency internally, so we don't attach one at the router level.
+
 app.include_router(auth_router, prefix="/api/v1", tags=["auth"])
 
-# All remaining routers require an authenticated user. Admin-only endpoints add a
-# stricter AdminUser dependency at the route level.
+
 _auth_dep = [Depends(get_current_user)]
 _admin_dep = [Depends(require_admin)]
 
@@ -136,9 +134,9 @@ app.include_router(
   relationships_router, prefix="/api/v1", tags=["relationships"], dependencies=_auth_dep
 )
 app.include_router(
-  citation_canvas_router,
+  citation_map_router,
   prefix="/api/v1",
-  tags=["citation-canvas"],
+  tags=["citation-map"],
   dependencies=_auth_dep,
 )
 app.include_router(
@@ -197,8 +195,6 @@ app.include_router(
   tags=["huggingface"],
   dependencies=_auth_dep,
 )
-
-# PDF files are served via the authenticated GET /papers/{id}/file endpoint
 
 
 @app.get("/")

@@ -19,7 +19,6 @@ from sqlalchemy.orm import relationship
 from app.core.config import settings
 from app.models.base import Base
 
-# Junction table for sessions and discovered papers
 discovery_session_papers = Table(
   "discovery_session_papers",
   Base.metadata,

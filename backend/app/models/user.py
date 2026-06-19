@@ -65,6 +65,3 @@ class User(Base):
   refresh_tokens = relationship(
     "RefreshToken", back_populates="user", cascade="all, delete-orphan"
   )
-  canvas_items = relationship(
-    "CitationCanvasItem", back_populates="user", cascade="all, delete-orphan"
-  )

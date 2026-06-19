@@ -1,7 +1,11 @@
 from app.models.annotation import Annotation
 from app.models.bookmark import Bookmark
 from app.models.chat import ChatMessage, ChatSession
-from app.models.citation_canvas import CitationCanvasItem
+from app.models.citation_map import (
+  CitationMapCache,
+  CitationMapItem,
+  CitationMapPosition,
+)
 from app.models.discovery import DiscoveredPaper, DiscoverySession
 from app.models.duplicate_log import DuplicateDetectionLog
 from app.models.group import Group
@@ -22,7 +26,9 @@ __all__ = [
   "Bookmark",
   "ChatMessage",
   "ChatSession",
-  "CitationCanvasItem",
+  "CitationMapCache",
+  "CitationMapItem",
+  "CitationMapPosition",
   "MultiChatMessage",
   "MultiChatSession",
   "DiscoveredPaper",

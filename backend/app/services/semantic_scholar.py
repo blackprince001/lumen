@@ -38,12 +38,15 @@ class SemanticScholarService:
     if paper.get("authors"):
       authors = [author.get("name") for author in paper.get("authors", [])]
 
+    external_ids = paper.get("externalIds") or {}
     return {
+      "s2_id": paper.get("paperId"),
       "title": paper.get("title"),
-      "doi": paper.get("externalIds", {}).get("DOI"),
-      "arxiv": paper.get("externalIds", {}).get("ArXiv"),
+      "doi": external_ids.get("DOI"),
+      "arxiv": external_ids.get("ArXiv"),
       "url": paper.get("url"),
       "year": paper.get("year"),
+      "citation_count": paper.get("citationCount"),
       "authors": authors,
     }
 
@@ -63,6 +66,8 @@ class SemanticScholarService:
 
     return None
 
+  NEIGHBOR_FIELDS = "paperId,title,url,year,citationCount,authors,externalIds"
+
   async def search_paper(self, title: str) -> str | None:
     """Search for a paper by title and return its Semantic Scholar ID."""
     if not title:
@@ -79,6 +84,119 @@ class SemanticScholarService:
       logger.error("Error searching for paper", title=title, error=str(e))
 
     return None
+
+  async def resolve_paper_id(
+    self,
+    *,
+    doi: str | None = None,
+    arxiv: str | None = None,
+    title: str | None = None,
+  ) -> str | None:
+    """Resolve a paper to its Semantic Scholar id.
+
+    Tries DOI / arXiv identifiers first (exact lookup), then falls back to a
+    title search. Returns ``None`` when the paper cannot be found.
+    """
+    identifier = self._get_identifier(doi=doi, arxiv=arxiv)
+    if identifier:
+      try:
+        data = await self._get(f"paper/{identifier}", {"fields": "paperId"})
+        if data.get("paperId"):
+          return data["paperId"]
+      except Exception as e:
+        logger.warning(
+          "Error resolving paper by identifier", identifier=identifier, error=str(e)
+        )
+
+    if title:
+      return await self.search_paper(title)
+
+    return None
+
+  async def get_neighbors(
+    self, identifier: str, *, direction: str, limit: int = 200
+  ) -> list[dict[str, Any]]:
+    """Fetch references or citations for a paper, paged up to ``limit``.
+
+    ``direction`` is ``"references"`` (works the paper cites) or
+    ``"citations"`` (works that cite the paper). Returns formatted neighbour
+    dicts (see ``_format_paper``), de-duplicated by Semantic Scholar id.
+    """
+    if not identifier or direction not in ("references", "citations"):
+      return []
+
+    inner_key = "citedPaper" if direction == "references" else "citingPaper"
+    page_size = 100
+    results: dict[str, dict[str, Any]] = {}
+    offset = 0
+
+    while offset < limit:
+      params = {
+        "fields": self.NEIGHBOR_FIELDS,
+        "limit": min(page_size, limit - offset),
+        "offset": offset,
+      }
+      try:
+        data = await self._get(f"paper/{identifier}/{direction}", params)
+      except Exception as e:
+        logger.error(
+          "Error fetching neighbors",
+          identifier=identifier,
+          direction=direction,
+          error=str(e),
+        )
+        break
+
+      rows = data.get("data", [])
+      if not rows:
+        break
+
+      for item in rows:
+        inner = item.get(inner_key)
+        if not inner or not inner.get("paperId"):
+          continue
+        formatted = self._format_paper(inner)
+        results[inner["paperId"]] = formatted
+
+      if len(rows) < params["limit"]:
+        break
+      offset += params["limit"]
+
+    return list(results.values())
+
+  async def get_neighbors_page(
+    self, identifier: str, *, direction: str, offset: int = 0, limit: int = 25
+  ) -> tuple[list[dict[str, Any]], bool]:
+    """Fetch a single page of references/citations at ``offset``.
+
+    Returns ``(neighbours, has_more)``. ``has_more`` is true when Semantic
+    Scholar reports a ``next`` offset (or the page came back full).
+    """
+    if not identifier or direction not in ("references", "citations"):
+      return [], False
+
+    inner_key = "citedPaper" if direction == "references" else "citingPaper"
+    params = {"fields": self.NEIGHBOR_FIELDS, "limit": limit, "offset": offset}
+    try:
+      data = await self._get(f"paper/{identifier}/{direction}", params)
+    except Exception as e:
+      logger.error(
+        "Error fetching neighbors page",
+        identifier=identifier,
+        direction=direction,
+        error=str(e),
+      )
+      return [], False
+
+    rows = data.get("data", [])
+    results = []
+    for item in rows:
+      inner = item.get(inner_key)
+      if inner and inner.get("paperId"):
+        results.append(self._format_paper(inner))
+
+    has_more = data.get("next") is not None or len(rows) == limit
+    return results, has_more
 
   async def get_citations(
     self, identifier: str, limit: int = 10
