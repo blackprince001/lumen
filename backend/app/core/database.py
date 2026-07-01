@@ -82,9 +82,11 @@ async def stream_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 async def init_db() -> None:
+  # Schema is owned by Alembic; create_all is a DEBUG-only convenience.
   async with engine.begin() as conn:
     await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-    await conn.run_sync(Base.metadata.create_all)
+    if settings.DEBUG:
+      await conn.run_sync(Base.metadata.create_all)
 
 
 async def close_db() -> None:
