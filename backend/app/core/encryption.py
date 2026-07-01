@@ -1,24 +1,32 @@
 """Symmetric encryption for sensitive data (API keys, etc.).
 
-Uses Fernet (AES-128-CBC) with a key derived from the app's
-JWT_SECRET_KEY to encrypt/decrypt values stored in the database.
+Uses Fernet (AES-128-CBC) keyed from AI_KEY_ENCRYPTION_KEY when set, with a
+JWT_SECRET_KEY-derived key as decrypt-only fallback for legacy values.
 """
 
 import base64
 import hashlib
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 
 from app.core.config import settings
 
 
-def _get_fernet_key() -> bytes:
-  """Derive a Fernet-compatible 32-byte key from JWT_SECRET_KEY."""
-  raw = hashlib.sha256(settings.JWT_SECRET_KEY.encode()).digest()
+def _derive_fernet_key(secret: str) -> bytes:
+  """Derive a Fernet-compatible 32-byte key from an arbitrary secret."""
+  raw = hashlib.sha256(secret.encode()).digest()
   return base64.urlsafe_b64encode(raw)
 
 
-_fernet = Fernet(_get_fernet_key())
+def _build_fernet() -> MultiFernet:
+  keys = []
+  if settings.AI_KEY_ENCRYPTION_KEY:
+    keys.append(Fernet(_derive_fernet_key(settings.AI_KEY_ENCRYPTION_KEY)))
+  keys.append(Fernet(_derive_fernet_key(settings.JWT_SECRET_KEY)))
+  return MultiFernet(keys)
+
+
+_fernet = _build_fernet()
 
 
 def encrypt_value(value: str) -> str:
