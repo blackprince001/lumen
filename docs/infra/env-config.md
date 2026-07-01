@@ -1,0 +1,83 @@
+---
+type: Config
+title: Environment Configuration
+description: The full root .env.example variable list — API keys, DB/Redis components, JWT, Google OAuth/admin, email, deep-research toggles, prod domain vars — plus the frontend build-time vars.
+resource: .env.example
+tags: [infra, config, env]
+timestamp: 2026-06-28T00:00:00Z
+---
+
+The root `.env.example` is the authoritative variable list. `backend/.env.example`
+is a stub that points at it. The backend `Settings` class is documented in
+[/backend/config.md](/backend/config.md).
+
+# API keys
+
+| Variable | Purpose | Line |
+|---|---|---|
+| `GOOGLE_API_KEY` | Server-side key — **embeddings only** (per `config.py:21-23`) | `:4` |
+| `SEMANTIC_SCHOLAR_API_KEY` | Paper discovery source — Semantic Scholar (optional) | `:7` |
+| `SERPAPI_KEY` | Paper discovery source — SerpAPI (Google Scholar) (optional) | `:8` |
+| `OPENALEX_API_KEY` | Paper discovery source — OpenAlex (optional) | `:9` |
+
+# Database & Redis
+
+| Variable | Purpose |
+|---|---|
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` | Postgres connection components (default host `postgres`, port `5432`, db `papers`) |
+| `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | Redis broker for Celery + task status (default host `redis`, port `6379`) |
+
+Or set `DATABASE_URL` directly (`postgresql+asyncpg://…`).
+
+# Backend runtime
+
+| Variable | Purpose |
+|---|---|
+| `DEBUG` | Debug flag (default `false`) |
+| `PORT` | Backend listen port (default `8000`) |
+| `STORAGE_PATH` | Paper file storage path (default `/app/storage/papers`) |
+| `EMBEDDING_MODEL` | Embedding model name (default `gemini-embedding-001`) |
+| `EMBEDDING_DIMENSION` | Embedding vector dim (default `768`) |
+
+# Auth
+
+| Variable | Purpose |
+|---|---|
+| `JWT_SECRET_KEY` / `JWT_ALGORITHM` / `ACCESS_TOKEN_EXPIRE_MINUTES` / `REFRESH_TOKEN_EXPIRE_DAYS` | JWT auth config (HS256, 30-min access, 7-day refresh) |
+| `ADMIN_USERNAME` / `ADMIN_PASSWORD` | Admin credentials (base64-encoded) |
+| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
+
+# URLs
+
+| Variable | Purpose |
+|---|---|
+| `FRONTEND_URL` | Frontend URL for CORS (default `http://testing.maurc.org`) |
+| `APP_URL` | Application base URL |
+
+# Email (optional)
+
+`RESEND_API_KEY` / `EMAIL_FROM` / `EMAIL_ENABLED` (off by default).
+
+# Deep research (experimental, off)
+
+`ENABLE_DEEP_RESEARCH` / `DEEP_RESEARCH_DAILY_CAP` (10/day). The
+`DEEP_RESEARCH_MODEL`/`_MCP_URL`/`_MCP_TOKEN` vars were removed 2026-07-01 —
+the revised [deep-research](/features/deep-research.md) approach won't use an
+external MCP config.
+
+# Prod-only domain vars
+
+`LETSENCRYPT_EMAIL` / `TRAEFIK_DOMAIN` / `BACKEND_DOMAIN` / `FRONTEND_DOMAIN`.
+
+# Frontend build-time vars (`frontend-v2/.env.example`)
+
+| Variable | Purpose |
+|---|---|
+| `VITE_API_URL` | API base (default `http://localhost:8000/api/v1`) — baked at build; passed as Docker build arg |
+| `VITE_GOOGLE_CLIENT_ID` | Google client ID — baked at build; passed as Docker build arg |
+
+# Landing build-time vars (`landing/.env.example`)
+
+| Variable | Purpose |
+|---|---|
+| `VITE_APP_URL` | URL of the deployed Lumen web app — drives all "Open Lumen" / login CTAs |

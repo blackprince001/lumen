@@ -1,0 +1,12 @@
+# Bundle Update Log
+
+## 2026-07-01
+* **Reformation batch 1**: `init_db()` no longer runs `create_all` outside DEBUG ([ADR](/decisions/migrations-own-schema.md)); global HTTP error envelope `{code, message, detail}` via `app/core/error_handlers.py` + `ApiError.code` on the frontend ([ADR](/decisions/http-error-envelope.md)); new `AI_KEY_ENCRYPTION_KEY` with MultiFernet legacy fallback ([ADR](/decisions/separate-encryption-key.md)). Affected [database](/backend/database.md), [security](/backend/security.md), [config](/backend/config.md), [entry-point](/backend/entry-point.md), [api-layer](/frontend/api-layer.md).
+* **Update**: Removed `DEEP_RESEARCH_MODEL`/`_MCP_URL`/`_MCP_TOKEN` from `.env.example` and both compose files — the revised [deep-research](/features/deep-research.md) approach won't need an external MCP config; its plan is marked for architectural revision. JWT hard-fail-in-prod was considered and declined; warn-and-generate stays.
+
+## 2026-06-28
+* **Creation**: Added the [reformation assessment](/reformation.md) (type: Assessment) — a whole-project review of usage-side pitfalls, backend improvements, feature considerations, and additional things to track; references the [deep-research](/features/deep-research.md) feature plan.
+* **Creation**: Added the [deep-research feature plan](/features/deep-research.md) (type: Feature Plan) as the first entry in [/features/](/features/index.md); referenced the existing-but-unmodeled `DEEP_RESEARCH_*` env vars (drift noted in reformation §7).
+* **Update**: `.gitignore` blanket-ignored `*.md` repo-wide, which silently defeated the OKF bundle — added `!docs/`, `!docs/**`, `!CLAUDE.md` negations so the bundle and `CLAUDE.md` are version-controlled. Tracked in reformation §7 item 1.
+* **Update**: Removed `ai-lifecycle.md` (AI-lifecycle concept no longer needed) and added a [features/](/features/index.md) directory, which serves as the home for forward-looking feature-planning concepts. Listed [features](/features/index.md) and [reformation](/reformation.md) in the root [index](/index.md).
+* **Initialization**: Generated the OKF v0.1 knowledge bundle from a full codebase scan. Created the bundle root [index](/index.md), the [architecture overview](/architecture.md), and concept trees under [backend](/backend/), [frontend](/frontend/), [landing](/landing/), [infra](/infra/), and [decisions](/decisions/).
