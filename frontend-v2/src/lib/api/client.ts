@@ -4,13 +4,15 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/
 
 export class ApiError extends Error {
   status: number;
+  code?: string;
   data?: unknown;
 
-  constructor(status: number, message: string, data?: unknown) {
+  constructor(status: number, message: string, data?: unknown, code?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
     this.data = data;
+    this.code = code;
   }
 }
 
@@ -33,16 +35,27 @@ export function getAuthHeaders(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-async function extractErrorMessage(response: Response): Promise<string> {
+interface ExtractedError {
+  message: string;
+  code?: string;
+  data?: unknown;
+}
+
+async function extractError(response: Response): Promise<ExtractedError> {
   try {
-    const data = await response.clone().json();
-    return (data as { detail?: string })?.detail || `HTTP ${response.status}`;
+    const data = (await response.clone().json()) as {
+      message?: string;
+      detail?: string;
+      code?: string;
+    };
+    const message = data?.message || data?.detail || `HTTP ${response.status}`;
+    return { message, code: data?.code, data };
   } catch {
     try {
       const text = await response.text();
-      return text || `HTTP ${response.status}`;
+      return { message: text || `HTTP ${response.status}` };
     } catch {
-      return `HTTP ${response.status}`;
+      return { message: `HTTP ${response.status}` };
     }
   }
 }
@@ -132,7 +145,8 @@ export async function fetchApi<T>(
       // Never try to rescue the auth endpoints themselves — they're the ones
       // we'd call to rescue. Propagate the 401 and let AuthContext decide.
       if (isAuthBootstrapPath(cleanEndpoint)) {
-        throw new ApiError(401, await extractErrorMessage(response));
+        const err = await extractError(response);
+        throw new ApiError(401, err.message, err.data, err.code);
       }
 
       // Attempt silent refresh once
@@ -148,9 +162,9 @@ export async function fetchApi<T>(
     }
 
     if (!response.ok) {
-      const errorMessage = await extractErrorMessage(response);
+      const err = await extractError(response);
       logger.error('Response error:', { url: endpoint, status: response.status });
-      throw new ApiError(response.status, errorMessage);
+      throw new ApiError(response.status, err.message, err.data, err.code);
     }
 
     logger.debug(`${response.status} ${config.method?.toUpperCase() || 'GET'} ${endpoint}`);

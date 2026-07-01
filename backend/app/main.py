@@ -28,6 +28,7 @@ from app.api.user_ai_settings import router as user_ai_settings_router
 from app.api.users import router as users_router
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.error_handlers import register_exception_handlers
 from app.core.logger import configure_logging, get_logger
 from app.dependencies import get_current_user, require_admin
 
@@ -103,6 +104,8 @@ app = FastAPI(
   docs_url=None,
   redoc_url=None,
 )
+
+register_exception_handlers(app)
 
 # CORS — allow configured frontend + localhost for dev
 allowed_origins = [settings.FRONTEND_URL]
