@@ -25,7 +25,6 @@ class Settings(BaseSettings):
   SEMANTIC_SCHOLAR_API_KEY: str = ""
   OPENALEX_API_KEY: str = ""
   ENABLE_DEEP_RESEARCH: bool = False
-  DEEP_RESEARCH_DAILY_CAP: int = 10
   AGENT_MAX_TURNS: int = 25
   DEBUG: bool = False
   PORT: int = 8000
@@ -46,6 +45,7 @@ class Settings(BaseSettings):
 
   # JWT configuration
   JWT_SECRET_KEY: str = ""
+  AI_KEY_ENCRYPTION_KEY: str = ""
   JWT_ALGORITHM: str = "HS256"
   ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
   REFRESH_TOKEN_EXPIRE_DAYS: int = 7

@@ -27,7 +27,6 @@ instantiated at import (`config.py:135`).
 | `SEMANTIC_SCHOLAR_API_KEY` | str | `""` | `:25` | Semantic Scholar discovery provider |
 | `OPENALEX_API_KEY` | str | `""` | `:26` | OpenAlex discovery provider |
 | `ENABLE_DEEP_RESEARCH` | bool | `False` | `:27` | Experimental deep-research feature |
-| `DEEP_RESEARCH_DAILY_CAP` | int | `10` | `:28` | Daily cap for deep research |
 | `AGENT_MAX_TURNS` | int | `25` | `:29` | Max agent turns |
 | `DEBUG` | bool | `False` | `:30` | Debug flag |
 | `PORT` | int | `8000` | `:31` | Backend listen port |
@@ -62,9 +61,9 @@ instantiated at import (`config.py:135`).
 [ai-agent.md](/backend/services/ai-agent.md)), and the comment at
 `config.py:21-23` confirms this. The former `DEEP_RESEARCH_MODEL` /
 `DEEP_RESEARCH_MCP_URL` / `DEEP_RESEARCH_MCP_TOKEN` compose/env drift was
-removed 2026-07-01 — the revised [deep-research](/features/deep-research.md)
-approach won't need them; only `ENABLE_DEEP_RESEARCH` and
-`DEEP_RESEARCH_DAILY_CAP` remain.
+removed 2026-07-01, along with `DEEP_RESEARCH_DAILY_CAP` — the revised
+[deep-research](/features/deep-research.md) approach won't need them; only
+the `ENABLE_DEEP_RESEARCH` flag remains.
 
 # Citations
 

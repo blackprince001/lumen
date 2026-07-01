@@ -39,13 +39,14 @@ docker-compose, and modeled as `Settings` fields in
 | Variable | Default | Purpose |
 |---|---|---|
 | `ENABLE_DEEP_RESEARCH` | `false` | Feature flag (off by default) |
-| `DEEP_RESEARCH_DAILY_CAP` | `10` | Per-user daily research-session cap |
 
-> **Revised 2026-07-01**: `DEEP_RESEARCH_MODEL` / `DEEP_RESEARCH_MCP_URL` /
-> `DEEP_RESEARCH_MCP_TOKEN` were removed from `.env.example` and compose —
-> the agent approach will not depend on an external MCP server or a
-> deployment-level model override. The architecture below still reflects the
-> old MCP-based sketch and needs revision when this feature is taken up.
+> **Revised 2026-07-01**: `DEEP_RESEARCH_DAILY_CAP`, `DEEP_RESEARCH_MODEL`,
+> `DEEP_RESEARCH_MCP_URL`, and `DEEP_RESEARCH_MCP_TOKEN` were removed from
+> `.env.example`, compose, and `Settings` — the agent approach will not
+> depend on an external MCP server, a deployment-level model override, or a
+> daily cap. Only the `ENABLE_DEEP_RESEARCH` flag remains. The architecture
+> below still reflects the old MCP-based sketch and needs revision when this
+> feature is taken up.
 
 # Proposed architecture
 

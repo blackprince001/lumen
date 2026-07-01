@@ -60,10 +60,10 @@ Or set `DATABASE_URL` directly (`postgresql+asyncpg://…`).
 
 # Deep research (experimental, off)
 
-`ENABLE_DEEP_RESEARCH` / `DEEP_RESEARCH_DAILY_CAP` (10/day). The
+`ENABLE_DEEP_RESEARCH` only. The `DEEP_RESEARCH_DAILY_CAP` /
 `DEEP_RESEARCH_MODEL`/`_MCP_URL`/`_MCP_TOKEN` vars were removed 2026-07-01 —
 the revised [deep-research](/features/deep-research.md) approach won't use an
-external MCP config.
+external MCP config or a daily cap.
 
 # Prod-only domain vars
 
