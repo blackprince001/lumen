@@ -1,6 +1,7 @@
 # Bundle Update Log
 
 ## 2026-07-01
+* **Update**: Added repo-root `LICENSE` — PolyForm Noncommercial 1.0.0, owner blackprince001 (reformation "additional" §4). Also removed `DEEP_RESEARCH_DAILY_CAP` from `Settings`, `.env.example`, and both compose files — the revised deep-research approach won't use a daily cap; only `ENABLE_DEEP_RESEARCH` remains. Affected [config](/backend/config.md), [env-config](/infra/env-config.md), [deep-research](/features/deep-research.md).
 * **Reformation batch 1**: `init_db()` no longer runs `create_all` outside DEBUG ([ADR](/decisions/migrations-own-schema.md)); global HTTP error envelope `{code, message, detail}` via `app/core/error_handlers.py` + `ApiError.code` on the frontend ([ADR](/decisions/http-error-envelope.md)); new `AI_KEY_ENCRYPTION_KEY` with MultiFernet legacy fallback ([ADR](/decisions/separate-encryption-key.md)). Affected [database](/backend/database.md), [security](/backend/security.md), [config](/backend/config.md), [entry-point](/backend/entry-point.md), [api-layer](/frontend/api-layer.md).
 * **Update**: Removed `DEEP_RESEARCH_MODEL`/`_MCP_URL`/`_MCP_TOKEN` from `.env.example` and both compose files — the revised [deep-research](/features/deep-research.md) approach won't need an external MCP config; its plan is marked for architectural revision. JWT hard-fail-in-prod was considered and declined; warn-and-generate stays.
 

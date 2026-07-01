@@ -237,7 +237,9 @@ with backend improvements and feature considerations below.
    A `/metrics` (Prometheus) endpoint + Celery Flower-style task metrics would
    meaningfully help self-host ops. Overlaps with feature #7.
 
-4. **No LICENSE file** — README says "personal project, fork and customize,"
+4. ✅ **Done 2026-07-01** (PolyForm Noncommercial 1.0.0 at repo-root
+   `LICENSE`, owner blackprince001 — allows use and personal modification,
+   bans commercial use) — **No LICENSE file** — README says "personal project, fork and customize,"
    but anyone who actually wants to fork/self-host needs a real license
    (MIT/Apache/AGPL). Without it, the default is "all rights reserved."
 
