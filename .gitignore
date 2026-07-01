@@ -6,3 +6,8 @@ letsencrypt/*
 .cursor
 docker-compose.yaml
 *.md
+
+# OKF knowledge bundle + project agent rules — must be version-controlled
+!docs/
+!docs/**
+!CLAUDE.md
