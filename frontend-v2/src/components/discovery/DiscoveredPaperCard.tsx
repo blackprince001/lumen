@@ -12,6 +12,8 @@ interface DiscoveredPaperCardProps {
   isSelected?: boolean;
   onToggleSelect?: () => void;
   index?: number;
+  /** Calibrated 0–1 composite (Jev-led) — preferred over the provider scale. */
+  relevanceScore?: number | null;
 }
 
 export function DiscoveredPaperCard({
@@ -20,8 +22,12 @@ export function DiscoveredPaperCard({
   isSelected = false,
   onToggleSelect,
   index: _index = 0,
+  relevanceScore,
 }: DiscoveredPaperCardProps) {
   const [showDialog, setShowDialog] = useState(false);
+  // Composite (Jev-led, 0–1, comparable) wins when present; otherwise the
+  // provider's own scale with its legacy normalization.
+  const displayScore = relevanceScore ?? paper.relevance_score;
 
   const titleHash = paper.title.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
   const theme = getPaperTheme(titleHash);
@@ -124,7 +130,7 @@ export function DiscoveredPaperCard({
 
             <div className="flex items-center gap-3 text-caption opacity-60" style={{ color: theme.text }}>
               {paper.citation_count !== undefined && <span>{paper.citation_count} citations</span>}
-              {paper.relevance_score !== undefined && (
+              {displayScore !== undefined && displayScore !== null && (
                 <span className="font-semibold opacity-100">
                   {/* Sources disagree on scale: some send 0–1, OpenAlex sends
                       unbounded scores — normalize and cap so it reads as a
@@ -132,7 +138,7 @@ export function DiscoveredPaperCard({
                   {Math.min(
                     100,
                     Math.round(
-                      paper.relevance_score <= 1 ? paper.relevance_score * 100 : paper.relevance_score,
+                      displayScore <= 1 ? displayScore * 100 : displayScore,
                     ),
                   )}
                   % relevant

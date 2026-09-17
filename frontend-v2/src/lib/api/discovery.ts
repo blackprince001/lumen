@@ -138,6 +138,10 @@ export interface PaperRelevanceExplanation {
   relevance: string;
   key_contribution: string;
   relevance_score: number;
+  /** Calibrated Jev relevance (0–1), present when the rerank gate ran. */
+  jev_relevance?: number | null;
+  /** Code-blended composite (0–1), present when the rerank gate ran. */
+  composite_score?: number | null;
 }
 
 export interface RelevanceExplanations {

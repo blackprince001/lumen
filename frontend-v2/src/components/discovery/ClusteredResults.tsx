@@ -122,7 +122,7 @@ export function ClusteredResults({ clustering, papers, relevanceExplanations = [
         <div className="grid grid-cols-1 gap-3">
           {active.papers.map(({ paper, relevance }) => (
             <div key={`${paper.source}-${paper.external_id}`} className="flex flex-col gap-2">
-              <DiscoveredPaperCard paper={paper} />
+              <DiscoveredPaperCard paper={paper} relevanceScore={relevance?.composite_score} />
               {relevance && (
                 <div className="flex items-start gap-2 rounded-lg border border-(--border) bg-(--muted) px-3 py-2">
                   <SparklesIcon className="w-4 h-4 shrink-0 text-(--muted-foreground) mt-0.5" />

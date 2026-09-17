@@ -47,12 +47,13 @@ CITATION_UNSUPPORTED = "unsupported"
 _CITATION_LINK_RE = re.compile(r"\[[^]]+\]\((https?://[^)\s]+)\)", re.IGNORECASE)
 _SENTENCE_SPLIT_RE = re.compile(r"(?<=[.?!])\s+")
 
-# Discovery rerank (slice 3): weights are code policy, tunable without
-# rewording questions. Jev carries relevance; the BYO LLM score, citation
-# count, and recency are supporting signals only.
+# Discovery rerank (slice 3): relevance is a Jev judgment — the BYO LLM's
+# per-paper score carries zero weight so ordering never depends on provider
+# quality. The LLM's prose (why/key_contribution) is still displayed; only
+# the number is Jev-led. Citations/recency are supporting code signals.
 RERANK_WEIGHTS: dict[str, float] = {
-  "jev": 0.60,
-  "llm": 0.25,
+  "jev": 0.85,
+  "llm": 0.0,
   "citations": 0.10,
   "recency": 0.05,
 }

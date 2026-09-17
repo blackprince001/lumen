@@ -30,9 +30,10 @@ behind the `BaseDiscoveryProvider` ABC (`base_provider.py`) with a shared
   exposed on the discovery router — see [/backend/api/discovery.md](/backend/api/discovery.md).
 - `ai_search_service.py` — AI-enhanced search using the user's configured
   provider; powers `/discovery/ai-search` and the `/ai-search/stream` SSE
-  endpoint. Relevance explanations are reordered by a composite score
-  (`services/judgments.py`): calibrated Jev relevance first, BYO LLM score,
-  citation count, and recency blended in code; fail-soft keeps LLM order.
+  endpoint. Clustering and overviews stay with the BYO LLM; relevance is a
+  Jev judgment — explanations reorder by a composite score (0.85 Jev, 0.10
+  citations, 0.05 recency; the LLM's own score carries zero weight) and the
+  card's % badge shows the composite with provider-scale fallback.
 - `provider_registry.py` — `provider_registry` singleton for discovery
   providers.
 

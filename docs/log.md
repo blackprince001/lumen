@@ -2,6 +2,7 @@
 
 ## 2026-09-17
 
+* **Update**: Relevance fully Jev-scored (LLM weight zeroed; prose still LLM), card % badge shows the composite, `TYPESAFE_API_KEY` wired through dev/prod compose on all four backend services plus `.env.example`, `uv.lock` updated so the image build resolves `typesafe-sdk` — run needs only the key set.
 * **Update**: Chat-ref manifest annotation — `annotate_manifest` inside `resolve_manifest` (covers chat, threads, multi-chat) adds per-entry `verification` from claim-vs-snippet Choice plus a long-quote prefilter that only ever downgrades to logged-only; live smoke verified/contradicted — affected backend services catalog.
 * **Update**: Jev citation check on the worker completion gate (slice 2b) — shared `citation_claims_for_report` matcher (normalizer parity-tested), high-confidence contradictions pause under existing `unsupported_citation` handling with resume intact; ask path refactored onto the same helper — affected [/features/deep-research.md](/features/deep-research.md).
 * **Update**: Router golden eval (50 requests, 40 tune / 10 holdout) — tune 0.97, holdout 1.00, zero deep-research auto-routes; single miss (r32) is a borderline open-question routed safe, deliberately untuned — new `backend/evals/golden/` harness gates releases.
