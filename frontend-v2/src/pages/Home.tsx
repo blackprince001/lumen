@@ -7,16 +7,65 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { PaperCard } from '@/components/PaperCard';
 import { ExpandedInput } from '@/components/ExpandedInput';
 import { papersApi } from '@/lib/api/papers';
+import { routeApi, type RouteDestination, type RouteResult } from '@/lib/api/route';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { LibraryIllustration } from '@/components/illustrations';
 
+const DEST_LABEL: Record<Exclude<RouteDestination, 'unsupported'>, string> = {
+  library_search: 'Your library',
+  discovery_search: 'New papers',
+  ai_search: 'AI overview',
+  deep_research: 'Deep dive',
+};
+
+function destTarget(dest: RouteDestination, term: string): { to: string; state?: unknown } {
+  const receipt = `via=router&route=${dest}`;
+  switch (dest) {
+    case 'discovery_search':
+    case 'ai_search':
+      return { to: '/discovery', state: { routedQuery: term, receipt } };
+    case 'deep_research':
+      return { to: '/deep-research' };
+    case 'library_search':
+    case 'unsupported':
+    default:
+      return { to: `/search?q=${encodeURIComponent(term)}&${receipt}` };
+  }
+}
+
 export default function Home() {
   const [query, setQuery] = useState('');
+  const [routing, setRouting] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ result: RouteResult; term: string } | null>(null);
   const navigate = useNavigate();
 
-  const handleSearch = (q?: string) => {
+  const go = (dest: RouteDestination, term: string, conf: number) => {
+    const target = destTarget(dest, term);
+    if (target.state) {
+      navigate(target.to, { state: { ...(target.state as object), conf } });
+    } else {
+      navigate(`${target.to}${target.to.includes('?') ? '&' : '?'}conf=${conf.toFixed(2)}`);
+    }
+  };
+
+  const handleSearch = async (q?: string) => {
     const term = (q ?? query).trim();
-    if (term) navigate(`/search?q=${encodeURIComponent(term)}`);
+    if (!term || routing) return;
+    // Fail-soft: router error reproduces today's behavior exactly.
+    setRouting(true);
+    setSuggestions(null);
+    try {
+      const result = await routeApi.route(term);
+      if (result.action === 'suggest') {
+        setSuggestions({ result, term });
+      } else {
+        go(result.destination, term, result.confidence);
+      }
+    } catch {
+      navigate(`/search?q=${encodeURIComponent(term)}`);
+    } finally {
+      setRouting(false);
+    }
   };
 
   const { data, isLoading } = useQuery({
@@ -45,13 +94,43 @@ export default function Home() {
         <div className="w-full max-w-2xl">
           <ExpandedInput
             value={query}
-            onChange={setQuery}
+            onChange={(v) => {
+              setQuery(v);
+              setSuggestions(null);
+            }}
             onSubmit={() => handleSearch()}
             placeholder="Search your library..."
             submitLabel="Search"
             submitIcon={<SearchIcon size="sm" />}
             autoFocus
+            loading={routing}
+            disabled={routing}
           />
+          {suggestions && (
+            <div className="mt-3 flex flex-wrap items-center gap-2" aria-live="polite">
+              <span className="text-caption text-(--muted-foreground)">
+                Where should this go?
+              </span>
+              {(Object.keys(DEST_LABEL) as (keyof typeof DEST_LABEL)[])
+                .sort(
+                  (a, b) =>
+                    (suggestions.result.probabilities[b] ?? 0) -
+                    (suggestions.result.probabilities[a] ?? 0),
+                )
+                .map((dest) => (
+                  <button
+                    key={dest}
+                    type="button"
+                    onClick={() => go(dest, suggestions.term, suggestions.result.probabilities[dest] ?? 0)}
+                    className="h-8 px-3 text-caption font-medium rounded-lg bg-(--muted) text-(--foreground) hover:bg-(--border) transition-colors"
+                  >
+                    {DEST_LABEL[dest]}
+                    {suggestions.result.probabilities[dest] !== undefined &&
+                      ` · ${Math.round(suggestions.result.probabilities[dest] * 100)}%`}
+                  </button>
+                ))}
+            </div>
+          )}
         </div>
       </div>
 

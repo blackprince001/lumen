@@ -49,6 +49,9 @@ export type {
 export { searchApi } from './search';
 export type { SearchRequest, SearchResultItem, SearchResponse } from './search';
 
+export { routeApi } from './route';
+export type { RouteDestination, RouteAction, RouteResult } from './route';
+
 export { groupsApi } from './groups';
 export type { Group, GroupCreate, GroupUpdate } from './groups';
 

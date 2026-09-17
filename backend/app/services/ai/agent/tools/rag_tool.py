@@ -19,8 +19,30 @@ from app.services.ai.agent.context import get_byo_context
 from app.services.ai.agent.tools import rollback_quietly, with_timeout
 from app.services.deep_research.evidence import collect_context_evidence
 from app.services.embeddings import embedding_service
+from app.services.judgments import (
+  ROUTE_CONFLICT,
+  ROUTE_INCLUDE,
+  gate_passages,
+)
+from app.services.judgments import (
+  is_configured as judgments_configured,
+)
 
 logger = get_logger(__name__)
+
+
+def _format_paper_row(row, excerpt: str | None, score: float, index: int) -> list[str]:
+  lines = [f"{index}. [{row.id}] {row.title} (similarity: {score:.3f})"]
+  meta = row.metadata_json if isinstance(row.metadata_json, dict) else {}
+  row_authors = meta.get("authors")
+  if row_authors:
+    if isinstance(row_authors, (list, tuple)):
+      row_authors = ", ".join(str(a) for a in row_authors if a)
+    lines.append(f"   Authors: {str(row_authors)[:100]}")
+  if excerpt:
+    lines.append(f"   Excerpt: {excerpt}...")
+  lines.append("")
+  return lines
 
 
 @function_tool
@@ -81,31 +103,80 @@ async def semantic_search(query: str, limit: int = 5) -> str:
     if not rows:
       return "No semantically similar papers found."
 
+    # Fetch excerpts once — used both for Jev state and the formatted output.
+    excerpts: dict[int, str] = {}
+    for row in rows:
+      paper = await db.get(Paper, row.id)
+      if paper and paper.content_text:
+        excerpts[row.id] = paper.content_text[:500].replace("\n", " ")
+
+    gated: dict[str, dict] | None = None
+    if judgments_configured():
+      passages = [
+        {
+          "id": str(row.id),
+          "title": row.title or "Untitled",
+          "text": excerpts.get(row.id, row.title or ""),
+          "source_type": "library",
+        }
+        for row in rows
+      ]
+      gated = await gate_passages(query, passages)
+
+    # Fail-soft: None (off/error) or {} (every judgment failed) keeps the
+    # legacy unfiltered format. A non-empty gate always carries per-passage
+    # routes, so genuine all-excluded results still take the gated path.
+    if not gated:
+      collect_context_evidence(
+        ctx.extra,
+        [
+          {"source": "library", "external_id": str(row.id), "title": row.title or "Untitled"}
+          for row in rows
+        ],
+      )
+      lines = [f"Top {len(rows)} semantically similar paper(s):\n"]
+      for i, row in enumerate(rows, 1):
+        score = float(row.similarity) if row.similarity is not None else 0.0
+        lines.extend(_format_paper_row(row, excerpts.get(row.id), score, i))
+      return "\n".join(lines).strip()
+
+    by_id = {str(row.id): row for row in rows}
+    kept = [pid for pid, s in gated.items() if s["route"] == ROUTE_INCLUDE]
+    conflicts = [pid for pid, s in gated.items() if s["route"] == ROUTE_CONFLICT]
+    dropped = len(rows) - len(kept) - len(conflicts)
     collect_context_evidence(
       ctx.extra,
       [
-        {"source": "library", "external_id": str(row.id), "title": row.title or "Untitled"}
-        for row in rows
+        {"source": "library", "external_id": pid, "title": by_id[pid].title or "Untitled"}
+        for pid in (*kept, *conflicts)
+        if pid in by_id
       ],
     )
-    lines = [f"Top {len(rows)} semantically similar paper(s):\n"]
-    for i, row in enumerate(rows, 1):
-      score = float(row.similarity) if row.similarity is not None else 0.0
-      lines.append(f"{i}. [{row.id}] {row.title} (similarity: {score:.3f})")
-      meta = row.metadata_json if isinstance(row.metadata_json, dict) else {}
-      row_authors = meta.get("authors")
-      if row_authors:
-        if isinstance(row_authors, (list, tuple)):
-          row_authors = ", ".join(str(a) for a in row_authors if a)
-        lines.append(f"   Authors: {str(row_authors)[:100]}")
-
-      paper = await db.get(Paper, row.id)
-      if paper and paper.content_text:
-        excerpt = paper.content_text[:500].replace("\n", " ")
-        lines.append(f"   Excerpt: {excerpt}...")
-
-      lines.append("")
-
+    logger.info(
+      "rag_gate_routed", kept=len(kept), conflicting=len(conflicts), dropped=dropped
+    )
+    if not kept and not conflicts:
+      return (
+        f"Top {len(rows)} semantically similar paper(s) were all filtered "
+        f"as off-topic or unusable ({dropped} dropped). No evidence to answer from — "
+        "say so rather than guessing."
+      )
+    lines = [
+      f"Top {len(rows)} semantically similar paper(s) "
+      f"(Jev-gated: {len(kept)} kept, {len(conflicts)} conflicting, {dropped} dropped):\n"
+    ]
+    if kept:
+      lines.append("Accepted evidence:")
+      for i, pid in enumerate(kept, 1):
+        row = by_id[pid]
+        score = float(row.similarity) if row.similarity is not None else 0.0
+        lines.extend(_format_paper_row(row, excerpts.get(row.id), score, i))
+    if conflicts:
+      lines.append("Conflicting evidence (disputes the query premise — do not merge with accepted):")
+      for i, pid in enumerate(conflicts, 1):
+        row = by_id[pid]
+        score = float(row.similarity) if row.similarity is not None else 0.0
+        lines.extend(_format_paper_row(row, excerpts.get(row.id), score, i))
     return "\n".join(lines).strip()
 
   except Exception as e:

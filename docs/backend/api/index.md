@@ -1,6 +1,6 @@
 # API Routers
 
-22 FastAPI routers, one `APIRouter()` per feature domain, all mounted under
+23 FastAPI routers, one `APIRouter()` per feature domain, all mounted under
 `/api/v1` (some with additional sub-prefixes). Auth wiring: `auth_router` has
 no dependency; `users_router` uses `require_admin`; all others use
 `get_current_user`. See [entry-point.md](/backend/entry-point.md) for the
@@ -17,6 +17,7 @@ The routers are grouped below into 7 domain concept files by function:
 * [Discovery](discovery.md) - academic source search, AI search stream, recommendations, HuggingFace Daily Papers. (2 routers)
 * [Deep Research](deep-research.md) - long-running, source-cited research sessions on the `research` queue with durable generations, follow-ups, cancellation, archive search, and cursor-based SSE. (1 router)
 * [Infra & Stats](infra.md) - search, saved searches, statistics, Celery task status, dead-letter queue. (3 routers)
+* [Intent Route](route.md) - home-omnibox intent routing (`POST /route` → destination + route/suggest/fallback action). (1 router)
 
 # Conventions
 

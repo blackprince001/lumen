@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.logger import get_logger
 from app.services.access import apply_visible_papers_filter
+from app.services.judgments import annotate_manifest
 
 logger = get_logger(__name__)
 
@@ -56,7 +57,9 @@ async def resolve_manifest(
     entry = await _resolve_one(db, user_id, kind, rid, paper_id=paper_id)
     if entry is not None:
       entries.append(entry)
-  return entries
+  # Semantic pass over model-cited entries (chat refs): additive
+  # ``verification`` per entry, fail-soft to the unresolved manifest.
+  return await annotate_manifest(content, entries)
 
 
 async def resolve_batch(

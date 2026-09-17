@@ -64,6 +64,11 @@ from app.services.deep_research.orchestrator import verify_report
 from app.services.deep_research.provider import resolve_generation_provider
 from app.services.deep_research.state import check_transition, payload_bytes
 from app.services.deep_research.telemetry import record_metric
+from app.services.judgments import (
+  check_citations,
+  citation_claims_for_report,
+  decide_citation_outcome,
+)
 
 logger = get_logger(__name__)
 
@@ -614,6 +619,26 @@ async def _run_research(
           session_id,
           "unsupported_citation",
           "Research report contains citations that are not present in its evidence ledger.",
+        )
+        return "paused"
+      # Semantic citation gate (slice 2b): the ledger may contain the link
+      # while contradicting the claim staked on it. Only a high-confidence
+      # contradiction pauses (resume keeps working); anything weaker
+      # completes as today and is logged for eval.
+      semantic_claims = citation_claims_for_report(
+        report,
+        [
+          {"url": item.url, "title": item.title, "source_type": item.source_type}
+          for item in evidence
+        ],
+      )
+      if decide_citation_outcome(await check_citations(semantic_claims)) == "replace":
+        await _pause(
+          db,
+          session_id,
+          "unsupported_citation",
+          "Research report contains citations its evidence ledger contradicts. "
+          "Resume to continue anyway, or start a follow-up to gather better sources.",
         )
         return "paused"
       existing_assistant = (

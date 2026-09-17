@@ -1,0 +1,50 @@
+{"id": "r01", "query": "Attention Is All You Need", "expected": "library_search", "kind": "exact"}
+{"id": "r02", "query": "find papers in my library about diffusion models", "expected": "library_search", "kind": "exact"}
+{"id": "r03", "query": "do I have anything on retrieval augmented generation?", "expected": "library_search", "kind": "exact"}
+{"id": "r04", "query": "what does the BERT paper say about masked language modeling?", "expected": "library_search", "kind": "exact"}
+{"id": "r05", "query": "show me my saved papers on protein folding", "expected": "library_search", "kind": "exact"}
+{"id": "r06", "query": "papers by Vaswani in my collection", "expected": "library_search", "kind": "exact"}
+{"id": "r07", "query": "which of my papers discuss chain-of-thought prompting?", "expected": "library_search", "kind": "exact"}
+{"id": "r08", "query": "my notes on transformer interpretability", "expected": "library_search", "kind": "exact"}
+{"id": "r09", "query": "did I save anything about LoRA fine-tuning?", "expected": "library_search", "kind": "exact"}
+{"id": "r10", "query": "the survey paper on graph neural networks I added last week", "expected": "library_search", "kind": "exact"}
+{"id": "r11", "query": "what did the authors conclude in my RLHF paper?", "expected": "library_search", "kind": "exact"}
+{"id": "r12", "query": "list my papers tagged with causal inference", "expected": "library_search", "kind": "exact"}
+{"id": "r13", "query": "recent papers on retrieval augmented generation", "expected": "discovery_search", "kind": "exact"}
+{"id": "r14", "query": "find papers by Yann LeCun from 2024", "expected": "discovery_search", "kind": "exact"}
+{"id": "r15", "query": "latest advances in diffusion models", "expected": "discovery_search", "kind": "exact"}
+{"id": "r16", "query": "survey papers on mechanistic interpretability", "expected": "discovery_search", "kind": "exact"}
+{"id": "r17", "query": "papers about mixture of experts published after 2023", "expected": "discovery_search", "kind": "exact"}
+{"id": "r18", "query": "who is publishing on AI alignment this year?", "expected": "discovery_search", "kind": "exact"}
+{"id": "r19", "query": "semantic scholar papers citing Attention Is All You Need", "expected": "discovery_search", "kind": "exact"}
+{"id": "r20", "query": "new benchmarks for long-context LLMs", "expected": "discovery_search", "kind": "exact"}
+{"id": "r21", "query": "arxiv papers on test-time compute scaling", "expected": "discovery_search", "kind": "exact"}
+{"id": "r22", "query": "highly cited papers on constitutional AI", "expected": "discovery_search", "kind": "exact"}
+{"id": "r23", "query": "open access papers replicating AlphaFold results", "expected": "discovery_search", "kind": "exact"}
+{"id": "r24", "query": "workshops on LLM evaluation at NeurIPS 2025", "expected": "discovery_search", "kind": "exact"}
+{"id": "r25", "query": "how does RAG compare to fine-tuning for domain QA?", "expected": "ai_search", "kind": "exact"}
+{"id": "r26", "query": "what are the tradeoffs between sparse and dense retrievers?", "expected": "ai_search", "kind": "exact"}
+{"id": "r27", "query": "explain why transformers need positional encodings", "expected": "ai_search", "kind": "exact"}
+{"id": "r28", "query": "what methods exist for reducing hallucinations?", "expected": "ai_search", "kind": "exact"}
+{"id": "r29", "query": "is RLHF better than DPO for instruction following?", "expected": "ai_search", "kind": "exact"}
+{"id": "r30", "query": "summarize the debate on scaling laws vs architectural innovation", "expected": "ai_search", "kind": "exact"}
+{"id": "r31", "query": "how do diffusion models differ from flow matching?", "expected": "ai_search", "kind": "exact"}
+{"id": "r32", "query": "what evidence is there that chain-of-thought helps math reasoning?", "expected": "ai_search", "kind": "exact"}
+{"id": "r33", "query": "why do LLMs struggle with long-context recall?", "expected": "ai_search", "kind": "exact"}
+{"id": "r34", "query": "which embedding models work best for scientific text?", "expected": "ai_search", "kind": "exact"}
+{"id": "r35", "query": "write a thorough literature review on diffusion models with verified sources", "expected": "deep_research", "kind": "exact"}
+{"id": "r36", "query": "investigate everything published on mechanistic interpretability and synthesize it", "expected": "deep_research", "kind": "exact"}
+{"id": "r37", "query": "comprehensive survey of alignment techniques with citations", "expected": "deep_research", "kind": "exact"}
+{"id": "r38", "query": "deeply research the history of word embeddings from 2013 to today", "expected": "deep_research", "kind": "exact"}
+{"id": "r39", "query": "produce a source-backed report comparing all RLHF alternatives", "expected": "deep_research", "kind": "exact"}
+{"id": "r40", "query": "map the full research landscape of AI safety research", "expected": "deep_research", "kind": "exact"}
+{"id": "r41", "query": "hello", "expected": null, "kind": "safe"}
+{"id": "r42", "query": "what time is it?", "expected": "unsupported", "kind": "exact"}
+{"id": "r43", "query": "help", "expected": null, "kind": "safe"}
+{"id": "r44", "query": "papers", "expected": null, "kind": "safe"}
+{"id": "r45", "query": "what is the recommended access token lifetime?", "expected": null, "kind": "safe"}
+{"id": "r46", "query": "change my password", "expected": "unsupported", "kind": "exact"}
+{"id": "r47", "query": "transformers", "expected": null, "kind": "safe"}
+{"id": "r48", "query": "thanks!", "expected": "unsupported", "kind": "exact"}
+{"id": "r49", "query": "find recent work on sparse autoencoders for interpretability", "expected": "discovery_search", "kind": "exact"}
+{"id": "r50", "query": "compare my saved RLHF papers against the newest DPO results", "expected": null, "kind": "safe"}

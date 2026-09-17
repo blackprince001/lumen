@@ -32,6 +32,10 @@ dependencies = [
     "google-search-results>=2.4.2",
     "scalar-fastapi>=1.8.2",
     "pymupdf>=1.27.2.3",
+    # TypeSafe Jev (System One judgments) — optional at runtime; judgments.py
+    # fails closed when the SDK or key is absent. Install with:
+    #   uv add typesafe-sdk
+    "typesafe-sdk>=0.5.7",
 ]
 
 [dependency-groups]

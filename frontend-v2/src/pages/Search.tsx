@@ -82,6 +82,8 @@ export default function Search() {
   const results = data?.results ?? [];
   const semanticUnavailable =
     capabilities?.semantic_available === false || data?.semantic_available === false;
+  const routedVia = searchParams.get('via') === 'router' ? searchParams.get('route') : null;
+  const routedConf = searchParams.get('conf');
 
   return (
     <div className="max-w-content mx-auto px-6 py-8">
@@ -91,6 +93,27 @@ export default function Search() {
         <p className="text-body text-(--muted-foreground)">
           Find papers by content, metadata, or meaning
         </p>
+        {routedVia && (
+          <p className="text-caption text-(--muted-foreground) mt-2">
+            Routed to your library{routedConf ? ` · confidence ${Math.round(parseFloat(routedConf) * 100)}%` : ''}.
+            {' '}Not right?{' '}
+            <Link
+              to="/discovery"
+              state={{ routedQuery: query }}
+              className="font-medium underline underline-offset-2 hover:text-(--foreground)"
+            >
+              Try new papers
+            </Link>{' '}
+            or{' '}
+            <Link
+              to="/deep-research"
+              className="font-medium underline underline-offset-2 hover:text-(--foreground)"
+            >
+              start a deep dive
+            </Link>
+            .
+          </p>
+        )}
       </div>
 
       {/* Search bar */}

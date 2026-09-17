@@ -34,7 +34,7 @@ run config; the run is the SDK's `Runner`.
 |---|---|
 | `paper_tools.py` | paper text / metadata / annotations / citation retrieval |
 | `chat_history.py` | chat history retrieval for multi-turn coherence |
-| `rag_tool.py` | `semantic_search` via pgvector cosine similarity (768-dim) |
+| `rag_tool.py` | `semantic_search` via pgvector cosine similarity (768-dim), post-retrieval **Jev RAG gate** (`services/judgments.py`: 4 Nouls → include/conflict/exclude, fail-closed to unfiltered on missing key/SDK/error) |
 | `discovery_tools.py` | arXiv, Semantic Scholar, Google Scholar, OpenAlex search + Google via SerpAPI with DuckDuckGo fallback |
 | `figure_tools.py` | render figures → PNG → send to a vision-capable provider |
 

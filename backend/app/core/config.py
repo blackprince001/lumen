@@ -20,6 +20,14 @@ class Settings(BaseSettings):
   EMBEDDING_DIMENSION: int = 768
 
   GOOGLE_API_KEY: str = ""
+  # TypeSafe Jev (System One judgments) — server-side only
+  TYPESAFE_API_KEY: str = ""
+  TYPESAFE_MODEL: str = "jev-1.13.0"
+  TYPESAFE_TIMEOUT_S: float = 8.0
+  TYPESAFE_ENABLED: bool = True
+  TYPESAFE_MAX_PASSAGES: int = 12
+  TYPESAFE_MAX_RERANK: int = 20
+  TYPESAFE_MAX_DEDUP_PAIRS: int = 10
   SERPAPI_KEY: str = ""
   SEMANTIC_SCHOLAR_API_KEY: str = ""
   OPENALEX_API_KEY: str = ""

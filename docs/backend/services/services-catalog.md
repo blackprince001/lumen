@@ -30,7 +30,7 @@ subtrees are in [ai-agent.md](/backend/services/ai-agent.md) and
 | `citation_map_service.py` | Builds citation-map graph data; integrates **Semantic Scholar** for citation neighbors |
 | `graph_service.py` | Citation-graph aggregation |
 | `references.py` | Reference parsing utilities |
-| `reference_resolver.py` | Resolves inline `ref:<kind>/<id>` tokens into structured preview manifests |
+| `reference_resolver.py` | Resolves inline `ref:<kind>/<id>` tokens into structured preview manifests; Jev semantic pass (`services/judgments.py` `annotate_manifest`) adds per-entry `verification` (verified/contradicted/unsupported/unreviewed), fail-soft to the unresolved manifest |
 
 # Search & embeddings
 

@@ -31,6 +31,11 @@ from app.services.deep_research.state import (
   PayloadLimitExceeded,
   require_bounded_payload,
 )
+from app.services.judgments import (
+  check_citations,
+  citation_claims_for_report,
+  decide_citation_outcome,
+)
 
 FollowUpMode = Literal["ask", "research"]
 MAX_ASK_CONTEXT_BYTES = 48 * 1024
@@ -499,6 +504,24 @@ async def answer_from_evidence(
         source_ids = []
       else:
         verification = "evidence_scoped"
+        # Semantic citation check (slice 2): the syntactic gate above only
+        # proves a link is in the ledger, not that the cited source supports
+        # the claim staked on it. Fail-soft: None (off/error) keeps the
+        # syntactic verdict; low-confidence flags never block on their own.
+        claims = citation_claims_for_report(
+          answer,
+          [
+            {"url": item.url, "title": item.title, "source_type": item.source_type}
+            for item in evidence
+          ],
+        )
+        if decide_citation_outcome(await check_citations(claims)) == "replace":
+          answer = (
+            "I couldn't verify that answer against this research's stored evidence. "
+            "Try Research further to gather supporting sources."
+          )
+          verification = "unsupported_citation"
+          source_ids = []
     except asyncio.CancelledError:
       raise
     except FollowUpExecutionError:

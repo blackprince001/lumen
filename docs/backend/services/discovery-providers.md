@@ -24,10 +24,15 @@ behind the `BaseDiscoveryProvider` ABC (`base_provider.py`) with a shared
 
 - `discovery_service.py` — orchestrates multi-source search; registers the
   Google Scholar provider only when `SERPAPI_KEY` is set (`discovery_service.py:498`).
+  DOI + exact-title dedup runs synchronously, then a bounded Jev near-duplicate
+  pass (`services/judgments.py`: token-overlap prefilter, same-paper Choice,
+  high-confidence merges only, fail-soft keeps all).
   exposed on the discovery router — see [/backend/api/discovery.md](/backend/api/discovery.md).
 - `ai_search_service.py` — AI-enhanced search using the user's configured
   provider; powers `/discovery/ai-search` and the `/ai-search/stream` SSE
-  endpoint.
+  endpoint. Relevance explanations are reordered by a composite score
+  (`services/judgments.py`): calibrated Jev relevance first, BYO LLM score,
+  citation count, and recency blended in code; fail-soft keeps LLM order.
 - `provider_registry.py` — `provider_registry` singleton for discovery
   providers.
 

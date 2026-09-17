@@ -44,7 +44,13 @@ const DISCOVERY_PROMPTS = [
 ];
 
 export default function Discovery() {
-  const [query, setQuery] = useState('');
+  const location = useLocation();
+  // Router prefill (e.g. from the home omnibox): derived during render so
+  // no effect setState is needed. Same-route re-navigation with fresh state
+  // has no UI path — every entry here is a fresh mount.
+  const [query, setQuery] = useState(
+    () => (location.state as { routedQuery?: string } | null)?.routedQuery ?? '',
+  );
   const [selectedSources, setSelectedSources] = useState<SourceId[]>(['arxiv', 'semantic_scholar', 'google_scholar']);
   const [showFilters, setShowFilters] = useState(false);
   const [yearFrom, setYearFrom] = useState('');
@@ -55,11 +61,16 @@ export default function Discovery() {
   const [citationPaper, setCitationPaper] = useState<DiscoveredPaperPreview | null>(null);
   const [loadedSession, setLoadedSession] = useState<LoadedSession | null>(null);
 
-  const location = useLocation();
   const queryClient = useQueryClient();
   const { isSearching, isComplete, status, timeline, allPapers, queryUnderstanding, overview, clustering, relevanceExplanations, error, search } = useAISearchStream();
 
   // Restore session from archive navigation
+  useEffect(() => {
+    const state = location.state as { routedQuery?: string } | null;
+    // One-shot prefill: clear so back-navigation doesn't re-apply it.
+    // (The query itself is derived in useState above — no setState here.)
+    if (state?.routedQuery) window.history.replaceState({}, '');
+  }, [location.state]);
   useEffect(() => {
     const state = location.state as { restoreSessionId?: number } | null;
     if (!state?.restoreSessionId) return;

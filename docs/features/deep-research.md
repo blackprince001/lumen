@@ -42,7 +42,12 @@ gate to `false` only while stopping new starts and resumes.
   delivery and recover abandoned workers.
 - **Evidence:** authorized tool results populate the evidence ledger. A report
   link alone never becomes evidence. The verifier checks report links against
-  that ledger before completion.
+  that ledger before completion. Both the worker completion gate and
+  Ask-this-research answers get a Jev semantic pass
+  (`services/judgments.py`, shared `citation_claims_for_report` matcher): a
+  citation the ledger contradicts at high confidence pauses the run / replaces
+  the answer under the existing `unsupported_citation` handling; thin-context
+  unsupported flags are logged, never blocking.
 - **Conversation:** Ask this research reads the stored report and verified
   evidence with an agent that has no tools. Research further creates a new
   generation with the pinned provider and a fresh bounded investigation.

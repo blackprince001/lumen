@@ -1,5 +1,15 @@
 # Bundle Update Log
 
+## 2026-09-17
+
+* **Update**: Chat-ref manifest annotation — `annotate_manifest` inside `resolve_manifest` (covers chat, threads, multi-chat) adds per-entry `verification` from claim-vs-snippet Choice plus a long-quote prefilter that only ever downgrades to logged-only; live smoke verified/contradicted — affected backend services catalog.
+* **Update**: Jev citation check on the worker completion gate (slice 2b) — shared `citation_claims_for_report` matcher (normalizer parity-tested), high-confidence contradictions pause under existing `unsupported_citation` handling with resume intact; ask path refactored onto the same helper — affected [/features/deep-research.md](/features/deep-research.md).
+* **Update**: Router golden eval (50 requests, 40 tune / 10 holdout) — tune 0.97, holdout 1.00, zero deep-research auto-routes; single miss (r32) is a borderline open-question routed safe, deliberately untuned — new `backend/evals/golden/` harness gates releases.
+* **Update**: Jev intent router (slice 4) — `POST /api/v1/route` (destination + route/suggest/fallback, deep research suggest-only) driving the Home omnibox with routing/chip states, Discovery prefill, and Search receipt banner — affected [/backend/api/route.md](/backend/api/route.md).
+* **Update**: Jev discovery rerank + near-dup merge (slice 3) — `rank_papers` Noul per candidate plus code-blended composite (Jev/LLM/citations/recency) reordering relevance explanations, bounded same-paper Choice after the exact dedup pass — affected [/backend/services/discovery-providers.md](/backend/services/discovery-providers.md).
+* **Update**: Jev citation check (slice 2) on the Ask-this-research path — `check_citations` Choice (supports/contradicts/says_nothing) with 0.8 auto-act gate; only high-confidence contradictions replace the answer, thin-context unsupported flags log for eval — affected [/features/deep-research.md](/features/deep-research.md).
+* **Update**: Jev RAG gate (slice 1) behind `semantic_search` — new `services/judgments.py` (server-side `TYPESAFE_API_KEY`, pinned `jev-1.13.0`, fail-closed), gated accepted/conflicting evidence blocks in `rag_tool.py`, unit tests plus fixture smoke eval — affected [/backend/services/ai-agent.md](/backend/services/ai-agent.md).
+
 ## 2026-08-30
 
 * **Closeout**: The final reader and Deep Research gates are green. PDF file

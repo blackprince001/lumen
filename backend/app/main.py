@@ -20,6 +20,7 @@ from app.api.ingest import router as ingest_router
 from app.api.multi_chat import router as multi_chat_router
 from app.api.papers import router as papers_router
 from app.api.relationships import router as relationships_router
+from app.api.route import router as route_router
 from app.api.search import router as search_router
 from app.api.statistics import router as statistics_router
 from app.api.tags import router as tags_router
@@ -162,6 +163,7 @@ app.include_router(
 app.include_router(
   search_router, prefix="/api/v1", tags=["search"], dependencies=_auth_dep
 )
+app.include_router(route_router, prefix="/api/v1", tags=["route"], dependencies=_auth_dep)
 app.include_router(chat_router, prefix="/api/v1", tags=["chat"], dependencies=_auth_dep)
 app.include_router(
   multi_chat_router, prefix="/api/v1", tags=["multi-chat"], dependencies=_auth_dep

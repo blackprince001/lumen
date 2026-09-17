@@ -143,6 +143,77 @@ class TestSemanticSearch:
       assert isinstance(result, str)
 
 
+def _rag_row():
+  from types import SimpleNamespace
+
+  return SimpleNamespace(id=1, title="Test Paper", metadata_json={}, similarity=0.9)
+
+
+def _rag_ctx():
+  from unittest.mock import MagicMock
+
+  db_result = MagicMock()
+  db_result.fetchall.return_value = [_rag_row()]
+  db = MagicMock()
+  db.execute = AsyncMock(return_value=db_result)
+  from types import SimpleNamespace
+
+  db.get = AsyncMock(return_value=SimpleNamespace(content_text="Some content here."))
+  return MagicMock(extra={"db_session": db}, user_id=1, is_admin=False)
+
+
+class TestSemanticSearchGate:
+  """Jev RAG gate fallback contract."""
+
+  async def test_total_gate_failure_falls_back_to_legacy(self):
+    # {} means every judgment failed (e.g. outage) — must not masquerade
+    # as "all filtered". Legacy unfiltered format is the safe fallback.
+    with (
+      patch(
+        "app.services.ai.agent.tools.rag_tool.get_byo_context",
+        return_value=_rag_ctx(),
+      ),
+      patch(
+        "app.services.ai.agent.tools.rag_tool.embedding_service.generate_query_embedding",
+        return_value=[0.1] * 768,
+      ),
+      patch(
+        "app.services.ai.agent.tools.rag_tool.judgments_configured",
+        return_value=True,
+      ),
+      patch(
+        "app.services.ai.agent.tools.rag_tool.gate_passages",
+        return_value={},
+      ),
+    ):
+      result = await invoke_tool(semantic_search, query="test", limit=3)
+      assert "Top 1 semantically similar paper(s)" in result
+      assert "all filtered" not in result
+
+  async def test_gated_format_when_routes_present(self):
+    with (
+      patch(
+        "app.services.ai.agent.tools.rag_tool.get_byo_context",
+        return_value=_rag_ctx(),
+      ),
+      patch(
+        "app.services.ai.agent.tools.rag_tool.embedding_service.generate_query_embedding",
+        return_value=[0.1] * 768,
+      ),
+      patch(
+        "app.services.ai.agent.tools.rag_tool.judgments_configured",
+        return_value=True,
+      ),
+      patch(
+        "app.services.ai.agent.tools.rag_tool.gate_passages",
+        return_value={"1": {"route": "include"}},
+      ),
+    ):
+      result = await invoke_tool(semantic_search, query="test", limit=3)
+      assert "Jev-gated" in result
+      assert "Accepted evidence" in result
+
+
 class TestGetChatHistory:
   """get_chat_history tool."""
 

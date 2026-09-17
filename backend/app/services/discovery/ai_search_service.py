@@ -1,5 +1,6 @@
 """AI-powered search enhancements using the configured AI provider."""
 
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, ValidationError
@@ -9,6 +10,12 @@ from app.core.logger import get_logger
 from app.services.ai.helpers import get_provider_for_user
 from app.services.ai.providers.base import AIProvider, GenerateConfig
 from app.services.discovery.base_provider import ExternalPaperResult
+from app.services.judgments import (
+  citation_norm,
+  composite_score,
+  rank_papers,
+  recency_score,
+)
 from app.utils.json_extractor import extract_json_from_text
 
 logger = get_logger(__name__)
@@ -424,7 +431,7 @@ class AISearchService:
 
       try:
         validated = RelevanceResponse(**result)
-        return validated.model_dump()
+        return await self._rerank_explanations(query, papers, validated)
       except ValidationError as ve:
         logger.warning("Relevance validation failed", validation_errors=str(ve))
         if "explanations" in result:
@@ -434,6 +441,57 @@ class AISearchService:
     except Exception as e:
       logger.error("Error in relevance explanation", error=str(e))
       return None
+
+  async def _rerank_explanations(
+    self,
+    query: str,
+    papers: List[ExternalPaperResult],
+    validated: RelevanceResponse,
+  ) -> Dict[str, Any]:
+    """Reorder relevance explanations by composite score (slice 3).
+
+    Jev supplies a calibrated per-paper relevance judgment; the BYO LLM
+    score, citation count, and recency are supporting signals blended in
+    code. Fail-soft: gate off/failed keeps the LLM order unchanged, with
+    the same response shape plus additive score fields.
+    """
+    data = validated.model_dump()
+    ranked = await rank_papers(
+      query,
+      [
+        {"id": str(i), "title": p.title, "abstract": p.abstract or "", "year": p.year}
+        for i, p in enumerate(papers)
+      ],
+    )
+    if not ranked:
+      return data
+    current_year = datetime.now(timezone.utc).year
+    max_cites = max((p.citation_count or 0 for p in papers), default=0)
+    by_index = {str(i): p for i, p in enumerate(papers)}
+
+    def _composite(item: Dict[str, Any]) -> float:
+      idx = str(item.get("paper_index"))
+      paper = by_index.get(idx)
+      llm = item.get("relevance_score")
+      jev = ranked.get(idx, {}).get("noul") if ranked.get(idx) else None
+      cites = citation_norm(paper.citation_count if paper else None, max_cites)
+      fresh = recency_score(paper.year if paper else None, current_year)
+      return composite_score(jev, llm, cites, fresh)
+
+    enriched = []
+    for item in data.get("explanations", []):
+      idx = str(item.get("paper_index"))
+      item["jev_relevance"] = ranked[idx]["noul"] if idx in ranked else None
+      item["composite_score"] = round(_composite(item), 4)
+      enriched.append(item)
+    enriched.sort(key=lambda item: item["composite_score"], reverse=True)
+    data["explanations"] = enriched
+    logger.info(
+      "relevance_reranked",
+      count=len(enriched),
+      rescored=sum(1 for item in enriched if item["jev_relevance"] is not None),
+    )
+    return data
 
   async def enhance_search_results(
     self,

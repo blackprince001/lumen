@@ -95,6 +95,8 @@ class DiscoveryService:
 
     # Deduplicate papers across sources
     unique_papers, duplicate_count = self._deduplicate_papers(all_papers)
+    merged = await self._deduplicate_near_matches(unique_papers)
+    duplicate_count += merged
 
     # Cache results in database
     if cache_results and unique_papers:
@@ -239,6 +241,57 @@ class DiscoveryService:
     normalized = re.sub(r"[^\w\s]", "", normalized)
     normalized = " ".join(normalized.split())
     return normalized
+
+  async def _deduplicate_near_matches(
+    self, papers: List[ExternalPaperResult]
+  ) -> int:
+    """Merge near-duplicate records the exact pass missed (slice 3).
+
+    DOI and exact-title matches are already handled synchronously. Remaining
+    pairs with high token overlap go to a bounded Jev same-paper judgment;
+    only high-confidence verdicts merge. Fail-soft: keeps all records.
+    Returns the number of additional merges (0 when the gate is off).
+    """
+    from app.services.judgments import (
+      find_near_duplicate_pairs,
+      score_duplicate_pairs,
+    )
+
+    if len(papers) < 2:
+      return 0
+    ids = [f"{p.source}:{p.external_id}" for p in papers]
+    pairs = find_near_duplicate_pairs(list(zip(ids, [p.title for p in papers], strict=True)))
+    if not pairs:
+      return 0
+    by_id = dict(zip(ids, papers, strict=True))
+    judged = await score_duplicate_pairs(
+      [
+        (
+          {
+            "id": a,
+            "title": by_id[a].title,
+            "authors": by_id[a].authors,
+            "year": by_id[a].year,
+            "doi": by_id[a].doi,
+          },
+          {
+            "id": b,
+            "title": by_id[b].title,
+            "authors": by_id[b].authors,
+            "year": by_id[b].year,
+            "doi": by_id[b].doi,
+          },
+        )
+        for a, b in pairs
+        if a in by_id and b in by_id
+      ]
+    )
+    drop = {b for (a, b), outcome in judged.items() if outcome.get("same")}
+    if not drop:
+      return 0
+    papers[:] = [p for pid, p in zip(ids, papers, strict=True) if pid not in drop]
+    logger.info("near_duplicates_merged", merged=len(drop))
+    return len(drop)
 
   async def _cache_papers(
     self,
