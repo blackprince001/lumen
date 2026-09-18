@@ -40,7 +40,7 @@ papers/
 │   │   │   └── discovery/        # arXiv, Semantic Scholar, OpenAlex, Google Scholar
 │   │   ├── tasks/                # Celery tasks (ai, paper_processing, discovery, email)
 │   │   └── utils/                # Stateless helpers (text, JSON repair, citations)
-│   ├── migrations/               # Alembic (head: deep_research_002, 46 revisions)
+│   ├── migrations/               # Alembic (head: 446681659b13, 50 revisions)
 │   └── tests/                    # 10 test files focused on the AI agent layer
 ├── frontend-v2/                  # Main React SPA "Lumen"
 │   └── src/                      # components, contexts, hooks, lib, pages
@@ -104,7 +104,7 @@ papers/
 | `fastapi[standard]`, `pydantic`, `pydantic-settings` | Async web framework + validation + typed config |
 | `sqlalchemy[asyncio]` + `asyncpg` | Async ORM engine |
 | `psycopg2-binary` | Sync engine for Celery workers |
-| `alembic` | DB migrations (46 revisions, head `deep_research_002`) |
+| `alembic` | DB migrations (50 revisions, head `446681659b13`, merging the annotation-explanations and deep-research branches) |
 | `pgvector` | Vector similarity search on embeddings |
 | `celery[redis]` + `redis` | Background task queue + broker/result backend |
 | `openai-agents[litellm]` + `openai` | Agents SDK orchestration; OpenAI-compatible client |

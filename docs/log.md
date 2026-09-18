@@ -2,6 +2,7 @@
 
 ## 2026-09-17
 
+* **Fix**: Alembic multiple heads (`annotation_explanations_001` + `deep_research_004`, branched at `deep_research_002`, independent tables) merged via `446681659b13`; single head restored — affected architecture map.
 * **Update**: Relevance fully Jev-scored (LLM weight zeroed; prose still LLM), card % badge shows the composite, `TYPESAFE_API_KEY` wired through dev/prod compose on all four backend services plus `.env.example`, `uv.lock` updated so the image build resolves `typesafe-sdk` — run needs only the key set.
 * **Update**: Chat-ref manifest annotation — `annotate_manifest` inside `resolve_manifest` (covers chat, threads, multi-chat) adds per-entry `verification` from claim-vs-snippet Choice plus a long-quote prefilter that only ever downgrades to logged-only; live smoke verified/contradicted — affected backend services catalog.
 * **Update**: Jev citation check on the worker completion gate (slice 2b) — shared `citation_claims_for_report` matcher (normalizer parity-tested), high-confidence contradictions pause under existing `unsupported_citation` handling with resume intact; ask path refactored onto the same helper — affected [/features/deep-research.md](/features/deep-research.md).
