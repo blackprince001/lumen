@@ -1,0 +1,26 @@
+# Expose the prod stack through a Cloudflare Tunnel instead of Traefik +
+# Let's Encrypt. Cloudflare terminates TLS and nothing binds host ports.
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.tunnel.yml up -d --build
+#
+# deploy.sh adds this file automatically when CLOUDFLARE_TUNNEL_TOKEN is set.
+# Set FRONTEND_DOMAIN and BACKEND_DOMAIN to the same hostname and add two
+# public hostnames to the tunnel, in this order:
+#   <domain>  path ^/api/  ->  http://nexus-backend-prod:8000
+#   <domain>  (any path)   ->  http://nexus-frontend-prod:4173
+services:
+  traefik:
+    profiles: ["traefik"]   # off unless explicitly requested
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: lumen-cloudflared
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - app-network
+    restart: unless-stopped

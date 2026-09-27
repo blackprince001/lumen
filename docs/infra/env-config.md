@@ -4,7 +4,7 @@ title: Environment Configuration
 description: The full root .env.example variable list — API keys, DB/Redis components, JWT, Google OAuth/admin, email, prod domain vars — plus the frontend build-time vars.
 resource: .env.example
 tags: [infra, config, env]
-timestamp: 2026-06-28T00:00:00Z
+timestamp: 2026-09-27T00:00:00Z
 ---
 
 The root `.env.example` is the authoritative variable list. `backend/.env.example`
@@ -75,6 +75,12 @@ does not change the dedicated `research` queue (see
 # Prod-only domain vars
 
 `LETSENCRYPT_EMAIL` / `TRAEFIK_DOMAIN` / `BACKEND_DOMAIN` / `FRONTEND_DOMAIN`.
+
+| Variable | Purpose |
+|---|---|
+| `CELERY_WORKER_REPLICAS` | Interactive worker containers (default `2`) |
+| `CELERY_WORKER_CONCURRENCY` | Processes per interactive worker (default `4`) |
+| `CLOUDFLARE_TUNNEL_TOKEN` | When non-empty, `deploy.sh` adds `docker-compose.tunnel.yml`; set both domain vars to one hostname and leave the Let's Encrypt/Traefik vars unused |
 
 # Frontend build-time vars (`frontend-v2/.env.example`)
 

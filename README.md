@@ -400,6 +400,42 @@ curl https://papers.yourdomain.com
 
 Database migrations run automatically when the backend container starts, so there is no manual migration step. Certificate provisioning can take a minute on first boot — check `docker compose -f docker-compose.prod.yml logs traefik` if HTTPS isn't up immediately.
 
+On a small server, set `CELERY_WORKER_REPLICAS=1` and `CELERY_WORKER_CONCURRENCY=2` in `.env`. The defaults (2 × 4) want about 4 CPUs.
+
+### Behind a Cloudflare Tunnel instead
+
+If the server sits behind NAT, or you'd rather not open ports 80 and 443, skip Traefik and DNS records and use a tunnel. Cloudflare handles TLS, and the app serves the API from its own domain under `/api`.
+
+1. Create a tunnel in Cloudflare Zero Trust and copy its token.
+2. In `.env`, set `CLOUDFLARE_TUNNEL_TOKEN` and point both domains at one hostname:
+
+   ```bash
+   CLOUDFLARE_TUNNEL_TOKEN=eyJ...
+   FRONTEND_DOMAIN=papers.yourdomain.com
+   BACKEND_DOMAIN=papers.yourdomain.com
+   ```
+
+3. Add two public hostnames to the tunnel. The `/api` rule must come first:
+
+   | Hostname | Path | Service |
+   | --- | --- | --- |
+   | `papers.yourdomain.com` | `^/api/` | `http://nexus-backend-prod:8000` |
+   | `papers.yourdomain.com` | *(empty)* | `http://nexus-frontend-prod:4173` |
+
+4. Run `./deploy.sh` (below). It picks up `docker-compose.tunnel.yml` because the token is set.
+
+Add your public URL to the Google OAuth client's authorized JavaScript origins, or Google sign-in will fail.
+
+### Redeploying
+
+`deploy.sh` pulls `main`, rebuilds, starts the stack, and waits for the backend health check. Run it on the server, or from your machine with an SSH host:
+
+```bash
+./deploy.sh                    # on the server, inside the checkout
+./deploy.sh my-server          # from your machine; assumes ~/lumen on the server
+./deploy.sh my-server /opt/papers
+```
+
 ## Contributing
 
 This is a personal project. Feel free to fork and customize for your needs.

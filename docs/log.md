@@ -1,5 +1,10 @@
 # Bundle Update Log
 
+## 2026-09-27
+
+* **Fix**: Prod Celery services (worker, research worker, beat) now run through `uv run --no-sync`. The bare `celery` binary is not on `PATH` in the image, so these containers could not start. Interactive worker sizing moved to `CELERY_WORKER_REPLICAS` / `CELERY_WORKER_CONCURRENCY` — affected [/infra/docker.md](/infra/docker.md), [/infra/env-config.md](/infra/env-config.md).
+* **Update**: Added `docker-compose.tunnel.yml` (Cloudflare Tunnel ingress, Traefik off) and `deploy.sh` (pull, build, up, health wait; local or over SSH). First deploy is live at `https://lumen.pkab.work` — affected [/infra/setup.md](/infra/setup.md), new ADR [/decisions/cloudflare-tunnel-ingress.md](/decisions/cloudflare-tunnel-ingress.md).
+
 ## 2026-09-17
 
 * **Fix**: Alembic multiple heads (`annotation_explanations_001` + `deep_research_004`, branched at `deep_research_002`, independent tables) merged via `446681659b13`; single head restored — affected architecture map.

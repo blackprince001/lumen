@@ -1,10 +1,10 @@
 ---
 type: Guide
 title: Setup & Deployment
-description: The three ways to run the stack — local instance (no Docker), Docker dev (docker-compose.dev.yml), Docker prod (docker-compose.prod.yml) — with the env, hosts, and migration facts each path needs.
+description: The ways to run the stack — local instance (no Docker), Docker dev (docker-compose.dev.yml), Docker prod (docker-compose.prod.yml, optionally behind a Cloudflare Tunnel via docker-compose.tunnel.yml) and deploy.sh — with the env, hosts, and migration facts each path needs.
 resource: README.md
 tags: [infra, setup, deployment, docker, local-dev]
-timestamp: 2026-07-12T00:00:00Z
+timestamp: 2026-09-27T00:00:00Z
 ---
 
 There is **no plain `docker-compose.yml`** — only `docker-compose.dev.yml` and
@@ -134,3 +134,40 @@ Same topology plus TLS and hardening (differences enumerated in
    issuance can take a minute (check the `traefik` service logs).
 
 `middlewares.yml` (security headers) is mounted into Traefik in prod only.
+
+Worker sizing comes from `CELERY_WORKER_REPLICAS` (default 2) and
+`CELERY_WORKER_CONCURRENCY` (default 4). A 2-CPU host runs fine at 1 × 2.
+
+# Docker prod behind a Cloudflare Tunnel
+
+`docker-compose.tunnel.yml` layers on top of the prod file. It puts Traefik
+behind a compose profile (so it doesn't start) and adds a `lumen-cloudflared`
+container on `app-network` that runs with `CLOUDFLARE_TUNNEL_TOKEN`. No host
+ports are bound, and there's no ACME or DNS `A` record step. Why:
+[/decisions/cloudflare-tunnel-ingress.md](/decisions/cloudflare-tunnel-ingress.md).
+
+1. `.env`: set `CLOUDFLARE_TUNNEL_TOKEN`, and set `FRONTEND_DOMAIN` and
+   `BACKEND_DOMAIN` to the **same** hostname. The frontend is then built with
+   `VITE_API_URL=https://<host>/api/v1` and CORS is same-origin.
+   `LETSENCRYPT_EMAIL`/`TRAEFIK_DOMAIN` are unused.
+2. Tunnel public hostnames (remote-managed, in the Cloudflare dashboard), with
+   the `/api` rule first: `<host>` path `^/api/` →
+   `http://nexus-backend-prod:8000`, then `<host>` →
+   `http://nexus-frontend-prod:4173`. This works because every backend route is
+   under `/api/v1` and the PWA service worker already denylists `/api/`.
+   `/health` is not routed publicly.
+3. `./deploy.sh` (see below).
+
+The live deployment is `https://lumen.pkab.work` on the `deployment` SSH host,
+checked out at `/root/lumen`.
+
+# deploy.sh
+
+`deploy.sh` at the repo root runs `git pull --ff-only`,
+`mkdir -p backend/storage letsencrypt`,
+`docker compose ... up -d --build --remove-orphans`, and an image prune. It
+then polls the backend `/health` from inside the container for up to 150 s. It
+adds `-f docker-compose.tunnel.yml` when `.env` has a non-empty
+`CLOUDFLARE_TUNNEL_TOKEN`. With arguments, `./deploy.sh <ssh-host> [dir]` SSHes
+in and runs itself on the server (`dir` defaults to `~/lumen`). The body sits in
+a `main` function so the pull can rewrite the script mid-run.

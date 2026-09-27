@@ -134,9 +134,11 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.celery_app worker -l info -Q ai,processing,discovery,dead_letter -c 4 --hostname=interactive@%h
+    # Dependencies live in uv's .venv, so celery must go through `uv run`.
+    # Size workers per host with CELERY_WORKER_REPLICAS / CELERY_WORKER_CONCURRENCY.
+    command: uv run --no-sync celery -A app.celery_app worker -l info -Q ai,processing,discovery,dead_letter -c ${CELERY_WORKER_CONCURRENCY:-4} --hostname=interactive@%h
     deploy:
-      replicas: 2
+      replicas: ${CELERY_WORKER_REPLICAS:-2}
     environment:
       - DB_HOST=${DB_HOST:-postgres}
       - DB_USER=${DB_USER:-postgres}
@@ -178,13 +180,12 @@ services:
       - traefik.enable=false
     restart: unless-stopped
 
-  # Celery beat — schedules periodic jobs (the retry sweep for incomplete AI
-  # processing). Run exactly one instance; the worker(s) above execute the jobs.
+  # Deep research gets its own worker so long runs never block interactive work.
   research-worker:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.celery_app worker -l info -Q research -c 1 --hostname=research@%h
+    command: uv run --no-sync celery -A app.celery_app worker -l info -Q research -c 1 --hostname=research@%h
     environment:
       - DB_HOST=${DB_HOST:-postgres}
       - DB_USER=${DB_USER:-postgres}
@@ -233,7 +234,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: celery -A app.celery_app beat -l info
+    command: uv run --no-sync celery -A app.celery_app beat -l info
     environment:
       - DB_HOST=${DB_HOST:-postgres}
       - DB_USER=${DB_USER:-postgres}

@@ -4,7 +4,7 @@ title: Docker Compose
 description: The 8-service topology (traefik, postgres, redis, backend, interactive celery-worker x2, dedicated research-worker, celery-beat, frontend) across dev and prod, with the key differences between the two compose files.
 resource: docker-compose.dev.yml
 tags: [infra, docker, compose, deployment]
-timestamp: 2026-06-28T00:00:00Z
+timestamp: 2026-09-27T00:00:00Z
 ---
 
 Both compose files share the same 8-service topology: **traefik, postgres,
@@ -40,7 +40,16 @@ Same 7 services, with prod differences:
 4. **Port exposure**: dev exposes postgres (`5433`) and redis (`6379`) to the host for debugging; prod exposes neither.
 5. **Storage**: dev uses named volume `storage_data`; prod uses a bind mount `./backend/storage:/app/storage` (`:118-119`).
 6. **Redis**: prod adds `--maxmemory 256mb --maxmemory-policy allkeys-lru` (`:61`).
-7. **Celery command**: dev prefixes `uv run`; prod calls `celery` directly (`:139`, `:191`).
+7. **Celery command**: both go through `uv run` (prod uses `uv run --no-sync`), because dependencies live in uv's `.venv` and a bare `celery` is not on `PATH`. Prod worker replicas and concurrency come from `CELERY_WORKER_REPLICAS` / `CELERY_WORKER_CONCURRENCY` (defaults 2 and 4).
 8. **Container naming**: dev `papers-*`; prod `nexus-*-prod`.
 9. **middlewares.yml** is only mounted into Traefik in prod (`:24`).
 10. `DEBUG=false` hardcoded (`:88`, `:149`, `:199`).
+
+# `docker-compose.tunnel.yml`
+
+An override for the prod file. It moves `traefik` into a `traefik` profile (so
+it's off by default) and adds `cloudflared` (`cloudflare/cloudflared:latest`,
+container `lumen-cloudflared`, `TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}`) on
+`app-network`. The tunnel reaches `nexus-backend-prod:8000` and
+`nexus-frontend-prod:4173` by container name. See
+[setup.md](/infra/setup.md#docker-prod-behind-a-cloudflare-tunnel).
