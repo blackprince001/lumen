@@ -85,12 +85,17 @@ export type {
   UserAiSettings,
   UserAiSettingsUpdate,
   ProviderInfo,
-  ModelInfo,
   ProviderTestRequest,
   ProviderTestResponse,
 } from './userAiSettings';
 export { userAiProvidersApi } from './userAiProviders';
-export type { UserAiProvider, UserAiProviderCreate, UserAiProviderUpdate } from './userAiProviders';
+export type {
+  UserAiProvider,
+  UserAiProviderCreate,
+  UserAiProviderUpdate,
+  ProviderModel,
+  ProviderModelsRequest,
+} from './userAiProviders';
 
 export { deepResearchApi } from './deepResearch';
 export type {

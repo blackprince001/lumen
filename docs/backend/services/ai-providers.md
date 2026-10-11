@@ -62,6 +62,12 @@ chat uses `resolve_providers()` from the agents-SDK path instead — see
 
 # Resource-listing & testing
 
-`/ai/models` (OpenRouter catalog) and `/ai/providers/test` (connection smoke
-test) are exposed on the `ai-settings` router — see
-[ai.md](/backend/api/ai.md).
+Model names come from each provider's native `/models` endpoint via
+`services/ai/model_catalog.py` (`list_provider_models`), using the user's key:
+OpenAI and DeepSeek (OpenAI-style, filtered to chat models), Anthropic
+(`x-api-key`, display names), Gemini (`generateContent` models only), and
+self-hosted endpoints at their base URL (unfiltered). Creating or updating a
+hosted provider rejects a model that list does not contain. See
+[ADR](/decisions/native-provider-model-listing.md) and
+[ai.md](/backend/api/ai.md). `/ai/providers/test` (connection smoke test)
+stays on the `ai-settings` router.

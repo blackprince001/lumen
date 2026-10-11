@@ -18,6 +18,7 @@ most feature changes are not ADRs.
 * [Durable deep-research generations and event replay](resumable-agent-runs.md) - generation checkpoints and ordered SSE events live in Postgres; Redis is used for Celery transport.
 * [Dedicated `research` queue; deep research always-on](deep-research-queue.md) - isolate deep research on its own Celery queue; the mutation setting is an emergency stop, not a product flag.
 * [Cloudflare Tunnel as prod ingress](cloudflare-tunnel-ingress.md) - an optional override swaps Traefik + Let's Encrypt for a tunnel, with the API same-origin under `/api`.
+* [Model names from the provider's own API](native-provider-model-listing.md) - the settings model picker lists models from each provider's `/models` endpoint with the user's key, not OpenRouter.
 * [Tailwind v4 CSS-based config](tailwind-v4-css-config.md) - no `tailwind.config.js`; tokens declared in `@theme`.
 
 See the [architecture overview](/architecture.md) for how these fit together.

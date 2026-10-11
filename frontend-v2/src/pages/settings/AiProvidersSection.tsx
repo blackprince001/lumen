@@ -14,8 +14,8 @@ import { SetupIllustration } from '@/components/illustrations';
 import {
   userAiSettingsApi,
   userAiProvidersApi,
-  type ModelInfo,
   type ProviderInfo,
+  type ProviderModel,
   type UserAiProvider,
 } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -41,16 +41,55 @@ const EMPTY_DRAFT: ProviderDraft = {
 
 const SELF_HOSTED = new Set(['ollama', 'vllm', 'openai-compatible']);
 
-const KNOWN_PROVIDERS = new Set(['openai', 'anthropic', 'deepseek', 'gemini']);
+// Ask the provider for its models, so the picker only offers names its API accepts.
+function useProviderModels(draft: ProviderDraft, providerId: number | null) {
+  const [models, setModels] = useState<ProviderModel[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const selfHosted = SELF_HOSTED.has(draft.provider);
+  const ready = draft.provider !== ''
+    && (selfHosted ? draft.baseUrl !== '' : draft.apiKey !== '' || providerId !== null);
+
+  useEffect(() => {
+    setModels([]);
+    setError(null);
+    if (!ready) return;
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await userAiProvidersApi.listModels({
+          provider: draft.provider,
+          api_key: draft.apiKey || undefined,
+          base_url: draft.baseUrl || null,
+          provider_id: providerId ?? undefined,
+        });
+        if (!cancelled) setModels(res.models);
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : 'Could not load models');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [ready, draft.provider, draft.apiKey, draft.baseUrl, providerId]);
+
+  return { models, loading, error, ready };
+}
 
 function ProviderForm({
-  draft, setDraft, providers, models, editing, onSave, onCancel, saving,
+  draft, setDraft, providers, providerId, onSave, onCancel, saving,
 }: {
   draft: ProviderDraft;
   setDraft: (d: ProviderDraft) => void;
   providers: ProviderInfo[];
-  models: ModelInfo[];
-  editing: boolean;
+  providerId: number | null;
   onSave: () => void;
   onCancel: () => void;
   saving: boolean;
@@ -65,13 +104,15 @@ function ProviderForm({
     }
     setDraft({ ...draft, ...patch });
   };
+  const editing = providerId !== null;
   const selectedProvider = providers.find((p) => p.type === draft.provider);
-  const showModelSelect = KNOWN_PROVIDERS.has(draft.provider);
   const hideApiKey = SELF_HOSTED.has(draft.provider);
   const needsTest = !editing;
 
-  const availableModels = models.filter((m) => m.provider === draft.provider);
-  const noModels = draft.provider !== '' && showModelSelect && availableModels.length === 0;
+  const { models, loading: modelsLoading, error: modelsError, ready } =
+    useProviderModels(draft, providerId);
+  const showModelSelect = models.length > 0;
+  const modelOffered = models.some((m) => m.id === draft.model);
 
   const handleTest = async () => {
     setTesting(true);
@@ -172,10 +213,13 @@ function ProviderForm({
             onChange={(e) => set({ model: e.target.value })}
             placeholder="Select a model"
           >
-            <option value="">{noModels ? 'No models available' : 'Select a model'}</option>
-            {availableModels.map((m) => (
-              <option key={m.model} value={m.model}>
-                {m.name} {m.source === 'self-hosted' ? '(Self-host)' : '(API)'}
+            <option value="">Select a model</option>
+            {draft.model && !modelOffered && (
+              <option value={draft.model}>{draft.model} (not offered by this provider)</option>
+            )}
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name === m.id ? m.id : `${m.name} (${m.id})`}
               </option>
             ))}
           </Select>
@@ -190,6 +234,21 @@ function ProviderForm({
                   : 'gpt-4o'}
           />
         )}
+        <p className={cn(
+          'mt-1 text-caption',
+          modelsError || (showModelSelect && draft.model && !modelOffered)
+            ? 'text-(--danger)'
+            : 'text-(--muted-foreground)',
+        )}>
+          {modelsLoading ? 'Loading models from the provider…'
+            : modelsError ? `${modelsError}. You can still type a model name.`
+              : showModelSelect && draft.model && !modelOffered
+                ? 'This model is not offered by the provider. Pick another.'
+                : !ready ? (hideApiKey
+                  ? 'Enter the base URL to load models'
+                  : 'Enter your API key to load models')
+                  : showModelSelect ? 'Models listed by the provider for your key' : ''}
+        </p>
       </div>
 
       <div className="flex items-center gap-3">
@@ -239,7 +298,6 @@ function ProviderForm({
 export function AiProvidersSection() {
   const [items, setItems] = useState<UserAiProvider[]>([]);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
-  const [models, setModels] = useState<ModelInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<SectionStatus>(null);
@@ -255,14 +313,12 @@ export function AiProvidersSection() {
   useEffect(() => {
     (async () => {
       try {
-        const [list, provs, modelList] = await Promise.all([
+        const [list, provs] = await Promise.all([
           userAiProvidersApi.list(),
           userAiSettingsApi.listProviders(),
-          userAiSettingsApi.listModels(),
         ]);
         setItems(list);
         setProviders(provs);
-        setModels(modelList);
       } catch {
         // noop — empty is fine
       } finally {
@@ -368,8 +424,7 @@ export function AiProvidersSection() {
               draft={draft}
               setDraft={setDraft}
               providers={providers}
-              models={models}
-              editing={editingId !== 'new'}
+              providerId={typeof editingId === 'number' ? editingId : null}
               onSave={handleSave}
               onCancel={() => setEditingId(null)}
               saving={saving}

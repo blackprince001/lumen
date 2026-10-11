@@ -57,3 +57,25 @@ class UserAIProviderResponse(BaseModel):
   updated_at: datetime
 
   model_config = {"from_attributes": True}
+
+
+class ProviderModelsRequest(BaseModel):
+  """Ask a provider which models it serves.
+
+  Send ``api_key`` for an unsaved provider, or ``provider_id`` to reuse a
+  saved provider's stored key when the key field is left blank.
+  """
+
+  provider: str
+  api_key: str = ""
+  base_url: str | None = None
+  provider_id: int | None = None
+
+
+class ProviderModel(BaseModel):
+  id: str = Field(description="Model name sent to the provider's API")
+  name: str = Field(description="Human-readable display name")
+
+
+class ProviderModelsResponse(BaseModel):
+  models: list[ProviderModel]

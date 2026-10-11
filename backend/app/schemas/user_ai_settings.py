@@ -51,20 +51,6 @@ class ProviderTypeInfo(BaseModel):
   supports_grounding: bool
 
 
-class ModelInfo(BaseModel):
-  """A model available from a supported provider."""
-
-  provider: str = Field(
-    description="Internal provider type, e.g. 'openai', 'anthropic'"
-  )
-  model: str = Field(description="Raw model name sent to the API, e.g. 'gpt-4o'")
-  name: str = Field(description="Human-readable display name")
-  context_length: int = Field(description="Maximum context length in tokens")
-  source: str = Field(
-    description="'api' for closed-source API-only, 'self-hosted' for open-weight models"
-  )
-
-
 class ProviderTestRequest(BaseModel):
   """Request schema for testing a provider connection."""
 

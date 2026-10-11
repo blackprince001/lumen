@@ -32,15 +32,15 @@ These usually enqueue the matching Celery tasks in [tasks.md](/backend/tasks.md)
 |---|---|---|---|
 | GET / PUT / PATCH / DELETE | `/user/ai-settings` | `:98/:113/:139/:155` | full lifecycle |
 | GET | `/ai/providers` | `:167` | list registered provider types |
-| GET | `/ai/models` | `:176` | list models from OpenRouter |
 | POST | `/ai/providers/test` | `:185` | smoke-test a provider config |
 
 # `user_ai_providers.py` — multiple providers, one default
 
 | Method | Path | Line | Notes |
 |---|---|---|---|
-| GET / POST | `/user/ai-providers` | `:23 / :36` | list / create |
-| PATCH | `/user/ai-providers/{provider_id}` | `:51` | |
+| GET / POST | `/user/ai-providers` | | list / create (create rejects a model the provider does not list) |
+| POST | `/user/ai-providers/models` | | list models from the provider's own API, using the sent key or a saved provider's key (`provider_id`) |
+| PATCH | `/user/ai-providers/{provider_id}` | | re-checks the model when provider, model, key, or base URL change |
 | PUT | `/user/ai-providers/{provider_id}/default` | `:68` | sets default (clears others) |
 | DELETE | `/user/ai-providers/{provider_id}` | `:84` | |
 

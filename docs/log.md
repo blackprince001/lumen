@@ -1,5 +1,9 @@
 # Bundle Update Log
 
+## 2026-10-11
+
+* **Fix**: Saved models could be OpenRouter slugs (e.g. `deepseek-v4.1-flash:batch`) that the provider's API rejects with a 400. The model picker now lists models from the provider's own `/models` endpoint using the user's key, and create/update reject a model the provider does not list. Removed `GET /ai/models` (OpenRouter) — affected [/backend/services/ai-providers.md](/backend/services/ai-providers.md), [/backend/api/ai.md](/backend/api/ai.md), new ADR [/decisions/native-provider-model-listing.md](/decisions/native-provider-model-listing.md).
+
 ## 2026-09-27
 
 * **Fix**: Prod Celery services (worker, research worker, beat) now run through `uv run --no-sync`. The bare `celery` binary is not on `PATH` in the image, so these containers could not start. Interactive worker sizing moved to `CELERY_WORKER_REPLICAS` / `CELERY_WORKER_CONCURRENCY` — affected [/infra/docker.md](/infra/docker.md), [/infra/env-config.md](/infra/env-config.md).

@@ -33,6 +33,18 @@ export interface UserAiProviderUpdate {
   is_active?: boolean;
 }
 
+export interface ProviderModel {
+  id: string;
+  name: string;
+}
+
+export interface ProviderModelsRequest {
+  provider: string;
+  api_key?: string;
+  base_url?: string | null;
+  provider_id?: number;
+}
+
 export const userAiProvidersApi = {
   list: () => api.get<UserAiProvider[]>('/user/ai-providers'),
 
@@ -46,4 +58,7 @@ export const userAiProvidersApi = {
     api.put<UserAiProvider>(`/user/ai-providers/${id}/default`, {}),
 
   delete: (id: number) => api.delete<void>(`/user/ai-providers/${id}`),
+
+  listModels: (data: ProviderModelsRequest) =>
+    api.post<{ models: ProviderModel[] }>('/user/ai-providers/models', data),
 };
