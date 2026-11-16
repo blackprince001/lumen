@@ -13,6 +13,7 @@ list it below as it is added.
 
 * [Reader and AI Experience Reformation](reader-ai-experience.md) - **Complete.** The reader and deep-research lifecycle work is shipped; visual verification remains a product review checkpoint.
 * [Deep Research](deep-research.md) - **Implemented.** The agent/Celery/Postgres implementation with evidence verification, follow-ups, cancellation, archive search, and release operations.
+* [Desktop App](desktop.md) - **Planned.** A native macOS client on the same API, built after Learning for Mac and sharing its kit and PDF viewer. Native Google sign-in needs `/auth/google` to accept a desktop client ID.
 
 # Related
 

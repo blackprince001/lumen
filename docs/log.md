@@ -1,5 +1,9 @@
 # Bundle Update Log
 
+## 2026-11-16
+
+* **Add**: Plan for a desktop app, a native macOS client on the same API. Sign-in uses Google's installed-app flow, so `/auth/google` will need to accept a desktop client ID — new [/features/desktop.md](/features/desktop.md).
+
 ## 2026-10-11
 
 * **Fix**: Saved models could be OpenRouter slugs (e.g. `deepseek-v4.1-flash:batch`) that the provider's API rejects with a 400. The model picker now lists models from the provider's own `/models` endpoint using the user's key, and create/update reject a model the provider does not list. Removed `GET /ai/models` (OpenRouter) — affected [/backend/services/ai-providers.md](/backend/services/ai-providers.md), [/backend/api/ai.md](/backend/api/ai.md), new ADR [/decisions/native-provider-model-listing.md](/decisions/native-provider-model-listing.md).
