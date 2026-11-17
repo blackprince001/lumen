@@ -34,7 +34,8 @@ instantiated at import (`config.py:135`).
 | `REDIS_HOST`/`REDIS_PORT`/`REDIS_DB`/`REDIS_PASSWORD` | str/int | `localhost`/`6379`/`0`/`""` | `:42-45` | Redis broker + cache |
 | `JWT_SECRET_KEY`/`JWT_ALGORITHM`/`ACCESS_TOKEN_EXPIRE_MINUTES`/`REFRESH_TOKEN_EXPIRE_DAYS` | varies | `""`/`"HS256"`/`30`/`7` | — | JWT auth config |
 | `AI_KEY_ENCRYPTION_KEY` | str | `""` | — | Primary Fernet key for stored user AI keys; falls back to JWT-derived key ([decision](/decisions/separate-encryption-key.md)) |
-| `GOOGLE_CLIENT_ID` | str | `""` | `:54` | Google OAuth client ID |
+| `GOOGLE_CLIENT_ID` | str | `""` | `:69` | Google OAuth client ID |
+| `GOOGLE_DESKTOP_CLIENT_ID` | str | `""` | `:70` | Optional desktop-app OAuth client ID; a second accepted audience for `/auth/google` |
 | `ADMIN_USERNAME`/`ADMIN_PASSWORD` | str | `""` | `:57-58` | Admin creds (base64-encoded) |
 | `FRONTEND_URL` | str | `"http://localhost:5173"` | `:61` | CORS allow-list origin |
 In `DEBUG` mode, the API also allows `http://127.0.0.1:5173` (and the corresponding port `3000` origins) so local access works whether the browser uses `localhost` or `127.0.0.1`.

@@ -1,0 +1,27 @@
+[package]
+name = "lumen-desktop"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+base64 = "0.23.1"
+env_logger = "0.11.11"
+futures = "0.3.34"
+gpui = { version = "=0.3.12", package = "gpui-pre" }
+gpui-component = "0.9.1"
+gpui-kit-assets = "0.9.1"
+# font-kit is off by default on crates.io, and without it GPUI draws no text at all.
+gpui_platform = { version = "=0.3.12", package = "gpui-pre-platform", features = ["font-kit"] }
+jiff = { version = "0.2.45", default-features = false, features = ["std", "tz-system", "tzdb-zoneinfo"] }
+log = "0.4.35"
+rand = "0.10.4"
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "form", "cookies", "rustls", "http2"] }
+reqwest_cookie_store = "0.10.0"
+rust-embed = "8.14.0"
+security-framework = "3.7.0"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["rt-multi-thread", "time", "sync", "net", "io-util"] }
+url = "2.5.8"

@@ -45,6 +45,7 @@ papers/
 ├── frontend-v2/                  # Main React SPA "Lumen"
 │   └── src/                      # components, contexts, hooks, lib, pages
 ├── landing/                      # Separate React/Vite marketing site (no router)
+├── desktop/                      # Lumen for Mac: native GPUI client (Rust), same API
 ├── docs/                         # This OKF knowledge bundle
 ├── docker-compose.dev.yml        # 7 services; traefik, postgres, redis, backend,
 ├── docker-compose.prod.yml       #   celery-worker (replicas:2), celery-beat, frontend
