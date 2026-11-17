@@ -1,5 +1,11 @@
 # Bundle Update Log
 
+## 2026-11-17
+
+* **Add**: Lumen for Mac, milestone L1: a GPUI app in `desktop/` with loopback Google sign-in, a Keychain-backed session, the library window (sidebar, toolbar, system menus), Home and a Settings window — affected [/features/desktop.md](/features/desktop.md), [/architecture.md](/architecture.md).
+* **Update**: `/auth/google` accepts ID tokens from a desktop OAuth client. New optional `GOOGLE_DESKTOP_CLIENT_ID` is a second audience next to `GOOGLE_CLIENT_ID`; wired through dev/prod compose and `.env.example`; tests in `backend/tests/test_google_id_token.py` use real google-auth verification — affected [/backend/security.md](/backend/security.md), [/infra/env-config.md](/infra/env-config.md), [/backend/config.md](/backend/config.md), new ADR [/decisions/desktop-oauth-audience.md](/decisions/desktop-oauth-audience.md).
+* **Update**: The desktop plan now follows the settled design: three window kinds, where each web screen goes, macOS chrome, shortcuts, how code is reused from Learning, revised milestones and open questions — affected [/features/desktop.md](/features/desktop.md).
+
 ## 2026-11-16
 
 * **Add**: Plan for a desktop app, a native macOS client on the same API. Sign-in uses Google's installed-app flow, so `/auth/google` will need to accept a desktop client ID — new [/features/desktop.md](/features/desktop.md).
