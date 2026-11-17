@@ -19,7 +19,10 @@ timestamp: 2026-06-28T00:00:00Z
   endpoint implements **token rotation**: revokes the presented refresh and
   issues a new one.
 - `verify_google_id_token` — uses `google.oauth2.id_token` to verify Google
-  OAuth ID tokens.
+  OAuth ID tokens. The accepted audiences are `GOOGLE_CLIENT_ID` (web) and
+  `GOOGLE_DESKTOP_CLIENT_ID` (desktop app, optional); empty values are skipped.
+  Raises `ValueError` if neither is set. See the
+  [desktop audience decision](/decisions/desktop-oauth-audience.md).
 - `decode_admin_credentials` — base64-decodes `ADMIN_USERNAME` /
   `ADMIN_PASSWORD` env vars.
 - `hash_password` / `verify_password` — passlib-style (bcrypt, pinned <4.0).

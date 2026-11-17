@@ -67,6 +67,7 @@ class Settings(BaseSettings):
   REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
   GOOGLE_CLIENT_ID: str = ""
+  GOOGLE_DESKTOP_CLIENT_ID: str = ""
 
   ADMIN_USERNAME: str = ""
   ADMIN_PASSWORD: str = ""

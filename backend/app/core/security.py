@@ -75,12 +75,17 @@ def verify_google_id_token(token: str) -> dict:
   Returns dict with keys: sub, email, name, picture.
   Raises ValueError on verification failure.
   """
-  if not settings.GOOGLE_CLIENT_ID:
+  audiences = [
+    aud
+    for aud in (settings.GOOGLE_CLIENT_ID, settings.GOOGLE_DESKTOP_CLIENT_ID)
+    if aud
+  ]
+  if not audiences:
     raise ValueError("GOOGLE_CLIENT_ID is not configured")
 
   try:
     idinfo = google_id_token.verify_oauth2_token(
-      token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+      token, google_requests.Request(), audiences
     )
 
     if idinfo["iss"] not in ("accounts.google.com", "https://accounts.google.com"):
